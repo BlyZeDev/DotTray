@@ -1,0 +1,21 @@
+name: Enhancement suggestion
+description: Feature request or improvement idea
+labels: ["💡 Enhancement"]
+assignees:
+  - BlyZeDev
+body:
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggestion
+      description: Specify your idea as detailed as possible
+      placeholder: I would really like if...
+    validations:
+      required: true
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other context that could be useful
+    validations:
+      required: false

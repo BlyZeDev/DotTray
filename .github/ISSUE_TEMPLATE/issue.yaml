@@ -1,0 +1,36 @@
+name: Bug Report
+description: Report a bug
+labels: ["🐞 Bug"]
+assignees:
+  - BlyZeDev
+body:
+  - type: textarea
+    id: error
+    attributes:
+      label: Error
+      description: Specify the error
+    validations:
+      required: false
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe as detailed as possible.
+      placeholder: Also tell me, what did you expect to happen?
+      value: "Steps to reproduce:\n\n1. Use this...\n2. Then do this...\n3. Error happens!"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version(s)
+      placeholder: Separate versions with ;
+    validations:
+      required: true
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other context that could be useful
+    validations:
+      required: false
