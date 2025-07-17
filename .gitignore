@@ -1,0 +1,8 @@
+**/appsettings.json
+**/bin
+**/obj
+**/build
+**/.vs
+**/*.user
+**/.editorconfig
+**/*.ini

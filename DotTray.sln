@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36301.6 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotTray", "DotTray\DotTray.csproj", "{C6D5E1B5-9D5C-4D62-B03D-078EB4919837}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotTrayTests", "DotTrayTests\DotTrayTests.csproj", "{0ECFCE67-965D-45E7-87C2-181598346BB2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C6D5E1B5-9D5C-4D62-B03D-078EB4919837}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C6D5E1B5-9D5C-4D62-B03D-078EB4919837}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C6D5E1B5-9D5C-4D62-B03D-078EB4919837}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C6D5E1B5-9D5C-4D62-B03D-078EB4919837}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0ECFCE67-965D-45E7-87C2-181598346BB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0ECFCE67-965D-45E7-87C2-181598346BB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0ECFCE67-965D-45E7-87C2-181598346BB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0ECFCE67-965D-45E7-87C2-181598346BB2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9090A18C-26C2-4AEA-8237-AD5211BD8872}
+	EndGlobalSection
+EndGlobal
