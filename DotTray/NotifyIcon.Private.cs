@@ -4,27 +4,14 @@ using DotTray.Internal;
 using DotTray.Internal.Win32;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
-public sealed unsafe partial class NotifyIcon
+public sealed partial class NotifyIcon
 {
-    private void RebuildMenu(IEnumerable<IMenuItem> items)
-    {
-        if (trayMenu != nint.Zero)
-        {
-            Native.DestroyMenu(trayMenu);
-            trayMenu = nint.Zero;
-        }
-        trayMenu = Native.CreatePopupMenu();
-
-        _menuActions.Clear();
-        _subMenus.Clear();
-
-        nextCommandId = 1000;
-        BuildMenu(trayMenu, items);
-    }
-
     private void BuildMenu(nint menuHandle, IEnumerable<IMenuItem> items)
     {
         foreach (var item in items)
@@ -82,28 +69,6 @@ public sealed unsafe partial class NotifyIcon
         Native.Shell_NotifyIcon(Native.NIM_ADD, ref iconData);
     }
 
-    private void UpdateToolTip(string toolTip)
-    {
-        var iconData = new NOTIFYICONDATA
-        {
-            cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
-            hWnd = hWnd,
-            uID = Native.ID_TRAY_ICON,
-            uFlags = Native.NIF_TIP,
-        };
-
-        var tipPtr = iconData.szTip;
-        for (int i = 0; i < NOTIFYICONDATA.SZTIP_BYTE_SIZE; i++)
-        {
-            tipPtr[i] = 0;
-        }
-
-        var bytes = Encoding.Unicode.GetBytes(toolTip);
-        Marshal.Copy(bytes, 0, (nint)iconData.szTip, Math.Min(bytes.Length, NOTIFYICONDATA.SZTIP_BYTE_SIZE - 2));
-
-        Native.Shell_NotifyIcon(Native.NIM_MODIFY, ref iconData);
-    }
-
     private void RemoveIcon()
     {
         var iconData = new NOTIFYICONDATA
@@ -124,7 +89,7 @@ public sealed unsafe partial class NotifyIcon
         Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_REBUILD, 0, 0);
     }
 
-    private nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
+    private unsafe nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
     {
         switch (msg)
         {
@@ -135,7 +100,7 @@ public sealed unsafe partial class NotifyIcon
                 {
                     Native.SetForegroundWindow(hWnd);
                     Native.GetCursorPos(out var point);
-                    Native.TrackPopupMenu(trayMenu, Native.TPM_RIGHTBUTTON | 0x0004, point.x, point.y, 0, hWnd, 0);
+                    Native.TrackPopupMenu(trayMenu, Native.TPM_RIGHTBUTTON, point.x, point.y, 0, hWnd, 0);
                 }
                 break;
 
@@ -147,14 +112,83 @@ public sealed unsafe partial class NotifyIcon
                 }
                 break;
 
-            case Native.WM_APP_TRAYICON_TOOLTIP: UpdateToolTip(ToolTip); break;
+            case Native.WM_APP_TRAYICON_TOOLTIP:
+                var iconData = new NOTIFYICONDATA
+                {
+                    cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
+                    hWnd = hWnd,
+                    uID = Native.ID_TRAY_ICON,
+                    uFlags = Native.NIF_TIP,
+                };
+
+                var tipPtr = iconData.szTip;
+                for (int i = 0; i < NOTIFYICONDATA.SZTIP_BYTE_SIZE; i++)
+                {
+                    tipPtr[i] = 0;
+                }
+
+                var bytes = Encoding.Unicode.GetBytes(ToolTip);
+                Marshal.Copy(bytes, 0, (nint)iconData.szTip, Math.Min(bytes.Length, NOTIFYICONDATA.SZTIP_BYTE_SIZE - 2));
+
+                Native.Shell_NotifyIcon(Native.NIM_MODIFY, ref iconData);
+                break;
 
             case Native.WM_APP_TRAYICON_REBUILD:
                 menuRefreshQueued = false;
-                RebuildMenu(MenuItems);
+
+                if (trayMenu != nint.Zero)
+                {
+                    Native.DestroyMenu(trayMenu);
+                    trayMenu = nint.Zero;
+                }
+                trayMenu = Native.CreatePopupMenu();
+
+                _menuActions.Clear();
+                _subMenus.Clear();
+
+                nextCommandId = 1000;
+                BuildMenu(trayMenu, MenuItems);
+
                 return nint.Zero;
+
+            case Native.WM_APP_TRAYICON_QUIT:
+                Native.PostQuitMessage(0);
+                break;
         }
 
         return Native.DefWindowProc(hWnd, msg, wParam, lParam);
+    }
+
+    private static NotifyIcon Run(nint iconHandle, bool needIconDestroy, CancellationToken cancellationToken)
+    {
+        using (var manualLock = new ManualResetEventSlim(false))
+        {
+            var icon = new NotifyIcon(iconHandle, needIconDestroy, manualLock.Set, cancellationToken);
+
+            manualLock.Wait(cancellationToken);
+
+            return icon;
+        }
+    }
+
+    private static async Task<NotifyIcon> RunAsync(nint iconHandle, bool needIconDestroy, CancellationToken cancellationToken)
+    {
+        var manualLock = new AsyncManualResetEvent(false);
+
+        var icon = new NotifyIcon(iconHandle, needIconDestroy, manualLock.Set, cancellationToken);
+
+        await manualLock.WaitAsync(cancellationToken);
+
+        return icon;
+    }
+
+    private static nint PrepareIconHandle(string icoPath)
+    {
+        if (!File.Exists(icoPath)) throw new FileNotFoundException("The .ico file could not be found", icoPath);
+
+        var handle = Native.LoadImage(nint.Zero, icoPath, Native.IMAGE_ICON, 0, 0, Native.LR_LOADFROMFILE);
+        if (handle == nint.Zero) throw new FileLoadException("The .ico file could not be loaded", icoPath);
+
+        return handle;
     }
 }

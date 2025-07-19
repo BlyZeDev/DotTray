@@ -4,10 +4,12 @@ using DotTray.Internal;
 using DotTray.Internal.Win32;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Threading;
+using System.Threading.Tasks;
 
+[SupportedOSPlatform("Windows")]
 public sealed partial class NotifyIcon : IDisposable
 {
     private const string WindowClassName = $"{nameof(DotTray)}NotifyIconWindow";
@@ -27,31 +29,11 @@ public sealed partial class NotifyIcon : IDisposable
     private bool menuRefreshQueued;
     private int nextCommandId;
 
-    private IEnumerable<IMenuItem>? menuItems;
-    public IEnumerable<IMenuItem> MenuItems
-    {
-        get => menuItems ?? [];
-        set
-        {
-            menuItems = value;
-            Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_REBUILD, 0, 0);
-        }
-    }
+    public IEnumerable<IMenuItem> MenuItems { get; private set; }
 
-    private string? toolTip;
-    public string ToolTip
-    {
-        get => toolTip ?? "";
-        set
-        {
-            if (toolTip == value) return;
+    public string ToolTip { get; private set; }
 
-            toolTip = value;
-            Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_TOOLTIP, 0, 0);
-        }
-    }
-
-    private NotifyIcon(nint iconHandle, bool needIconDestroy, CancellationToken cancellationToken)
+    private NotifyIcon(nint iconHandle, bool needIconDestroy, Action onInitializationFinished, CancellationToken cancellationToken)
     {
         _iconHandle = iconHandle;
         _needsIconDestroy = needIconDestroy;
@@ -61,6 +43,9 @@ public sealed partial class NotifyIcon : IDisposable
 
         menuRefreshQueued = false;
         nextCommandId = 1000;
+
+        MenuItems = [];
+        ToolTip = "";
 
         _trayLoopThread = new Thread(() =>
         {
@@ -80,27 +65,53 @@ public sealed partial class NotifyIcon : IDisposable
 
             Native.SetWindowLongPtr(hWnd, Native.GWLP_USERDATA, GCHandle.ToIntPtr(thisHandle));
 
+            onInitializationFinished();
+
             ShowIcon();
 
-            if (menuItems is not null) Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_REBUILD, 0, 0);
-            if (toolTip is not null) Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_TOOLTIP, 0, 0);
-
-            using (var registration = cancellationToken.Register(() => Native.PostMessage(hWnd, Native.WM_QUIT, 0, 0)))
+            using (var registration = cancellationToken.Register(() => Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_QUIT, 0, 0)))
             {
-                while (Native.GetMessage(out var message, hWnd, 0, 0))
+                Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_REBUILD, 0, 0);
+                Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_TOOLTIP, 0, 0);
+
+                while (Native.GetMessage(out var message, nint.Zero, 0, 0))
                 {
-                    Native.TranslateMessage(ref message);
-                    Native.DispatchMessage(ref message);
+                    if (hWnd == message.hwnd)
+                    {
+                        Native.TranslateMessage(ref message);
+                        Native.DispatchMessage(ref message);
+                    }
                 }
             }
         });
+        _trayLoopThread.SetApartmentState(ApartmentState.STA);
         _trayLoopThread.Start();
+    }
+
+    public void SetMenuItems(IEnumerable<IMenuItem> menuItems)
+    {
+        MenuItems = menuItems;
+        Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_REBUILD, 0, 0);
+
+        MonitorMenuItems(MenuItems);
+    }
+
+    public void SetToolTip(string toolTip)
+    {
+        if (ToolTip.Equals(toolTip, StringComparison.Ordinal)) return;
+
+        ToolTip = toolTip;
+        Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_TOOLTIP, 0, 0);
     }
 
     public void Dispose()
     {
+        Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_QUIT, 0, 0);
+
         RemoveIcon();
         MonitorMenuItems(MenuItems, true);
+
+        if (_trayLoopThread.IsAlive) _trayLoopThread.Join();
 
         if (_needsIconDestroy) Native.DestroyIcon(_iconHandle);
 
@@ -121,23 +132,25 @@ public sealed partial class NotifyIcon : IDisposable
             Native.UnregisterClass(WindowClassName, instanceHandle);
             instanceHandle = nint.Zero;
         }
-
-        if (_trayLoopThread.IsAlive) _trayLoopThread.Join();
     }
 
     public static NotifyIcon Run(string icoPath, CancellationToken cancellationToken)
     {
-        if (!File.Exists(icoPath)) throw new FileNotFoundException("The .ico file could not be found", icoPath);
+        var iconHandle = PrepareIconHandle(icoPath);
 
-        var handle = Native.LoadImage(nint.Zero, icoPath, Native.IMAGE_ICON, 0, 0, Native.LR_LOADFROMFILE);
-        if (handle == nint.Zero) throw new FileLoadException("The .ico file could not be loaded", icoPath);
-
-        return Run(handle, true, cancellationToken);
+        return Run(iconHandle, true, cancellationToken);
     }
 
     public static NotifyIcon Run(nint iconHandle, CancellationToken cancellationToken)
         => Run(iconHandle, false, cancellationToken);
 
-    private static NotifyIcon Run(nint iconHandle, bool needIconDestroy, CancellationToken cancellationToken)
-        => new NotifyIcon(iconHandle, needIconDestroy, cancellationToken);
+    public static Task<NotifyIcon> RunAsync(string icoPath, CancellationToken cancellationToken)
+    {
+        var iconHandle = PrepareIconHandle(icoPath);
+
+        return RunAsync(iconHandle, true, cancellationToken);
+    }
+
+    public static Task<NotifyIcon> RunAsync(nint iconHandle, CancellationToken cancellationToken)
+        => RunAsync(iconHandle, false, cancellationToken);
 }

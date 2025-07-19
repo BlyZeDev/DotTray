@@ -1,13 +1,13 @@
 ﻿namespace DotTrayTests;
 
 using DotTray;
+using System.Runtime.Versioning;
 
 sealed class Program
 {
+    [SupportedOSPlatform("windows")]
     static async Task Main()
     {
-        await Task.Yield();
-
         var cts = new CancellationTokenSource();
         IEnumerable<IMenuItem> menuItems =
         [
@@ -45,9 +45,9 @@ sealed class Program
             }
         ];
 
-        var tray = NotifyIcon.Run(nint.Zero, cts.Token);
-        tray.ToolTip = "Test ToolTip";
-        tray.MenuItems = menuItems;
+        var tray = await NotifyIcon.RunAsync(nint.Zero, cts.Token);
+        tray.SetToolTip("Test ToolTip");
+        tray.SetMenuItems(menuItems);
 
         Console.WriteLine("End is reached!");
 

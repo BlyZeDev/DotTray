@@ -11,13 +11,13 @@ internal static class Native
 
     public const int GWLP_USERDATA = -21;
 
-    public const int WM_QUIT = 0x0012;
     public const int WM_COMMAND = 0x0111;
 
     public const int WM_APP = 0x8000;
     public const uint WM_APP_TRAYICON = WM_APP + 1;
     public const uint WM_APP_TRAYICON_TOOLTIP = WM_APP + 2;
     public const uint WM_APP_TRAYICON_REBUILD = WM_APP + 3;
+    public const uint WM_APP_TRAYICON_QUIT = WM_APP + 100;
 
     public const int WM_LBUTTONUP = 0x202;
     public const int WM_RBUTTONUP = 0x205;
@@ -88,6 +88,9 @@ internal static class Native
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool PostMessage(nint hWnd, uint Msg, nint wParam, nint lParam);
+
+    [DllImport(User32, SetLastError = true)]
+    public static extern void PostQuitMessage(int nExitCode);
 
     [DllImport(User32, SetLastError = true)]
     public static extern nint SendMessage(nint hWnd, int Msg, nint wParam, nint lParam);
