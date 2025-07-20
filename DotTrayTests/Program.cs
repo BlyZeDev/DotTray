@@ -9,7 +9,7 @@ sealed class Program
     static async Task Main()
     {
         var cts = new CancellationTokenSource();
-        IEnumerable<IMenuItem> menuItems =
+        MenuItemCollection menuItems =
         [
             new MenuItem
             {
@@ -45,11 +45,18 @@ sealed class Program
             }
         ];
 
-        var tray = await NotifyIcon.RunAsync(nint.Zero, cts.Token);
-        tray.SetToolTip("Test ToolTip");
-        tray.SetMenuItems(menuItems);
+        var tray = await NotifyIcon.RunAsync(@"C:\Users\leons\OneDrive\Desktop\!Programmierung\NuGetPackages\ConsoleMenu\icon.ico", menuItems, cts.Token);
+        tray.SetToolTip("🔔 This is a long string with emoji 😊 and more");
 
-        Console.WriteLine("End is reached!");
+        Console.ReadLine();
+
+        tray.MenuItems.Insert(tray.MenuItems.Count - 1, new MenuItem { Text = "New Item test" });
+        tray.ShowBalloon(new BalloonNotification
+        {
+            Icon = BalloonNotificationIcon.None,
+            Title = "Error - Something went wrong",
+            Message = "You have done something wrong. You're cooked :("
+        });
 
         Console.ReadLine();
 

@@ -3,11 +3,11 @@
 using System.Runtime.InteropServices;
 
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-internal unsafe struct NOTIFYICONDATA
+internal struct NOTIFYICONDATA
 {
-    public const int SZTIP_BYTE_SIZE = 128;
-    public const int SZINFO_BYTE_SIZE = 256;
-    public const int SZINFOTITLE_BYTE_SIZE = 64;
+    public const int SZTIP_LENGTH = 128;
+    public const int SZINFO_LENGTH = 256;
+    public const int SZINFOTITLE_LENGTH = 64;
 
     public uint cbSize;
     public nint hWnd;
@@ -15,11 +15,14 @@ internal unsafe struct NOTIFYICONDATA
     public uint uFlags;
     public uint uCallbackMessage;
     public nint hIcon;
-    public fixed byte szTip[SZTIP_BYTE_SIZE];
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = SZTIP_LENGTH)]
+    public string szTip;
     public uint dwState;
     public uint dwStateMask;
-    public fixed byte szInfo[SZINFO_BYTE_SIZE];
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = SZINFO_LENGTH)]
+    public string szInfo;
     public uint uTimeoutOrVersion;
-    public fixed byte szInfoTitle[SZINFOTITLE_BYTE_SIZE];
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = SZINFOTITLE_LENGTH)]
+    public string szInfoTitle;
     public uint dwInfoFlags;
 }

@@ -1,16 +1,20 @@
 ﻿namespace DotTray;
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
+/// <summary>
+/// Represents a <see cref="NotifyIcon"/> menu item
+/// </summary>
 public sealed record MenuItem : IMenuItem
 {
     private string text;
     private bool? isChecked;
     private bool isDisabled;
-    private IReadOnlyList<IMenuItem>? subMenu;
 
+    /// <summary>
+    /// The displayed text
+    /// </summary>
     public required string Text
     {
         get => text;
@@ -24,6 +28,10 @@ public sealed record MenuItem : IMenuItem
         }
     }
 
+    /// <summary>
+    /// <see langword="true"/> if this <see cref="MenuItem"/> is checked, otherwise <see langword="false"/>.
+    /// <see langword="null"/> if this <see cref="MenuItem"/> is not checkable.<br/>
+    /// </summary>
     public bool? IsChecked
     {
         get => isChecked;
@@ -36,6 +44,9 @@ public sealed record MenuItem : IMenuItem
         }
     }
 
+    /// <summary>
+    /// <see langword="true"/> if this <see cref="MenuItem"/> is disabled, otherwise <see langword="false"/>
+    /// </summary>
     public bool IsDisabled
     {
         get => isDisabled;
@@ -48,17 +59,15 @@ public sealed record MenuItem : IMenuItem
         }
     }
 
+    /// <summary>
+    /// The <see cref="Action{T1, T2}"/> to invoke if this <see cref="MenuItem"/> is clicked
+    /// </summary>
     public Action<MenuItem, NotifyIcon>? Click { get; set; }
 
-    public IReadOnlyList<IMenuItem>? SubMenu
-    {
-        get => subMenu;
-        set
-        {
-            subMenu = value;
-            Changed?.Invoke();
-        }
-    }
+    /// <summary>
+    /// The sub menu items of this <see cref="MenuItem"/>
+    /// </summary>
+    public MenuItemCollection SubMenu { get; init; } = [];
 
     internal event Action? Changed;
 }

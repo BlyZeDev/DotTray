@@ -15,8 +15,10 @@ internal static class Native
 
     public const int WM_APP = 0x8000;
     public const uint WM_APP_TRAYICON = WM_APP + 1;
-    public const uint WM_APP_TRAYICON_TOOLTIP = WM_APP + 2;
-    public const uint WM_APP_TRAYICON_REBUILD = WM_APP + 3;
+    public const uint WM_APP_TRAYICON_ICON = WM_APP + 2;
+    public const uint WM_APP_TRAYICON_TOOLTIP = WM_APP + 3;
+    public const uint WM_APP_TRAYICON_BALLOON = WM_APP + 4;
+    public const uint WM_APP_TRAYICON_REBUILD = WM_APP + 99;
     public const uint WM_APP_TRAYICON_QUIT = WM_APP + 100;
 
     public const int WM_LBUTTONUP = 0x202;
@@ -31,6 +33,15 @@ internal static class Native
     public const uint NIF_MESSAGE = 0x00000001;
     public const uint NIF_ICON = 0x00000002;
     public const uint NIF_TIP = 0x00000004;
+    public const uint NIF_INFO = 0x00000010;
+
+    public const uint NIIF_NONE = 0x00000000;
+    public const uint NIIF_INFO = 0x00000001;
+    public const uint NIIF_WARNING = 0x00000002;
+    public const uint NIIF_ERROR = 0x00000003;
+    public const uint NIIF_USER = 0x00000004;
+    public const uint NIIF_NOSOUND = 0x00000010;
+    public const uint NIIF_LARGE_ICON = 0x00000020;
 
     public const uint NIM_ADD = 0x00000000;
     public const uint NIM_MODIFY = 0x00000001;
@@ -91,9 +102,6 @@ internal static class Native
 
     [DllImport(User32, SetLastError = true)]
     public static extern void PostQuitMessage(int nExitCode);
-
-    [DllImport(User32, SetLastError = true)]
-    public static extern nint SendMessage(nint hWnd, int Msg, nint wParam, nint lParam);
 
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
