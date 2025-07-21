@@ -5,6 +5,30 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Authors>BlyZe</Authors>
+    <Title>DotTray</Title>
+    <Description>Lightweight Windows notification icon</Description>
+    <Copyright></Copyright>
+    <PackageProjectUrl>https://github.com/BlyZeDev/DotTray</PackageProjectUrl>
+    <PackageIcon>icon.png</PackageIcon>
+    <RepositoryUrl>https://github.com/BlyZeDev/DotTray</RepositoryUrl>
+    <PackageTags>notify;notifyicon;notification;notificationicon;blyze;blyzedev</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <IncludeSymbols>True</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="icon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
 </Project>

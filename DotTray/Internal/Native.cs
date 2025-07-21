@@ -41,7 +41,6 @@ internal static class Native
     public const uint NIIF_ERROR = 0x00000003;
     public const uint NIIF_USER = 0x00000004;
     public const uint NIIF_NOSOUND = 0x00000010;
-    public const uint NIIF_LARGE_ICON = 0x00000020;
 
     public const uint NIM_ADD = 0x00000000;
     public const uint NIM_MODIFY = 0x00000001;

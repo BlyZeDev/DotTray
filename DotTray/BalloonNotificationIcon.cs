@@ -22,5 +22,9 @@ public enum BalloonNotificationIcon : uint
     /// <summary>
     /// An error icon is shown
     /// </summary>
-    Error = Native.NIIF_ERROR
+    Error = Native.NIIF_ERROR,
+    /// <summary>
+    /// The icon of the <see cref="NotifyIcon"/> is shown
+    /// </summary>
+    User = Native.NIIF_USER
 }

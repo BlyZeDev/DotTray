@@ -105,6 +105,34 @@ public sealed partial class NotifyIcon : IDisposable
                         Native.DispatchMessage(ref message);
                     }
                 }
+
+                iconData = new NOTIFYICONDATA
+                {
+                    cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
+                    hWnd = hWnd,
+                    uID = Native.ID_TRAY_ICON
+                };
+                Native.Shell_NotifyIcon(Native.NIM_DELETE, ref iconData);
+
+                if (needsIcoDestroy) Native.DestroyIcon(icoHandle);
+
+                if (trayMenu != nint.Zero)
+                {
+                    Native.DestroyMenu(trayMenu);
+                    trayMenu = nint.Zero;
+                }
+
+                if (hWnd != nint.Zero)
+                {
+                    Native.SetWindowLongPtr(hWnd, Native.GWLP_USERDATA, nint.Zero);
+                    if (thisHandle.IsAllocated) thisHandle.Free();
+
+                    Native.DestroyWindow(hWnd);
+                    hWnd = nint.Zero;
+
+                    Native.UnregisterClass(WindowClassName, instanceHandle);
+                    instanceHandle = nint.Zero;
+                }
             }
         });
         _trayLoopThread.SetApartmentState(ApartmentState.STA);
@@ -168,35 +196,7 @@ public sealed partial class NotifyIcon : IDisposable
         MonitorMenuItems(MenuItems, true);
         Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_QUIT, 0, 0);
 
-        var iconData = new NOTIFYICONDATA
-        {
-            cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
-            hWnd = hWnd,
-            uID = Native.ID_TRAY_ICON
-        };
-        Native.Shell_NotifyIcon(Native.NIM_DELETE, ref iconData);
-
         if (_trayLoopThread.IsAlive) _trayLoopThread.Join();
-
-        if (needsIcoDestroy) Native.DestroyIcon(icoHandle);
-
-        if (trayMenu != nint.Zero)
-        {
-            Native.DestroyMenu(trayMenu);
-            trayMenu = nint.Zero;
-        }
-
-        if (hWnd != nint.Zero)
-        {
-            Native.SetWindowLongPtr(hWnd, Native.GWLP_USERDATA, nint.Zero);
-            if (thisHandle.IsAllocated) thisHandle.Free();
-
-            Native.DestroyWindow(hWnd);
-            hWnd = nint.Zero;
-
-            Native.UnregisterClass(WindowClassName, instanceHandle);
-            instanceHandle = nint.Zero;
-        }
     }
 
     /// <summary>

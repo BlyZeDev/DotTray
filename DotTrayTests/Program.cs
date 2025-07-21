@@ -53,9 +53,10 @@ sealed class Program
         tray.MenuItems.Insert(tray.MenuItems.Count - 1, new MenuItem { Text = "New Item test" });
         tray.ShowBalloon(new BalloonNotification
         {
-            Icon = BalloonNotificationIcon.None,
+            Icon = BalloonNotificationIcon.User,
             Title = "Error - Something went wrong",
-            Message = "You have done something wrong. You're cooked :("
+            Message = "You have done something wrong. You're cooked :(",
+            NoSound = false
         });
 
         Console.ReadLine();

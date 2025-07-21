@@ -3,10 +3,8 @@
 using DotTray.Internal;
 using DotTray.Internal.Win32;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -89,10 +87,7 @@ public sealed partial class NotifyIcon
             case Native.WM_COMMAND:
                 {
                     var command = (int)(wParam & 0xFFFF);
-                    if (_menuActions.TryGetValue(command, out var action))
-                    {
-                        action.Invoke();
-                    }
+                    if (_menuActions.TryGetValue(command, out var action)) action();
                 }
                 break;
 
@@ -142,11 +137,14 @@ public sealed partial class NotifyIcon
                         cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                         hWnd = hWnd,
                         uID = Native.ID_TRAY_ICON,
+                        hIcon = (nextBalloon.Icon is BalloonNotificationIcon.User) ? icoHandle : nint.Zero,
                         uFlags = Native.NIF_INFO,
-                        dwInfoFlags = (uint)nextBalloon.Icon,
+                        dwInfoFlags = (uint)nextBalloon.Icon | (nextBalloon.NoSound ? Native.NIIF_NOSOUND : 0),
                         szInfoTitle = nextBalloon.Title,
                         szInfo = nextBalloon.Message
                     };
+
+                    nextBalloon = null;
 
                     Native.Shell_NotifyIcon(Native.NIM_MODIFY, ref iconData);
                 }
@@ -206,8 +204,6 @@ public sealed partial class NotifyIcon
         if (!File.Exists(icoPath)) throw new FileNotFoundException("The .ico file could not be found", icoPath);
 
         var handle = Native.LoadImage(nint.Zero, icoPath, Native.IMAGE_ICON, 0, 0, Native.LR_LOADFROMFILE);
-        if (handle == nint.Zero) throw new FileLoadException("The .ico file could not be loaded", icoPath);
-
-        return handle;
+        return handle == nint.Zero ? throw new FileLoadException("The .ico file could not be loaded", icoPath) : handle;
     }
 }

@@ -39,7 +39,7 @@ public sealed record BalloonNotification
     /// <summary>
     /// The icon of the notification
     /// </summary>
-    public required BalloonNotificationIcon Icon
+    public BalloonNotificationIcon Icon
     {
         get => _icon;
         init
@@ -47,4 +47,12 @@ public sealed record BalloonNotification
             if (Enum.IsDefined(value)) _icon = value;
         }
     }
+
+    /// <summary>
+    /// <see langword="true"/> if no sound should be played, otherwise <see langword="false"/>
+    /// </summary>
+    /// <remarks>
+    /// The default is <see langword="false"/>
+    /// </remarks>
+    public bool NoSound { get; init; } = false;
 }
