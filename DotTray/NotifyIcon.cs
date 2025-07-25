@@ -22,9 +22,11 @@ using System.Threading.Tasks;
 [SupportedOSPlatform("Windows")]
 public sealed partial class NotifyIcon : IDisposable
 {
-    private const string WindowClassName = $"{nameof(DotTray)}NotifyIconWindow";
+    private static uint nextTrayId;
 
+    private readonly string _windowClassName;
     private readonly Thread _trayLoopThread;
+    private readonly uint _trayId;
 
     private readonly Dictionary<int, Action> _menuActions;
     private readonly Dictionary<string, nint> _subMenus;
@@ -56,6 +58,10 @@ public sealed partial class NotifyIcon : IDisposable
         this.icoHandle = icoHandle;
         this.needsIcoDestroy = needsIcoDestroy;
 
+        nextTrayId++;
+        _trayId = nextTrayId;
+        _windowClassName = $"{nameof(DotTray)}NotifyIconWindow{_trayId}";
+
         _menuActions = [];
         _subMenus = [];
 
@@ -76,11 +82,11 @@ public sealed partial class NotifyIcon : IDisposable
             {
                 lpfnWndProc = Marshal.GetFunctionPointerForDelegate(wndProc),
                 hInstance = instanceHandle,
-                lpszClassName = WindowClassName
+                lpszClassName = _windowClassName
             };
             Native.RegisterClass(ref wndClass);
 
-            hWnd = Native.CreateWindowEx(0, WindowClassName, "", 0, 0, 0, 0, 0, 0, 0, instanceHandle, 0);
+            hWnd = Native.CreateWindowEx(0, _windowClassName, "", 0, 0, 0, 0, 0, 0, 0, instanceHandle, 0);
             thisHandle = GCHandle.Alloc(this, GCHandleType.Normal);
 
             Native.SetWindowLongPtr(hWnd, Native.GWLP_USERDATA, GCHandle.ToIntPtr(thisHandle));
@@ -91,7 +97,7 @@ public sealed partial class NotifyIcon : IDisposable
             {
                 cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                 hWnd = hWnd,
-                uID = Native.ID_TRAY_ICON, //TODO: Allow multiple TrayIcons at once by using a unique ID for every running instance
+                uID = _trayId,
                 uFlags = Native.NIF_MESSAGE | Native.NIF_ICON,
                 uCallbackMessage = Native.WM_APP_TRAYICON,
                 hIcon = icoHandle
@@ -116,7 +122,7 @@ public sealed partial class NotifyIcon : IDisposable
                 {
                     cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                     hWnd = hWnd,
-                    uID = Native.ID_TRAY_ICON
+                    uID = _trayId
                 };
                 Native.Shell_NotifyIcon(Native.NIM_DELETE, ref iconData);
 
@@ -136,7 +142,7 @@ public sealed partial class NotifyIcon : IDisposable
                     Native.DestroyWindow(hWnd);
                     hWnd = nint.Zero;
 
-                    Native.UnregisterClass(WindowClassName, instanceHandle);
+                    Native.UnregisterClass(_windowClassName, instanceHandle);
                     instanceHandle = nint.Zero;
                 }
             }
@@ -203,6 +209,8 @@ public sealed partial class NotifyIcon : IDisposable
         Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_QUIT, 0, 0);
 
         if (_trayLoopThread.IsAlive) _trayLoopThread.Join();
+
+        nextTrayId--;
     }
 
     /// <summary>

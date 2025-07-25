@@ -69,5 +69,21 @@ public sealed record MenuItem : IMenuItem
     /// </summary>
     public MenuItemCollection SubMenu { get; init; } = [];
 
+    [SetsRequiredMembers]
+    private MenuItem(MenuItem instance)
+    {
+        Text = instance.Text;
+        IsChecked = instance.IsChecked;
+        IsDisabled = instance.IsDisabled;
+        Click = instance.Click;
+        SubMenu = instance.SubMenu.Copy();
+    }
+
+    /// <summary>
+    /// Creates a deep copy of this <see cref="MenuItem"/> instance
+    /// </summary>
+    /// <returns><see cref="MenuItem"/></returns>
+    public MenuItem Copy() => new MenuItem(this);
+
     internal event Action? Changed;
 }

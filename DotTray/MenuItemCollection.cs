@@ -96,6 +96,23 @@ public sealed class MenuItemCollection : IList<IMenuItem>
         EntriesChanged?.Invoke();
     }
 
+    /// <summary>
+    /// Creates a deep copy of this <see cref="MenuItemCollection"/> instance
+    /// </summary>
+    /// <returns><see cref="MenuItemCollection"/></returns>
+    public MenuItemCollection Copy()
+    {
+        var cloned = new MenuItemCollection();
+
+        foreach (var item in _items)
+        {
+            if (item is MenuItem menuItem) cloned.Add(menuItem.Copy());
+            else cloned.Add(item);
+        }
+
+        return cloned;
+    }
+
     /// <inheritdoc/>
     public IEnumerator<IMenuItem> GetEnumerator() => _items.GetEnumerator();
 

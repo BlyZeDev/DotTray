@@ -65,7 +65,7 @@ public sealed partial class NotifyIcon
         Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_REBUILD, 0, 0);
     }
 
-    private void SetIcon(nint icoHandle, bool needsIcoDestroy) => Native.PostMessage(hWnd, Native.ID_TRAY_ICON, icoHandle, needsIcoDestroy ? 1 : 0);
+    private void SetIcon(nint icoHandle, bool needsIcoDestroy) => Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_ICON, icoHandle, needsIcoDestroy ? 1 : 0);
 
     private unsafe nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
     {
@@ -91,7 +91,7 @@ public sealed partial class NotifyIcon
                 }
                 break;
 
-            case Native.ID_TRAY_ICON:
+            case Native.WM_APP_TRAYICON_ICON:
                 {
                     var newIco = wParam;
                     var newNeedsIcoDestroy = lParam != 0;
@@ -100,7 +100,7 @@ public sealed partial class NotifyIcon
                     {
                         cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                         hWnd = hWnd,
-                        uID = Native.ID_TRAY_ICON,
+                        uID = _trayId,
                         uFlags = Native.NIF_ICON,
                         uCallbackMessage = Native.WM_APP_TRAYICON,
                         hIcon = newIco
@@ -120,7 +120,7 @@ public sealed partial class NotifyIcon
                     {
                         cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                         hWnd = hWnd,
-                        uID = Native.ID_TRAY_ICON,
+                        uID = _trayId,
                         uFlags = Native.NIF_TIP,
                         szTip = ToolTip
                     };
@@ -136,7 +136,7 @@ public sealed partial class NotifyIcon
                     {
                         cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                         hWnd = hWnd,
-                        uID = Native.ID_TRAY_ICON,
+                        uID = _trayId,
                         hIcon = (nextBalloon.Icon is BalloonNotificationIcon.User) ? icoHandle : nint.Zero,
                         uFlags = Native.NIF_INFO,
                         dwInfoFlags = (uint)nextBalloon.Icon | (nextBalloon.NoSound ? Native.NIIF_NOSOUND : 0),
