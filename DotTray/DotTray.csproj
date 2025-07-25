@@ -18,6 +18,9 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Version>1.1.0</Version>
+    <PackageReleaseNotes>- Now supports multiple icons running simultaniously
+- Added deep cloning for MenuItem and MenuItemCollection</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
