@@ -13,6 +13,12 @@ using System.Threading.Tasks;
 /// <summary>
 /// Represents a Notification Icon that is displayed in the Taskbar
 /// </summary>
+/// <remarks>
+/// Due to the fact that the Windows notification icon size is 16x16,
+/// it is recommended that the icon contains a 16x16 variant.<br/>
+/// If no 16x16 variant is available,
+/// the quality can suffer greatly as it then has to be scaled from another existing size.
+/// </remarks>
 [SupportedOSPlatform("Windows")]
 public sealed partial class NotifyIcon : IDisposable
 {
@@ -85,7 +91,7 @@ public sealed partial class NotifyIcon : IDisposable
             {
                 cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                 hWnd = hWnd,
-                uID = Native.ID_TRAY_ICON,
+                uID = Native.ID_TRAY_ICON, //TODO: Allow multiple TrayIcons at once by using a unique ID for every running instance
                 uFlags = Native.NIF_MESSAGE | Native.NIF_ICON,
                 uCallbackMessage = Native.WM_APP_TRAYICON,
                 hIcon = icoHandle

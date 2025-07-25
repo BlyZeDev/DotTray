@@ -48,8 +48,6 @@ internal static class Native
 
     public const uint TPM_RIGHTBUTTON = 0x0002;
 
-    public const int ID_TRAY_ICON = 1000;
-
     public const uint IMAGE_ICON = 1;
     public const uint LR_LOADFROMFILE = 0x00000010;
 

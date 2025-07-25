@@ -45,8 +45,10 @@ sealed class Program
             }
         ];
 
-        var tray = await NotifyIcon.RunAsync(@"C:\Users\leons\OneDrive\Desktop\!Programmierung\NuGetPackages\ConsoleMenu\icon.ico", menuItems, cts.Token);
+        var tray = await NotifyIcon.RunAsync(@"C:\Users\leschi\Downloads\test.ico", menuItems, cts.Token);
+        var tray2 = await NotifyIcon.RunAsync(@"C:\Users\leschi\Downloads\test.ico", menuItems, cts.Token);
         tray.SetToolTip("🔔 This is a long string with emoji 😊 and more");
+        tray2.SetToolTip("Second Icon :)");
 
         Console.ReadLine();
 
