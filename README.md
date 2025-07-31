@@ -9,6 +9,7 @@
 - Changing menu items at runtime
 - CancellationToken support to easily tie cancellation to other operations
 - Show detailed balloon notifications with customization options
+- NativeAOT compatible
 
 ## Quickstart
 ```cs
