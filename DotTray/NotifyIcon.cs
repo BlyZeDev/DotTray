@@ -146,6 +146,8 @@ public sealed partial class NotifyIcon : IDisposable
                     instanceHandle = nint.Zero;
                 }
             }
+
+            GC.KeepAlive(wndProc);
         });
         _trayLoopThread.SetApartmentState(ApartmentState.STA);
         _trayLoopThread.Start();
