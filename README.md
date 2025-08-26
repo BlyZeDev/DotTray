@@ -1,6 +1,8 @@
 # DotTray
 ### Show lightweight Windows Notification Icons simple and easy without any dependencies.
 
+[![NuGet](https://img.shields.io/nuget/v/DotTray?style=for-the-badge&logo=nuget&logoColor=white&logoSize=auto&label=NUGET%20Package&labelColor=%23101010&color=white)](https://www.nuget.org/packages/DotTray)
+
 **Current features** - for feature requests just open an issue [here](https://github.com/BlyZeDev/ClipTypr/issues/new?template=enhancement.yml)
 - Fully non-blocking API with async support
 - Easily create multiple icons at once and handle them individually without any complicated code required
