@@ -1,6 +1,7 @@
 ﻿namespace DotTrayTests;
 
 using DotTray;
+using System.Drawing;
 using System.Runtime.Versioning;
 
 sealed class Program
@@ -15,10 +16,10 @@ sealed class Program
             {
                 Text = "Test",
                 IsChecked = true,
-                Click = (sender, args) =>
+                Click = (args) =>
                 {
                     Console.WriteLine("Test");
-                    sender.Text = "Neuer Text";
+                    args.MenuItem.Text = "Neuer Text";
                 }
             },
             SeparatorItem.Instance,
@@ -41,12 +42,14 @@ sealed class Program
             new MenuItem
             {
                 Text = "EXIT",
-                Click = (_, _) => cts.Cancel()
+                Click = _ => cts.Cancel()
             }
         ];
 
-        var tray = await NotifyIcon.RunAsync(@"C:\Users\leons\OneDrive\Desktop\!Programmierung\NuGetPackages\DotTray\DotTray\icon.ico", menuItems, cts.Token);
-        var tray2 = await NotifyIcon.RunAsync(@"C:\Users\leons\OneDrive\Desktop\!Programmierung\NuGetPackages\DotTray\DotTray\icon.ico", menuItems.Copy(), cts.Token);
+        var tempPath = CreateTestIcon() ?? throw new InvalidOperationException("Icon could not be created");
+
+        var tray = await NotifyIcon.RunAsync(tempPath, menuItems, cts.Token);
+        var tray2 = await NotifyIcon.RunAsync(tempPath, menuItems.Copy(), cts.Token);
         tray.SetToolTip("🔔 This is a long string with emoji 😊 and more");
         tray2.SetToolTip("Second Icon :)");
 
@@ -67,5 +70,30 @@ sealed class Program
         tray.Dispose();
 
         Console.ReadLine();
+
+        try
+        {
+            File.Delete(tempPath ?? "");
+        }
+        catch (Exception) { }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static string? CreateTestIcon()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.CreateVersion7()}.ico");
+
+        using (var icon = SystemIcons.GetStockIcon(StockIconId.Error, StockIconOptions.SmallIcon))
+        {
+            if (icon is null) return null;
+
+            using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                icon.Save(fileStream);
+                fileStream.Flush();
+            }
+        }
+
+        return tempPath;
     }
 }

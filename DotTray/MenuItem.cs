@@ -60,9 +60,9 @@ public sealed record MenuItem : IMenuItem
     }
 
     /// <summary>
-    /// The <see cref="Action{T1, T2}"/> to invoke if this <see cref="MenuItem"/> is clicked
+    /// The <see cref="Action{MenuItemClickedArgs}"/> to invoke if this <see cref="MenuItem"/> is clicked
     /// </summary>
-    public Action<MenuItem, NotifyIcon>? Click { get; set; }
+    public Action<MenuItemClickedArgs>? Click { get; set; }
 
     /// <summary>
     /// The sub menu items of this <see cref="MenuItem"/>

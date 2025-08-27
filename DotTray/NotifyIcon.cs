@@ -39,6 +39,7 @@ public sealed partial class NotifyIcon : IDisposable
     private nint hWnd;
     private nint trayMenu;
 
+    private MouseButton lastClickedButton;
     private BalloonNotification? nextBalloon;
     private bool menuRefreshQueued;
     private int nextCommandId;
@@ -51,7 +52,18 @@ public sealed partial class NotifyIcon : IDisposable
     /// <summary>
     /// The <see cref="ToolTip"/> of this <see cref="NotifyIcon"/> instance
     /// </summary>
+    /// <remarks>
+    /// The default value is <see cref="string.Empty"/>
+    /// </remarks>
     public string ToolTip { get; private set; }
+
+    /// <summary>
+    /// The mouse buttons that are allowed to interact with the icon
+    /// </summary>
+    /// <remarks>
+    /// The default value is <see cref="MouseButton.Left"/> | <see cref="MouseButton.Right"/>
+    /// </remarks>
+    public MouseButton MouseButtons { get; set; }
 
     private NotifyIcon(nint icoHandle, bool needsIcoDestroy, MenuItemCollection menuItems, Action onInitializationFinished, CancellationToken cancellationToken)
     {
@@ -65,11 +77,13 @@ public sealed partial class NotifyIcon : IDisposable
         _menuActions = [];
         _subMenus = [];
 
+        lastClickedButton = MouseButton.None;
         menuRefreshQueued = false;
         nextCommandId = 1000;
 
         MenuItems = menuItems;
         ToolTip = "";
+        MouseButtons = MouseButton.Left | MouseButton.Right;
 
         MonitorMenuItems(MenuItems);
 

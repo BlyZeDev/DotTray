@@ -25,7 +25,12 @@ public sealed partial class NotifyIcon
                 else
                 {
                     var id = nextCommandId++;
-                    _menuActions[id] = () => menuItem.Click?.Invoke(menuItem, this);
+                    _menuActions[id] = () => menuItem.Click?.Invoke(new MenuItemClickedArgs
+                    {
+                        Icon = this,
+                        MenuItem = menuItem,
+                        MouseButton = lastClickedButton
+                    });
 
                     var flags = Native.MF_STRING;
                     if (menuItem.IsDisabled) flags |= Native.MF_GRAYED;
@@ -73,13 +78,19 @@ public sealed partial class NotifyIcon
         {
             case Native.WM_APP_TRAYICON:
                 {
-                    var eventCode = (int)lParam;
+                    lastClickedButton = (int)lParam switch
+                    {
+                        Native.WM_LBUTTONUP => MouseButton.Left,
+                        Native.WM_RBUTTONUP => MouseButton.Right,
+                        Native.WM_MBUTTONUP => MouseButton.Middle,
+                        _ => MouseButton.None
+                    };
 
-                    if (eventCode is Native.WM_LBUTTONUP or Native.WM_RBUTTONUP)
+                    if (lastClickedButton is not MouseButton.None &&MouseButtons.HasFlag(lastClickedButton))
                     {
                         Native.SetForegroundWindow(hWnd);
-                        Native.GetCursorPos(out var point);
-                        Native.TrackPopupMenu(trayMenu, Native.TPM_RIGHTBUTTON, point.x, point.y, 0, hWnd, 0);
+                        Native.GetCursorPos(out var pos);
+                        Native.TrackPopupMenu(trayMenu, Native.TPM_RIGHTBUTTON, pos.x, pos.y, 0, hWnd, 0);
                     }
                 }
                 break;

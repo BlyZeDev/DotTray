@@ -23,6 +23,7 @@ internal static class Native
 
     public const int WM_LBUTTONUP = 0x202;
     public const int WM_RBUTTONUP = 0x205;
+    public const int WM_MBUTTONUP = 0x208;
 
     public const uint MF_STRING = 0x0000;
     public const uint MF_POPUP = 0x0010;
