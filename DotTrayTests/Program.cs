@@ -18,7 +18,7 @@ sealed class Program
                 IsChecked = true,
                 Click = (args) =>
                 {
-                    Console.WriteLine("Test");
+                    Console.WriteLine(args.MouseButton);
                     args.MenuItem.Text = "Neuer Text";
                 }
             },
@@ -52,6 +52,9 @@ sealed class Program
         var tray2 = await NotifyIcon.RunAsync(tempPath, menuItems.Copy(), cts.Token);
         tray.SetToolTip("🔔 This is a long string with emoji 😊 and more");
         tray2.SetToolTip("Second Icon :)");
+
+        tray.MouseButtons = MouseButton.Middle;
+        tray.MenuShowing += args => Console.WriteLine("Showing: " + args);
 
         Console.ReadLine();
 

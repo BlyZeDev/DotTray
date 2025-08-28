@@ -29,7 +29,7 @@ public sealed partial class NotifyIcon
                     {
                         Icon = this,
                         MenuItem = menuItem,
-                        MouseButton = lastClickedButton
+                        MouseButton = MouseButton.None //TODO
                     });
 
                     var flags = Native.MF_STRING;
@@ -78,7 +78,7 @@ public sealed partial class NotifyIcon
         {
             case Native.WM_APP_TRAYICON:
                 {
-                    lastClickedButton = (int)lParam switch
+                    var clickedButton = (int)lParam switch
                     {
                         Native.WM_LBUTTONUP => MouseButton.Left,
                         Native.WM_RBUTTONUP => MouseButton.Right,
@@ -86,8 +86,10 @@ public sealed partial class NotifyIcon
                         _ => MouseButton.None
                     };
 
-                    if (lastClickedButton is not MouseButton.None &&MouseButtons.HasFlag(lastClickedButton))
+                    if (clickedButton is not MouseButton.None && MouseButtons.HasFlag(clickedButton))
                     {
+                        MenuShowing?.Invoke(clickedButton);
+
                         Native.SetForegroundWindow(hWnd);
                         Native.GetCursorPos(out var pos);
                         Native.TrackPopupMenu(trayMenu, Native.TPM_RIGHTBUTTON, pos.x, pos.y, 0, hWnd, 0);

@@ -24,7 +24,6 @@ public sealed partial class NotifyIcon : IDisposable
 {
     private static uint nextTrayId;
 
-    private readonly string _windowClassName;
     private readonly Thread _trayLoopThread;
     private readonly uint _trayId;
 
@@ -39,7 +38,6 @@ public sealed partial class NotifyIcon : IDisposable
     private nint hWnd;
     private nint trayMenu;
 
-    private MouseButton lastClickedButton;
     private BalloonNotification? nextBalloon;
     private bool menuRefreshQueued;
     private int nextCommandId;
@@ -65,6 +63,16 @@ public sealed partial class NotifyIcon : IDisposable
     /// </remarks>
     public MouseButton MouseButtons { get; set; }
 
+    /// <summary>
+    /// Fired if the icon menu is showing by clicking <see cref="MouseButtons"/>
+    /// </summary>
+    public event Action<MouseButton>? MenuShowing;
+
+    /// <summary>
+    /// Fired if the icon menu is hiding
+    /// </summary>
+    public event Action? MenuHiding;
+
     private NotifyIcon(nint icoHandle, bool needsIcoDestroy, MenuItemCollection menuItems, Action onInitializationFinished, CancellationToken cancellationToken)
     {
         this.icoHandle = icoHandle;
@@ -72,12 +80,11 @@ public sealed partial class NotifyIcon : IDisposable
 
         nextTrayId++;
         _trayId = nextTrayId;
-        _windowClassName = $"{nameof(DotTray)}NotifyIconWindow{_trayId}";
+        var windowClassName = $"{nameof(DotTray)}NotifyIconWindow{_trayId}";
 
         _menuActions = [];
         _subMenus = [];
 
-        lastClickedButton = MouseButton.None;
         menuRefreshQueued = false;
         nextCommandId = 1000;
 
@@ -96,11 +103,11 @@ public sealed partial class NotifyIcon : IDisposable
             {
                 lpfnWndProc = Marshal.GetFunctionPointerForDelegate(wndProc),
                 hInstance = instanceHandle,
-                lpszClassName = _windowClassName
+                lpszClassName = windowClassName
             };
             Native.RegisterClass(ref wndClass);
 
-            hWnd = Native.CreateWindowEx(0, _windowClassName, "", 0, 0, 0, 0, 0, 0, 0, instanceHandle, 0);
+            hWnd = Native.CreateWindowEx(0, windowClassName, "", 0, 0, 0, 0, 0, 0, 0, instanceHandle, 0);
             thisHandle = GCHandle.Alloc(this, GCHandleType.Normal);
 
             Native.SetWindowLongPtr(hWnd, Native.GWLP_USERDATA, GCHandle.ToIntPtr(thisHandle));
@@ -156,7 +163,7 @@ public sealed partial class NotifyIcon : IDisposable
                     Native.DestroyWindow(hWnd);
                     hWnd = nint.Zero;
 
-                    Native.UnregisterClass(_windowClassName, instanceHandle);
+                    Native.UnregisterClass(windowClassName, instanceHandle);
                     instanceHandle = nint.Zero;
                 }
             }
