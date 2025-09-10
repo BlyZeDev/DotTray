@@ -28,15 +28,20 @@ public sealed partial class NotifyIcon
                     _menuActions[id] = () => menuItem.Click?.Invoke(new MenuItemClickedArgs
                     {
                         Icon = this,
-                        MenuItem = menuItem,
-                        MouseButton = MouseButton.None //TODO
+                        MenuItem = menuItem
                     });
 
-                    var flags = Native.MF_STRING;
-                    if (menuItem.IsDisabled) flags |= Native.MF_GRAYED;
-                    if (menuItem.IsChecked ?? false) flags |= Native.MF_CHECKED;
+                    var handle = GCHandle.Alloc(menuItem, GCHandleType.Normal);
 
-                    Native.AppendMenu(menuHandle, flags, id, menuItem.Text);
+                    Native.AppendMenu(menuHandle, Native.MF_OWNERDRAW, id, null);
+
+                    var menuItemInfo = new MENUITEMINFO
+                    {
+                        cbSize = (uint)Marshal.SizeOf<MENUITEMINFO>(),
+                        fMask = Native.MIIM_DATA,
+                        dwItemData = (nint)handle
+                    };
+                    Native.SetMenuItemInfo(menuHandle, (uint)id, false, ref menuItemInfo);
                 }
             }
             else Native.AppendMenu(menuHandle, Native.MF_SEPARATOR, 0, null!);
@@ -93,6 +98,8 @@ public sealed partial class NotifyIcon
                         Native.SetForegroundWindow(hWnd);
                         Native.GetCursorPos(out var pos);
                         Native.TrackPopupMenu(trayMenu, Native.TPM_RIGHTBUTTON, pos.x, pos.y, 0, hWnd, 0);
+
+                        MenuHiding?.Invoke();
                     }
                 }
                 break;
@@ -103,6 +110,68 @@ public sealed partial class NotifyIcon
                     if (_menuActions.TryGetValue(command, out var action)) action();
                 }
                 break;
+
+            case Native.WM_MEASUREITEM:
+                {
+                    var measureItemStruct = Marshal.PtrToStructure<MEASUREITEMSTRUCT>(lParam);
+                    var menuItem = (MenuItem)GCHandle.FromIntPtr(measureItemStruct.itemData).Target!;
+
+                    var hdc = Native.GetDC(nint.Zero);
+                    if (hdc == nint.Zero)
+                    {
+                        measureItemStruct.itemWidth = 80;
+                        measureItemStruct.itemHeight = 16;
+                    }
+                    else
+                    {
+                        Native.GetTextExtentPoint32(hdc, menuItem.Text, menuItem.Text.Length, out var size);
+                        _ = Native.ReleaseDC(nint.Zero, hdc);
+
+                        measureItemStruct.itemWidth = (uint)(size.cx + 24);
+                        measureItemStruct.itemHeight = (uint)(size.cy + 4);
+                    }
+                    
+                    Marshal.StructureToPtr(measureItemStruct, lParam, true);
+                }
+                return 1;
+
+            case Native.WM_DRAWITEM:
+                {
+                    var drawItemStruct = Marshal.PtrToStructure<DRAWITEMSTRUCT>(lParam);
+                    var menuItem = (MenuItem)GCHandle.FromIntPtr(drawItemStruct.itemData).Target!;
+
+                    var hdc = drawItemStruct.hDC;
+                    var rect = drawItemStruct.rcItem;
+
+                    var backgroundColor = Native.GetSysColorBrush((drawItemStruct.itemState & Native.ODS_SELECTED) != 0 ? Native.COLOR_HIGHLIGHT : Native.COLOR_MENU);
+                    Native.FillRect(hdc, ref rect, backgroundColor);
+
+                    var textColor = Native.GetSysColor((drawItemStruct.itemState & Native.ODS_SELECTED) != 0 ? Native.COLOR_HIGHLIGHTTEXT : Native.COLOR_MENUTEXT);
+                    _ = Native.SetTextColor(hdc, textColor);
+                    _ = Native.SetBkMode(hdc, Native.TRANSPARENT);
+
+                    _ = Native.DrawText(hdc, menuItem.Text, menuItem.Text.Length, ref rect, Native.DT_SINGLELINE | Native.DT_CENTER | Native.DT_LEFT);
+
+                    if (menuItem.IsChecked ?? false)
+                    {
+                        var checkRect = new RECT
+                        {
+                            Left = rect.Left + 2,
+                            Top = rect.Top + 2,
+                            Right = rect.Right + 14,
+                            Bottom = rect.Bottom - 2
+                        };
+                        _ = Native.DrawText(hdc, "✔", 1, ref checkRect, Native.DT_SINGLELINE | Native.DT_VCENTER | Native.DT_LEFT);
+                    }
+                }
+                return 1;
+
+            case Native.WM_DELETEITEM:
+                {
+                    var handle = GCHandle.FromIntPtr(Marshal.PtrToStructure<DELETEITEMSTRUCT>(lParam).itemData);
+                    if (handle.IsAllocated) handle.Free();
+                }
+                return 1;
 
             case Native.WM_APP_TRAYICON_ICON:
                 {

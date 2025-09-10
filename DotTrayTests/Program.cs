@@ -18,7 +18,7 @@ sealed class Program
                 IsChecked = true,
                 Click = (args) =>
                 {
-                    Console.WriteLine(args.MouseButton);
+                    Console.WriteLine(args);
                     args.MenuItem.Text = "Neuer Text";
                 }
             },
@@ -55,6 +55,7 @@ sealed class Program
 
         tray.MouseButtons = MouseButton.Middle;
         tray.MenuShowing += args => Console.WriteLine("Showing: " + args);
+        tray.MenuHiding += () => Console.WriteLine("Hiding");
 
         Console.ReadLine();
 

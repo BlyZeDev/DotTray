@@ -1,6 +1,7 @@
 ﻿namespace DotTray.Internal;
 
 using DotTray.Internal.Win32;
+using System.Drawing;
 using System.Runtime.InteropServices;
 
 internal static class Native
@@ -8,6 +9,7 @@ internal static class Native
     private const string User32 = "user32.dll";
     private const string Kernel32 = "kernel32.dll";
     private const string Shell32 = "shell32.dll";
+    private const string Gdi32 = "gdi32.dll";
 
     public const int GWLP_USERDATA = -21;
 
@@ -21,6 +23,10 @@ internal static class Native
     public const uint WM_APP_TRAYICON_REBUILD = WM_APP + 99;
     public const uint WM_APP_TRAYICON_QUIT = WM_APP + 100;
 
+    public const uint WM_MEASUREITEM = 0x002C;
+    public const uint WM_DRAWITEM = 0x002B;
+    public const uint WM_DELETEITEM = 0x002D;
+
     public const int WM_LBUTTONUP = 0x202;
     public const int WM_RBUTTONUP = 0x205;
     public const int WM_MBUTTONUP = 0x208;
@@ -30,6 +36,18 @@ internal static class Native
     public const uint MF_SEPARATOR = 0x0800;
     public const uint MF_GRAYED = 0x0001;
     public const uint MF_CHECKED = 0x0008;
+    public const uint MF_OWNERDRAW = 0x0100;
+
+    public const int ODS_SELECTED = 0x0001;
+    public const int ODS_GRAYED = 0x0002;
+    public const int ODS_DISABLED = 0x0004;
+    public const int ODS_CHECKED = 0x0008;
+    public const int ODS_FOCUS = 0x0010;
+    public const int ODS_DEFAULT = 0x0020;
+    public const int ODS_HOTLIGHT = 0x0040;
+    public const int ODS_INACTIVE = 0x0080;
+    public const int ODS_NOACCEL = 0x0100;
+    public const int ODS_NOFOCUSRECT = 0x0200;
 
     public const uint NIF_MESSAGE = 0x00000001;
     public const uint NIF_ICON = 0x00000002;
@@ -43,9 +61,24 @@ internal static class Native
     public const uint NIIF_USER = 0x00000004;
     public const uint NIIF_NOSOUND = 0x00000010;
 
+    public const uint MIIM_DATA = 0x00000020;
+
     public const uint NIM_ADD = 0x00000000;
     public const uint NIM_MODIFY = 0x00000001;
     public const uint NIM_DELETE = 0x00000002;
+
+    public const int TRANSPARENT = 1;
+
+    public const uint DT_LEFT = 0x0000;
+    public const uint DT_CENTER = 0x0001;
+    public const uint DT_RIGHT = 0x0002;
+    public const uint DT_VCENTER = 0x0004;
+    public const uint DT_SINGLELINE = 0x0020;
+
+    public const int COLOR_MENU = 4;
+    public const int COLOR_MENUTEXT = 7;
+    public const int COLOR_HIGHLIGHT = 13;
+    public const int COLOR_HIGHLIGHTTEXT = 14;
 
     public const uint TPM_RIGHTBUTTON = 0x0002;
 
@@ -81,7 +114,10 @@ internal static class Native
     public static extern bool TrackPopupMenu(nint hMenu, uint flags, int x, int y, int r, nint hWnd, nint rect);
 
     [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern bool AppendMenu(nint hMenu, uint uFlags, nint uIDNewItem, string lpNewItem);
+    public static extern bool AppendMenu(nint hMenu, uint uFlags, nint uIDNewItem, string? lpNewItem);
+
+    [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern bool SetMenuItemInfo(nint hMenu, uint uItem, bool fByPosition, ref MENUITEMINFO lpmii);
 
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -122,6 +158,33 @@ internal static class Native
 
     [DllImport(Shell32, CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern bool Shell_NotifyIcon(uint message, ref NOTIFYICONDATA data);
+
+    [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern int DrawText(nint hdc, string lpString, int nCount, ref RECT lpRect, uint uFormat);
+
+    [DllImport(User32)]
+    public static extern nint GetSysColorBrush(int nIndex);
+
+    [DllImport(User32)]
+    public static extern int GetSysColor(int nIndex);
+
+    [DllImport(User32)]
+    public static extern bool FillRect(nint hdc, ref RECT lprc, nint hbr);
+
+    [DllImport(Gdi32)]
+    public static extern uint SetTextColor(nint hdc, int crColor);
+
+    [DllImport(Gdi32)]
+    public static extern int SetBkMode(nint hdc, int mode);
+
+    [DllImport(User32)]
+    public static extern nint GetDC(nint hWnd);
+
+    [DllImport(User32)]
+    public static extern int ReleaseDC(nint hWnd, nint hDC);
+
+    [DllImport(Gdi32, CharSet = CharSet.Unicode)]
+    public static extern bool GetTextExtentPoint32(nint hdc, string lpString, int c, out SIZE psizl);
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true)]
     public delegate nint WndProc(nint hWnd, uint msg, nint wParam, nint lParam);

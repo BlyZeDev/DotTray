@@ -13,8 +13,4 @@ public sealed record MenuItemClickedArgs
     /// The selected menu item
     /// </summary>
     public required MenuItem MenuItem { get; init; }
-    /// <summary>
-    /// The mouse button that triggered the event
-    /// </summary>
-    public required MouseButton MouseButton { get; init; }
 }
