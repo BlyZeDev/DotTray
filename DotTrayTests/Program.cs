@@ -18,7 +18,7 @@ sealed class Program
                 IsChecked = true,
                 Click = (args) =>
                 {
-                    Console.WriteLine(args);
+                    Console.WriteLine(args.MenuItem.IsChecked.HasValue ? args.MenuItem.IsChecked.Value : "NULL");
                     args.MenuItem.Text = "Neuer Text";
                 }
             },
@@ -33,7 +33,8 @@ sealed class Program
                     {
                         Text = "Test Sub 1",
                         IsChecked = false,
-                        IsDisabled = true
+                        IsDisabled = true,
+                        Click = (args) => Console.WriteLine(args.MenuItem.IsChecked.HasValue ? args.MenuItem.IsChecked.Value : "NULL")
                     }
                 ]
             },

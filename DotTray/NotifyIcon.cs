@@ -22,6 +22,11 @@ using System.Threading.Tasks;
 [SupportedOSPlatform("Windows")]
 public sealed partial class NotifyIcon : IDisposable
 {
+    private const int MENU_PADDING_X = 12;
+    private const int MENU_PADDING_Y = 6;
+    private const int CHECKBOX_AREA = 20;
+    private const int ARROW_AREA = 12;
+
     private static uint nextTrayId;
 
     private readonly Thread _trayLoopThread;

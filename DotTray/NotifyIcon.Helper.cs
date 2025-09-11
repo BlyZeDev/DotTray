@@ -20,16 +20,38 @@ public sealed partial class NotifyIcon
                 {
                     var subMenu = Native.CreatePopupMenu();
                     BuildMenu(subMenu, menuItem.SubMenu);
-                    Native.AppendMenu(menuHandle, Native.MF_POPUP | (menuItem.IsDisabled ? Native.MF_GRAYED : 0), subMenu, menuItem.Text);
+
+                    var id = nextCommandId++;
+                    var handle = GCHandle.Alloc(menuItem, GCHandleType.Normal);
+                    _menuActions[id] = () => { };
+
+                    Native.AppendMenu(menuHandle, Native.MF_OWNERDRAW, id, menuItem.Text);
+
+                    var menuItemInfo = new MENUITEMINFO
+                    {
+                        cbSize = (uint)Marshal.SizeOf<MENUITEMINFO>(),
+                        fMask = Native.MIIM_DATA | Native.MIIM_SUBMENU,
+                        dwItemData = GCHandle.ToIntPtr(handle),
+                        hSubMenu = subMenu
+                    };
+                    Native.SetMenuItemInfo(menuHandle, (uint)id, false, ref menuItemInfo);
                 }
                 else
                 {
                     var id = nextCommandId++;
-                    _menuActions[id] = () => menuItem.Click?.Invoke(new MenuItemClickedArgs
+                    _menuActions[id] = () =>
                     {
-                        Icon = this,
-                        MenuItem = menuItem
-                    });
+                        if (menuItem.IsChecked.HasValue)
+                        {
+                            menuItem.IsChecked = !menuItem.IsChecked;
+                        }
+
+                        menuItem.Click?.Invoke(new MenuItemClickedArgs
+                        {
+                            Icon = this,
+                            MenuItem = menuItem
+                        });
+                    };
 
                     var handle = GCHandle.Alloc(menuItem, GCHandleType.Normal);
 
@@ -39,7 +61,7 @@ public sealed partial class NotifyIcon
                     {
                         cbSize = (uint)Marshal.SizeOf<MENUITEMINFO>(),
                         fMask = Native.MIIM_DATA,
-                        dwItemData = (nint)handle
+                        dwItemData = GCHandle.ToIntPtr(handle)
                     };
                     Native.SetMenuItemInfo(menuHandle, (uint)id, false, ref menuItemInfo);
                 }
@@ -114,70 +136,115 @@ public sealed partial class NotifyIcon
             case Native.WM_MEASUREITEM:
                 {
                     var measureItemStruct = Marshal.PtrToStructure<MEASUREITEMSTRUCT>(lParam);
-                    var menuItem = (MenuItem)GCHandle.FromIntPtr(measureItemStruct.itemData).Target!;
 
-                    var hdc = Native.GetDC(nint.Zero);
-                    if (hdc == nint.Zero)
+                    if (measureItemStruct.itemData == nint.Zero)
                     {
                         measureItemStruct.itemWidth = 80;
                         measureItemStruct.itemHeight = 16;
                     }
                     else
                     {
-                        Native.GetTextExtentPoint32(hdc, menuItem.Text, menuItem.Text.Length, out var size);
-                        _ = Native.ReleaseDC(nint.Zero, hdc);
+                        var menuItem = (MenuItem)GCHandle.FromIntPtr(measureItemStruct.itemData).Target!;
 
-                        measureItemStruct.itemWidth = (uint)(size.cx + 24);
-                        measureItemStruct.itemHeight = (uint)(size.cy + 4);
+                        var hdc = Native.GetDC(nint.Zero);
+                        if (hdc == nint.Zero)
+                        {
+                            measureItemStruct.itemWidth = 80;
+                            measureItemStruct.itemHeight = 16;
+                        }
+                        else
+                        {
+                            Native.GetTextExtentPoint32(hdc, menuItem.Text, menuItem.Text.Length, out var size);
+                            _ = Native.ReleaseDC(nint.Zero, hdc);
+
+                            var extra = CHECKBOX_AREA + MENU_PADDING_X * 2;
+                            if (menuItem.SubMenu?.Count > 0) extra += ARROW_AREA;
+
+                            measureItemStruct.itemWidth = (uint)(size.cx + extra);
+                            measureItemStruct.itemHeight = (uint)(size.cy + MENU_PADDING_Y * 2);
+                        }
                     }
-                    
+
                     Marshal.StructureToPtr(measureItemStruct, lParam, true);
+
+                    return 1;
                 }
-                return 1;
 
             case Native.WM_DRAWITEM:
                 {
                     var drawItemStruct = Marshal.PtrToStructure<DRAWITEMSTRUCT>(lParam);
+
+                    if (drawItemStruct.itemData == nint.Zero) return 1;
+
                     var menuItem = (MenuItem)GCHandle.FromIntPtr(drawItemStruct.itemData).Target!;
 
                     var hdc = drawItemStruct.hDC;
                     var rect = drawItemStruct.rcItem;
 
-                    var backgroundColor = Native.GetSysColorBrush((drawItemStruct.itemState & Native.ODS_SELECTED) != 0 ? Native.COLOR_HIGHLIGHT : Native.COLOR_MENU);
-                    Native.FillRect(hdc, ref rect, backgroundColor);
+                    if ((drawItemStruct.itemState & Native.ODS_SELECTED) != 0)
+                    {
+                        var hBrush = Native.GetSysColorBrush(Native.COLOR_HIGHLIGHT);
+                        Native.RoundRect(hdc, rect.Left, rect.Top, rect.Right, rect.Bottom, 6, 6);
+                        Native.FillRect(hdc, ref rect, hBrush);
+                    }
+                    else
+                    {
+                        var hBrush = Native.GetSysColorBrush(Native.COLOR_MENU);
+                        Native.FillRect(hdc, ref rect, hBrush);
+                    }
 
-                    var textColor = Native.GetSysColor((drawItemStruct.itemState & Native.ODS_SELECTED) != 0 ? Native.COLOR_HIGHLIGHTTEXT : Native.COLOR_MENUTEXT);
+                    var isDisabled = (drawItemStruct.itemState & Native.ODS_DISABLED) != 0;
+                    var textColor = Native.GetSysColor(isDisabled
+                        ? Native.COLOR_GRAYTEXT
+                        : (drawItemStruct.itemState & Native.ODS_SELECTED) != 0
+                        ? Native.COLOR_HIGHLIGHTTEXT
+                        : Native.COLOR_MENUTEXT);
+
                     _ = Native.SetTextColor(hdc, textColor);
                     _ = Native.SetBkMode(hdc, Native.TRANSPARENT);
 
-                    _ = Native.DrawText(hdc, menuItem.Text, menuItem.Text.Length, ref rect, Native.DT_SINGLELINE | Native.DT_CENTER | Native.DT_LEFT);
-
                     if (menuItem.IsChecked ?? false)
                     {
+                        var checkWidth = Native.GetSystemMetrics(Native.SM_CXMENUCHECK);
+                        var checkHeight = Native.GetSystemMetrics(Native.SM_CYMENUCHECK);
+
                         var checkRect = new RECT
                         {
-                            Left = rect.Left + 2,
-                            Top = rect.Top + 2,
-                            Right = rect.Right + 14,
-                            Bottom = rect.Bottom - 2
+                            Left = rect.Left + MENU_PADDING_X,
+                            Top = rect.Top + (rect.Bottom - rect.Top - checkHeight) / 2,
+                            Right = rect.Left + MENU_PADDING_X + checkWidth,
+                            Bottom = rect.Top + (rect.Bottom - rect.Top - checkHeight) / 2 + checkHeight
                         };
-                        _ = Native.DrawText(hdc, "✔", 1, ref checkRect, Native.DT_SINGLELINE | Native.DT_VCENTER | Native.DT_LEFT);
+
+                        _ = Native.DrawText(hdc, "✔", -1, ref checkRect, Native.DT_SINGLELINE | Native.DT_VCENTER | Native.DT_NOPREFIX | Native.DT_END_ELLIPSIS);
                     }
+
+                    rect.Left += CHECKBOX_AREA + MENU_PADDING_X;
+                    if (menuItem.SubMenu?.Count > 0)
+                    {
+                        rect.Right -= ARROW_AREA + MENU_PADDING_X;
+                    }
+
+                    _ = Native.DrawText(hdc, menuItem.Text, -1, ref rect, Native.DT_SINGLELINE | Native.DT_VCENTER | Native.DT_NOPREFIX | Native.DT_END_ELLIPSIS);
+
+                    return 1;
                 }
-                return 1;
 
             case Native.WM_DELETEITEM:
                 {
-                    var handle = GCHandle.FromIntPtr(Marshal.PtrToStructure<DELETEITEMSTRUCT>(lParam).itemData);
-                    if (handle.IsAllocated) handle.Free();
+                    var deleteItemStruct = Marshal.PtrToStructure<DELETEITEMSTRUCT>(lParam);
+
+                    if (deleteItemStruct.itemData != nint.Zero)
+                    {
+                        var handle = GCHandle.FromIntPtr(deleteItemStruct.itemData);
+                        if (handle.IsAllocated) handle.Free();
+                    }
+
+                    return 1;
                 }
-                return 1;
 
             case Native.WM_APP_TRAYICON_ICON:
                 {
-                    var newIco = wParam;
-                    var newNeedsIcoDestroy = lParam != 0;
-
                     var iconData = new NOTIFYICONDATA
                     {
                         cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
@@ -185,14 +252,14 @@ public sealed partial class NotifyIcon
                         uID = _trayId,
                         uFlags = Native.NIF_ICON,
                         uCallbackMessage = Native.WM_APP_TRAYICON,
-                        hIcon = newIco
+                        hIcon = wParam
                     };
                     Native.Shell_NotifyIcon(Native.NIM_MODIFY, ref iconData);
 
                     if (needsIcoDestroy) Native.DestroyIcon(icoHandle);
 
-                    icoHandle = newIco;
-                    needsIcoDestroy = newNeedsIcoDestroy;
+                    icoHandle = wParam;
+                    needsIcoDestroy = lParam != 0;
                 }
                 break;
 

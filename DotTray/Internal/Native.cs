@@ -1,7 +1,7 @@
 ﻿namespace DotTray.Internal;
 
 using DotTray.Internal.Win32;
-using System.Drawing;
+using System;
 using System.Runtime.InteropServices;
 
 internal static class Native
@@ -61,6 +61,7 @@ internal static class Native
     public const uint NIIF_USER = 0x00000004;
     public const uint NIIF_NOSOUND = 0x00000010;
 
+    public const uint MIIM_SUBMENU = 0x00000004;
     public const uint MIIM_DATA = 0x00000020;
 
     public const uint NIM_ADD = 0x00000000;
@@ -74,16 +75,31 @@ internal static class Native
     public const uint DT_RIGHT = 0x0002;
     public const uint DT_VCENTER = 0x0004;
     public const uint DT_SINGLELINE = 0x0020;
+    public const uint DT_NOPREFIX = 0x800;
+    public const uint DT_END_ELLIPSIS = 0x8000;
+
+    public const uint DFC_MENU = 2;
+
+    public const uint DFCS_MENUCHECK = 0x0001;
+    public const uint DFCS_FLAT = 0x4000;
+    public const uint DFCS_MENUARROW = 0x0008;
+
+    public const int SM_CXMENUCHECK = 71;
+    public const int SM_CYMENUCHECK = 72;
 
     public const int COLOR_MENU = 4;
     public const int COLOR_MENUTEXT = 7;
     public const int COLOR_HIGHLIGHT = 13;
     public const int COLOR_HIGHLIGHTTEXT = 14;
+    public const int COLOR_GRAYTEXT = 17;
 
     public const uint TPM_RIGHTBUTTON = 0x0002;
 
     public const uint IMAGE_ICON = 1;
     public const uint LR_LOADFROMFILE = 0x00000010;
+
+    [DllImport(User32, SetLastError = true)]
+    public static extern int GetSystemMetrics(int nIndex);
 
     [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern nint LoadImage(nint hInst, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
@@ -162,29 +178,42 @@ internal static class Native
     [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern int DrawText(nint hdc, string lpString, int nCount, ref RECT lpRect, uint uFormat);
 
-    [DllImport(User32)]
+    [DllImport(User32, SetLastError = true)]
     public static extern nint GetSysColorBrush(int nIndex);
 
-    [DllImport(User32)]
+    [DllImport(User32, SetLastError = true)]
     public static extern int GetSysColor(int nIndex);
 
-    [DllImport(User32)]
+    [DllImport(User32, SetLastError = true)]
     public static extern bool FillRect(nint hdc, ref RECT lprc, nint hbr);
 
-    [DllImport(Gdi32)]
+    [DllImport(Gdi32, SetLastError = true)]
     public static extern uint SetTextColor(nint hdc, int crColor);
 
-    [DllImport(Gdi32)]
+    [DllImport(Gdi32, SetLastError = true)]
     public static extern int SetBkMode(nint hdc, int mode);
 
-    [DllImport(User32)]
+    [DllImport(User32, SetLastError = true)]
     public static extern nint GetDC(nint hWnd);
 
-    [DllImport(User32)]
+    [DllImport(User32, SetLastError = true)]
     public static extern int ReleaseDC(nint hWnd, nint hDC);
 
-    [DllImport(Gdi32, CharSet = CharSet.Unicode)]
+    [DllImport(Gdi32, CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern bool GetTextExtentPoint32(nint hdc, string lpString, int c, out SIZE psizl);
+
+    [DllImport(User32, SetLastError = true)]
+    public static extern bool DrawFrameControl(nint hdc, ref RECT lprc, uint uType, uint uState);
+
+    [DllImport(Gdi32, SetLastError = true)]
+    public static extern bool RoundRect(nint hdc, int left, int top, int right, int bottom, int width, int height);
+
+    [DllImport(Gdi32, SetLastError = true)]
+    public static extern IntPtr CreateSolidBrush(int color);
+
+    [DllImport(Gdi32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool DeleteObject(nint hObject);
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true)]
     public delegate nint WndProc(nint hWnd, uint msg, nint wParam, nint lParam);
