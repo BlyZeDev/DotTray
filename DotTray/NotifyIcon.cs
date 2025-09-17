@@ -44,7 +44,7 @@ public sealed partial class NotifyIcon : IDisposable
     private nint trayMenu;
 
     private BalloonNotification? nextBalloon;
-    private bool menuRefreshQueued;
+    private bool menuRebuildQueued;
     private int nextCommandId;
 
     /// <summary>
@@ -90,7 +90,7 @@ public sealed partial class NotifyIcon : IDisposable
         _menuActions = [];
         _subMenus = [];
 
-        menuRefreshQueued = false;
+        menuRebuildQueued = false;
         nextCommandId = 1000;
 
         MenuItems = menuItems;

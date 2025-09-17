@@ -15,6 +15,9 @@ sealed class Program
             new MenuItem
             {
                 Text = "Test",
+                BackgroundColor = new Rgb(255, 0, 0),
+                BackgroundDisabledColor = new Rgb(0, 255, 0),
+                BackgroundHoverColor = new Rgb(0, 0, 255),
                 IsChecked = true,
                 Click = (args) =>
                 {

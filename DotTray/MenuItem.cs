@@ -11,6 +11,12 @@ public sealed record MenuItem : IMenuItem
     private string text;
     private bool? isChecked;
     private bool isDisabled;
+    private Rgb backgroundColor = new Rgb(30, 30, 30);
+    private Rgb backgroundHoverColor = new Rgb(50, 120, 220);
+    private Rgb backgroundDisabledColor = new Rgb(100, 100, 100);
+    private Rgb textColor = new Rgb(240, 240, 240);
+    private Rgb textHoverColor = new Rgb(255, 255, 255);
+    private Rgb textDisabledColor = new Rgb(30, 30, 30);
 
     /// <summary>
     /// The displayed text
@@ -60,6 +66,96 @@ public sealed record MenuItem : IMenuItem
     }
 
     /// <summary>
+    /// The default background color
+    /// </summary>
+    public Rgb BackgroundColor
+    {
+        get => backgroundColor;
+        set
+        {
+            if (backgroundColor == value) return;
+
+            backgroundColor = value;
+            Changed?.Invoke();
+        }
+    }
+    
+    /// <summary>
+    /// The background color if this item is hovered over
+    /// </summary>
+    public Rgb BackgroundHoverColor
+    {
+        get => backgroundHoverColor;
+        set
+        {
+            if (backgroundHoverColor == value) return;
+
+            backgroundHoverColor = value;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// The background color if this item is disabled
+    /// </summary>
+    public Rgb BackgroundDisabledColor
+    {
+        get => backgroundDisabledColor;
+        set
+        {
+            if (backgroundDisabledColor == value) return;
+
+            backgroundDisabledColor = value;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// The default text color
+    /// </summary>
+    public Rgb TextColor
+    {
+        get => textColor;
+        set
+        {
+            if (textColor == value) return;
+
+            textColor = value;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// The text color if this item is hovered over
+    /// </summary>
+    public Rgb TextHoverColor
+    {
+        get => textHoverColor;
+        set
+        {
+            if (textHoverColor == value) return;
+
+            textHoverColor = value;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// The text color if this item is disabled
+    /// </summary>
+    public Rgb TextDisabledColor
+    {
+        get => textDisabledColor;
+        set
+        {
+            if (textDisabledColor == value) return;
+
+            textDisabledColor = value;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
     /// The <see cref="Action{MenuItemClickedArgs}"/> to invoke if this <see cref="MenuItem"/> is clicked
     /// </summary>
     public Action<MenuItemClickedArgs>? Click { get; set; }
@@ -77,6 +173,12 @@ public sealed record MenuItem : IMenuItem
         IsDisabled = instance.IsDisabled;
         Click = instance.Click;
         SubMenu = instance.SubMenu.Copy();
+        BackgroundColor = instance.BackgroundColor;
+        BackgroundHoverColor = instance.BackgroundHoverColor;
+        BackgroundDisabledColor = instance.BackgroundDisabledColor;
+        TextColor = instance.TextColor;
+        TextHoverColor = instance.TextHoverColor;
+        TextDisabledColor = instance.TextDisabledColor;
     }
 
     /// <summary>

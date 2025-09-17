@@ -32,4 +32,7 @@ public readonly record struct Rgb
 
     /// <inheritdoc/>
     public static implicit operator uint(Rgb rgb) => rgb._value;
+
+    /// <inheritdoc/>
+    public static implicit operator int(Rgb rgb) => (int)rgb._value;
 }

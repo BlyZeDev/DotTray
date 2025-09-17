@@ -1,10 +1,9 @@
 ﻿namespace DotTray.Internal;
 
 using DotTray.Internal.Win32;
-using System;
 using System.Runtime.InteropServices;
 
-internal static class Native
+internal static unsafe class Native
 {
     private const string User32 = "user32.dll";
     private const string Kernel32 = "kernel32.dll";
@@ -38,6 +37,9 @@ internal static class Native
     public const uint MF_CHECKED = 0x0008;
     public const uint MF_OWNERDRAW = 0x0100;
 
+    public const uint MFS_CHECKED = 0x0008;
+    public const uint MFS_DISABLED = 0x0003;
+
     public const int ODS_SELECTED = 0x0001;
     public const int ODS_GRAYED = 0x0002;
     public const int ODS_DISABLED = 0x0004;
@@ -61,6 +63,7 @@ internal static class Native
     public const uint NIIF_USER = 0x00000004;
     public const uint NIIF_NOSOUND = 0x00000010;
 
+    public const uint MIIM_STATE = 0x00000001;
     public const uint MIIM_SUBMENU = 0x00000004;
     public const uint MIIM_DATA = 0x00000020;
 
@@ -68,7 +71,10 @@ internal static class Native
     public const uint NIM_MODIFY = 0x00000001;
     public const uint NIM_DELETE = 0x00000002;
 
+    public const int PS_SOLID = 0;
     public const int TRANSPARENT = 1;
+    public const int NULL_BRUSH = 5;
+    public const int NULL_PEN = 8;
 
     public const uint DT_LEFT = 0x0000;
     public const uint DT_CENTER = 0x0001;
@@ -202,14 +208,24 @@ internal static class Native
     [DllImport(Gdi32, CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern bool GetTextExtentPoint32(nint hdc, string lpString, int c, out SIZE psizl);
 
-    [DllImport(User32, SetLastError = true)]
-    public static extern bool DrawFrameControl(nint hdc, ref RECT lprc, uint uType, uint uState);
+    [DllImport(Gdi32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool Polyline(nint hdc,  POINT* lppt, int cPoints);
 
     [DllImport(Gdi32, SetLastError = true)]
     public static extern bool RoundRect(nint hdc, int left, int top, int right, int bottom, int width, int height);
 
     [DllImport(Gdi32, SetLastError = true)]
-    public static extern IntPtr CreateSolidBrush(int color);
+    public static extern nint CreateSolidBrush(int color);
+
+    [DllImport(Gdi32, SetLastError = true)]
+    public static extern nint CreatePen(int fnPenStyle, int nWidth, int crColor);
+
+    [DllImport(Gdi32, SetLastError = true)]
+    public static extern nint SelectObject(nint hdc, nint h);
+
+    [DllImport(Gdi32, SetLastError = true)]
+    public static extern nint GetStockObject(int fnObject);
 
     [DllImport(Gdi32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
