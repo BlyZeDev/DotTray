@@ -206,35 +206,56 @@ public sealed partial class NotifyIcon
 
                     if ((drawItemStruct.itemState & Native.ODS_CHECKED) != 0)
                     {
-                        var pen = Native.CreatePen(Native.PS_SOLID, 2, new Rgb(255, 255, 255));
+                        var checkX = rect.Left + 4;
+                        var checkY = rect.Top + (rect.Bottom - rect.Top - 16) / 2;
 
-                        oldBrush = Native.SelectObject(hdc, Native.GetStockObject(Native.NULL_BRUSH));
-                        oldPen = Native.SelectObject(hdc, pen);
-
-                        var checkWidth = Native.GetSystemMetrics(Native.SM_CXMENUCHECK);
-                        var checkHeight = Native.GetSystemMetrics(Native.SM_CYMENUCHECK);
-
-                        var startX = rect.Left + (MENU_PADDING_X);
-                        var startY = rect.Top + (rect.Bottom - rect.Top - checkHeight) / 2;
-
-                        const int PointsLength = 3;
-                        var points = stackalloc POINT[PointsLength]
+                        if (gdipToken == nint.Zero)
                         {
-                            new POINT { x = startX, y = startY + checkHeight / 2 },
-                            new POINT { x = startX + checkWidth / 3, y = startY + checkHeight - 2 },
-                            new POINT { x = startX + checkWidth, y = startY }
-                        };
+                            var pen = Native.CreatePen(Native.PS_SOLID, 2, new Rgb(255, 255, 255));
+                            oldPen = Native.SelectObject(hdc, pen);
+                            oldBrush = Native.SelectObject(hdc, Native.GetStockObject(Native.NULL_BRUSH));
 
-                        Native.Polyline(hdc, points, PointsLength);
+                            const int PointsLength = 4;
+                            var points = stackalloc POINT[PointsLength]
+                            {
+                                new POINT { x = checkX + 2,  y = checkY + 8  },
+                                new POINT { x = checkX + 6,  y = checkY + 12 },
+                                new POINT { x = checkX + 14, y = checkY + 2  },
+                                new POINT { x = checkX + 14, y = checkY + 2  }
+                            };
 
-                        Native.SelectObject(hdc, oldPen);
-                        Native.SelectObject(hdc, oldBrush);
-                        Native.DeleteObject(pen);
+                            Native.Polyline(hdc, points, PointsLength);
+
+                            Native.SelectObject(hdc, oldPen);
+                            Native.SelectObject(hdc, oldBrush);
+                            Native.DeleteObject(pen);
+                        }
+                        else
+                        {
+                            const int PointsLength = 3;
+                            var points = stackalloc POINT[PointsLength]
+                            {
+                                new POINT { x = checkX + 2,  y = checkY + 8  },
+                                new POINT { x = checkX + 6,  y = checkY + 12 },
+                                new POINT { x = checkX + 14, y = checkY + 2  }
+                            };
+
+                            _ = Native.GdipCreateFromHDC(hdc, out var graphicsHandle);
+                            _ = Native.GdipSetSmoothingMode(graphicsHandle, 4);
+                            _ = Native.GdipCreatePen1(0xFFFFFFFF, 2f, 2, out var pen);
+
+                            _ = Native.GdipSetPenLineJoin(pen, 2);
+                            _ = Native.GdipSetPenStartCap(pen, 2);
+                            _ = Native.GdipSetPenEndCap(pen, 2);
+
+                            _ = Native.GdipDrawLinesI(graphicsHandle, pen, points, PointsLength);
+
+                            _ = Native.GdipDeletePen(pen);
+                            _ = Native.GdipDeleteGraphics(graphicsHandle);
+                        }
                     }
 
-                    rect.Left += CHECKBOX_AREA + MENU_PADDING_X;
-
-                    if (menuItem.SubMenu?.Count > 0) rect.Right -= ARROW_AREA + MENU_PADDING_X;
+                    rect.Left += CHECKBOX_AREA + 5;
 
                     _ = Native.DrawText(hdc, menuItem.Text, -1, ref rect, Native.DT_SINGLELINE | Native.DT_VCENTER | Native.DT_NOPREFIX | Native.DT_END_ELLIPSIS);
 

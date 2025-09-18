@@ -42,6 +42,10 @@ sealed class Program
                 ]
             },
             SeparatorItem.Instance,
+            new MenuItem
+            {
+                Text = ":o"//"Comically looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong Text"
+            },
             SeparatorItem.Instance,
             new MenuItem
             {

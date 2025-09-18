@@ -1,52 +1,36 @@
 ﻿namespace DotTray;
 
+using DotTray.Internal;
 using System;
-using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
-/// Represents a <see cref="NotifyIcon"/> menu item
+/// Represents the base of a <see cref="NotifyIcon"/> menu item
 /// </summary>
-public sealed record MenuItem : IMenuItem
+public record MenuItem
 {
-    private string text;
-    private bool? isChecked;
-    private bool isDisabled;
-    private Rgb backgroundColor = new Rgb(30, 30, 30);
-    private Rgb backgroundHoverColor = new Rgb(50, 120, 220);
-    private Rgb backgroundDisabledColor = new Rgb(100, 100, 100);
-    private Rgb textColor = new Rgb(240, 240, 240);
-    private Rgb textHoverColor = new Rgb(255, 255, 255);
-    private Rgb textDisabledColor = new Rgb(30, 30, 30);
+    internal string text;
+    internal uint fState;
+    private Rgb backgroundColor;
+    private Rgb backgroundHoverColor;
+    private Rgb backgroundDisabledColor;
+    private Rgb textColor;
+    private Rgb textHoverColor;
+    private Rgb textDisabledColor;
+
+    internal event Action? Changed;
 
     /// <summary>
     /// The displayed text
     /// </summary>
-    public required string Text
+    public string Text
     {
         get => text;
-        [MemberNotNull(nameof(text))]
         set
         {
             if (text == value) return;
 
             text = value;
-            Changed?.Invoke();
-        }
-    }
-
-    /// <summary>
-    /// <see langword="true"/> if this <see cref="MenuItem"/> is checked, otherwise <see langword="false"/>.
-    /// <see langword="null"/> if this <see cref="MenuItem"/> is not checkable.<br/>
-    /// </summary>
-    public bool? IsChecked
-    {
-        get => isChecked;
-        set
-        {
-            if (isChecked == value) return;
-
-            isChecked = value;
-            Changed?.Invoke();
+            Update();
         }
     }
 
@@ -55,13 +39,15 @@ public sealed record MenuItem : IMenuItem
     /// </summary>
     public bool IsDisabled
     {
-        get => isDisabled;
+        get => (fState & Native.MFS_DISABLED) != 0;
         set
         {
-            if (isDisabled == value) return;
+            if ((fState & Native.MFS_DISABLED) != 0 == value) return;
 
-            isDisabled = value;
-            Changed?.Invoke();
+            if (value) fState |= Native.MFS_DISABLED;
+            else fState &= ~Native.MFS_DISABLED;
+            
+            Update();
         }
     }
 
@@ -76,10 +62,10 @@ public sealed record MenuItem : IMenuItem
             if (backgroundColor == value) return;
 
             backgroundColor = value;
-            Changed?.Invoke();
+            Update();
         }
     }
-    
+
     /// <summary>
     /// The background color if this item is hovered over
     /// </summary>
@@ -91,7 +77,7 @@ public sealed record MenuItem : IMenuItem
             if (backgroundHoverColor == value) return;
 
             backgroundHoverColor = value;
-            Changed?.Invoke();
+            Update();
         }
     }
 
@@ -106,7 +92,7 @@ public sealed record MenuItem : IMenuItem
             if (backgroundDisabledColor == value) return;
 
             backgroundDisabledColor = value;
-            Changed?.Invoke();
+            Update();
         }
     }
 
@@ -121,7 +107,7 @@ public sealed record MenuItem : IMenuItem
             if (textColor == value) return;
 
             textColor = value;
-            Changed?.Invoke();
+            Update();
         }
     }
 
@@ -136,7 +122,7 @@ public sealed record MenuItem : IMenuItem
             if (textHoverColor == value) return;
 
             textHoverColor = value;
-            Changed?.Invoke();
+            Update();
         }
     }
 
@@ -151,7 +137,7 @@ public sealed record MenuItem : IMenuItem
             if (textDisabledColor == value) return;
 
             textDisabledColor = value;
-            Changed?.Invoke();
+            Update();
         }
     }
 
@@ -160,32 +146,20 @@ public sealed record MenuItem : IMenuItem
     /// </summary>
     public Action<MenuItemClickedArgs>? Click { get; set; }
 
-    /// <summary>
-    /// The sub menu items of this <see cref="MenuItem"/>
-    /// </summary>
-    public MenuItemCollection SubMenu { get; init; } = [];
-
-    [SetsRequiredMembers]
-    private MenuItem(MenuItem instance)
+    internal MenuItem(string text, bool? isChecked, bool isDisabled, Rgb backgroundColor, Rgb backgroundHoverColor, Rgb backgroundDisabledColor, Rgb textColor, Rgb textHoverColor, Rgb textDisabledColor)
     {
-        Text = instance.Text;
-        IsChecked = instance.IsChecked;
-        IsDisabled = instance.IsDisabled;
-        Click = instance.Click;
-        SubMenu = instance.SubMenu.Copy();
-        BackgroundColor = instance.BackgroundColor;
-        BackgroundHoverColor = instance.BackgroundHoverColor;
-        BackgroundDisabledColor = instance.BackgroundDisabledColor;
-        TextColor = instance.TextColor;
-        TextHoverColor = instance.TextHoverColor;
-        TextDisabledColor = instance.TextDisabledColor;
+        this.text = text;
+
+        fState = isChecked ?? false ? Native.MFS_CHECKED : 0;
+        fState = isDisabled ? Native.MFS_DISABLED : 0;
+
+        this.backgroundColor = backgroundColor;
+        this.backgroundHoverColor = backgroundHoverColor;
+        this.backgroundDisabledColor = backgroundDisabledColor;
+        this.textColor = textColor;
+        this.textHoverColor = textHoverColor;
+        this.textDisabledColor = textDisabledColor;
     }
 
-    /// <summary>
-    /// Creates a deep copy of this <see cref="MenuItem"/> instance
-    /// </summary>
-    /// <returns><see cref="MenuItem"/></returns>
-    public MenuItem Copy() => new MenuItem(this);
-
-    internal event Action? Changed;
+    private protected void Update() => Changed?.Invoke();
 }

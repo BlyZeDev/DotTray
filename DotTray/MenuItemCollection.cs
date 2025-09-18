@@ -5,60 +5,41 @@ using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
-/// Represents a <see cref="IMenuItem"/> collection
+/// Represents a <see cref="MenuItem"/> collection
 /// </summary>
-public sealed class MenuItemCollection : IList<IMenuItem>
+public sealed class MenuItemCollection : IReadOnlyList<MenuItem>
 {
-    private readonly IList<IMenuItem> _items;
+    private readonly List<MenuItem> _items;
 
     internal event Action? EntriesChanged;
 
     /// <inheritdoc/>
     public int Count => _items.Count;
 
+    internal MenuItemCollection() => _items = [];
+
     /// <inheritdoc/>
-    public bool IsReadOnly => false;
+    public MenuItem this[int index] => _items[index];
 
     /// <summary>
-    /// Initializes a empty <see cref="MenuItemCollection"/>
+    /// Adds a new menu item and returns it
     /// </summary>
-    public MenuItemCollection() : this([]) { }
+    /// <typeparam name="T">The type of menu item to add</typeparam>
+    /// <param name="text">The text of the added menu item</param>
+    /// <returns><see cref="MenuItem"/></returns>
+    public MenuItem Add<T>(string text) where T : MenuItem
+    {
+
+
+        _items.Add(newItem);
+        EntriesChanged?.Invoke();
+
+        return newItem;
+    }
 
     /// <summary>
-    /// Initializes a <see cref="MenuItemCollection"/> from an existing <see cref="IEnumerable{T}"/>
+    /// Clears the collection
     /// </summary>
-    /// <param name="menuItems"><see cref="IEnumerable{T}"/> to create the <see cref="MenuItemCollection"/> from</param>
-    public MenuItemCollection(IEnumerable<IMenuItem> menuItems)
-    {
-        _items = [];
-
-        foreach (var item in menuItems)
-        {
-            _items.Add(item);
-        }
-
-        EntriesChanged?.Invoke();
-    }
-
-    /// <inheritdoc/>
-    public IMenuItem this[int index]
-    {
-        get => _items[index];
-        set
-        {
-            _items[index] = value;
-            EntriesChanged?.Invoke();
-        }
-    }
-
-    /// <inheritdoc/>
-    public void Add(IMenuItem item)
-    {
-        _items.Add(item);
-        EntriesChanged?.Invoke();
-    }
-
-    /// <inheritdoc/>
     public void Clear()
     {
         _items.Clear();
@@ -66,27 +47,19 @@ public sealed class MenuItemCollection : IList<IMenuItem>
     }
 
     /// <inheritdoc/>
-    public bool Contains(IMenuItem item) => _items.Contains(item);
+    public bool Contains(MenuItem item) => _items.Contains(item);
 
     /// <inheritdoc/>
-    public void CopyTo(IMenuItem[] array, int arrayIndex) => _items.CopyTo(array, arrayIndex);
+    public void CopyTo(MenuItem[] array, int arrayIndex) => _items.CopyTo(array, arrayIndex);
 
     /// <inheritdoc/>
-    public int IndexOf(IMenuItem item) => _items.IndexOf(item);
+    public int IndexOf(MenuItem item) => _items.IndexOf(item);
 
     /// <inheritdoc/>
-    public void Insert(int index, IMenuItem item)
+    public void Insert(int index, MenuItem item)
     {
         _items.Insert(index, item);
         EntriesChanged?.Invoke();
-    }
-
-    /// <inheritdoc/>
-    public bool Remove(IMenuItem item)
-    {
-        var removed = _items.Remove(item);
-        EntriesChanged?.Invoke();
-        return removed;
     }
 
     /// <inheritdoc/>
@@ -96,25 +69,8 @@ public sealed class MenuItemCollection : IList<IMenuItem>
         EntriesChanged?.Invoke();
     }
 
-    /// <summary>
-    /// Creates a deep copy of this <see cref="MenuItemCollection"/> instance
-    /// </summary>
-    /// <returns><see cref="MenuItemCollection"/></returns>
-    public MenuItemCollection Copy()
-    {
-        var cloned = new MenuItemCollection();
-
-        foreach (var item in _items)
-        {
-            if (item is MenuItem menuItem) cloned.Add(menuItem.Copy());
-            else cloned.Add(item);
-        }
-
-        return cloned;
-    }
-
     /// <inheritdoc/>
-    public IEnumerator<IMenuItem> GetEnumerator() => _items.GetEnumerator();
+    public IEnumerator<MenuItem> GetEnumerator() => _items.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

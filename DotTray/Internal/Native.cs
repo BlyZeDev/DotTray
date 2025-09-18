@@ -1,6 +1,7 @@
 ﻿namespace DotTray.Internal;
 
 using DotTray.Internal.Win32;
+using System;
 using System.Runtime.InteropServices;
 
 internal static unsafe class Native
@@ -9,6 +10,7 @@ internal static unsafe class Native
     private const string Kernel32 = "kernel32.dll";
     private const string Shell32 = "shell32.dll";
     private const string Gdi32 = "gdi32.dll";
+    private const string GdiPlus = "gdiplus.dll";
 
     public const int GWLP_USERDATA = -21;
 
@@ -111,12 +113,14 @@ internal static unsafe class Native
     public static extern nint LoadImage(nint hInst, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
 
     [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool DestroyIcon(nint hIcon);
 
     [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern ushort RegisterClass([In] ref WNDCLASS lpwc);
 
     [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool UnregisterClass(string lpClassName, nint hInstance);
 
     [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
@@ -133,12 +137,15 @@ internal static unsafe class Native
     public static extern nint CreatePopupMenu();
 
     [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool TrackPopupMenu(nint hMenu, uint flags, int x, int y, int r, nint hWnd, nint rect);
 
     [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool AppendMenu(nint hMenu, uint uFlags, nint uIDNewItem, string? lpNewItem);
 
     [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool SetMenuItemInfo(nint hMenu, uint uItem, bool fByPosition, ref MENUITEMINFO lpmii);
 
     [DllImport(User32, SetLastError = true)]
@@ -167,18 +174,21 @@ internal static unsafe class Native
     public static extern nint DispatchMessage([In] ref MSG lpmsg);
 
     [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetCursorPos(out POINT pt);
 
     [DllImport(User32, SetLastError = true)]
     public static extern nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
 
     [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool SetForegroundWindow(nint hWnd);
 
     [DllImport(Kernel32, CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern nint GetModuleHandle(string? moduleName);
 
     [DllImport(Shell32, CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool Shell_NotifyIcon(uint message, ref NOTIFYICONDATA data);
 
     [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
@@ -191,6 +201,7 @@ internal static unsafe class Native
     public static extern int GetSysColor(int nIndex);
 
     [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool FillRect(nint hdc, ref RECT lprc, nint hbr);
 
     [DllImport(Gdi32, SetLastError = true)]
@@ -206,13 +217,15 @@ internal static unsafe class Native
     public static extern int ReleaseDC(nint hWnd, nint hDC);
 
     [DllImport(Gdi32, CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetTextExtentPoint32(nint hdc, string lpString, int c, out SIZE psizl);
 
     [DllImport(Gdi32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool Polyline(nint hdc,  POINT* lppt, int cPoints);
+    public static extern bool Polyline(nint hdc, POINT* lppt, int cPoints);
 
     [DllImport(Gdi32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool RoundRect(nint hdc, int left, int top, int right, int bottom, int width, int height);
 
     [DllImport(Gdi32, SetLastError = true)]
@@ -230,6 +243,39 @@ internal static unsafe class Native
     [DllImport(Gdi32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool DeleteObject(nint hObject);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdiplusStartup(out nint token, ref GDIPLUSSTARTUPINPUT input, out nint output);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern void GdiplusShutdown(nint token);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipCreateFromHDC(nint hdc, out nint graphics);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipDeleteGraphics(nint graphics);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipSetSmoothingMode(nint graphics, int smoothingMode);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipCreatePen1(uint color, float width, int unit, out nint pen);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipDeletePen(nint pen);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipDrawLinesI(nint graphics, nint pen, POINT* points, int count);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipSetPenLineJoin(nint pen, int lineJoin);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipSetPenStartCap(nint pen, int lineCap);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipSetPenEndCap(nint pen, int lineCap);
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true)]
     public delegate nint WndProc(nint hWnd, uint msg, nint wParam, nint lParam);

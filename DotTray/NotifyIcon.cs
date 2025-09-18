@@ -27,6 +27,7 @@ public sealed partial class NotifyIcon : IDisposable
     private const int CHECKBOX_AREA = 20;
     private const int ARROW_AREA = 12;
 
+    private static nint gdipToken;
     private static uint nextTrayId;
 
     private readonly Thread _trayLoopThread;
@@ -101,6 +102,15 @@ public sealed partial class NotifyIcon : IDisposable
 
         _trayLoopThread = new Thread(() =>
         {
+            if (gdipToken == nint.Zero)
+            {
+                var input = new GDIPLUSSTARTUPINPUT
+                {
+                    GdiplusVersion = 1
+                };
+                _ = Native.GdiplusStartup(out gdipToken, ref input, out _);
+            }
+
             instanceHandle = Native.GetModuleHandle(null);
 
             var wndProc = new Native.WndProc(WndProcFunc);
@@ -239,6 +249,11 @@ public sealed partial class NotifyIcon : IDisposable
         if (_trayLoopThread.IsAlive) _trayLoopThread.Join();
 
         nextTrayId--;
+        if (nextTrayId == 0)
+        {
+            Native.GdiplusShutdown(gdipToken);
+            gdipToken = nint.Zero;
+        }
     }
 
     /// <summary>

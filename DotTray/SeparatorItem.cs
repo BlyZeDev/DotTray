@@ -3,7 +3,7 @@
 /// <summary>
 /// Represents a <see cref="NotifyIcon"/> separator
 /// </summary>
-public sealed record SeparatorItem : IMenuItem
+public sealed record SeparatorItem : MenuItem
 {
     /// <summary>
     /// The shared <see cref="SeparatorItem"/> instance to use
