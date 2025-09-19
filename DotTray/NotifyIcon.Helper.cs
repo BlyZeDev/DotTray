@@ -18,7 +18,7 @@ public sealed partial class NotifyIcon
             {
                 var subMenu = nint.Zero;
 
-                if (menuItem.SubMenu?.Count > 0)
+                if (menuItem.SubMenu.Count > 0)
                 {
                     subMenu = Native.CreatePopupMenu();
                     BuildMenu(subMenu, menuItem.SubMenu);
@@ -32,7 +32,7 @@ public sealed partial class NotifyIcon
                         menuItem.IsChecked = !menuItem.IsChecked;
                     }
 
-                    menuItem.Click?.Invoke(new MenuItemClickedArgs
+                    menuItem.Clicked?.Invoke(new MenuItemClickedArgs
                     {
                         Icon = this,
                         MenuItem = menuItem
@@ -49,7 +49,7 @@ public sealed partial class NotifyIcon
                     fMask = Native.MIIM_DATA | Native.MIIM_SUBMENU | Native.MIIM_STATE,
                     dwItemData = GCHandle.ToIntPtr(handle),
                     hSubMenu = subMenu,
-                    fState = (menuItem.IsChecked ?? false ? Native.MFS_CHECKED : 0) | (menuItem.IsDisabled ? Native.MFS_DISABLED : 0)
+                    fState = menuItem.fState
                 };
                 Native.SetMenuItemInfo(menuHandle, (uint)id, false, ref menuItemInfo);
             }
@@ -57,23 +57,10 @@ public sealed partial class NotifyIcon
         }
     }
 
-    private void MonitorMenuItems(MenuItemCollection menuItems, bool onlyDetach = false)
+    private void MonitorMenuItems(bool attach)
     {
-        var attach = !onlyDetach;
-
-        menuItems.EntriesChanged -= OnMenuItemChange;
-        if (attach) menuItems.EntriesChanged += OnMenuItemChange;
-
-        foreach (var item in menuItems)
-        {
-            if (item is MenuItem menuItem)
-            {
-                menuItem.Changed -= OnMenuItemChange;
-                if (attach) menuItem.Changed += OnMenuItemChange;
-
-                MonitorMenuItems(menuItem.SubMenu);
-            }
-        }
+        MenuItems.EntriesChanged -= OnMenuItemChange;
+        if (attach) MenuItems.EntriesChanged += OnMenuItemChange;
     }
 
     private void OnMenuItemChange()
@@ -145,7 +132,7 @@ public sealed partial class NotifyIcon
                             _ = Native.ReleaseDC(nint.Zero, hdc);
 
                             var extra = CHECKBOX_AREA + MENU_PADDING_X * 2;
-                            if (menuItem.SubMenu?.Count > 0) extra += ARROW_AREA;
+                            if (menuItem.SubMenu.Count > 0) extra += ARROW_AREA;
 
                             measureItemStruct.itemWidth = (uint)(size.cx + extra);
                             measureItemStruct.itemHeight = (uint)(size.cy + MENU_PADDING_Y * 2);
@@ -356,11 +343,11 @@ public sealed partial class NotifyIcon
         return Native.DefWindowProc(hWnd, msg, wParam, lParam);
     }
 
-    private static NotifyIcon Run(nint iconHandle, bool needIconDestroy, MenuItemCollection menuItems, CancellationToken cancellationToken)
+    private static NotifyIcon Run(nint iconHandle, bool needIconDestroy, CancellationToken cancellationToken)
     {
         using (var manualLock = new ManualResetEventSlim(false))
         {
-            var icon = new NotifyIcon(iconHandle, needIconDestroy, menuItems, manualLock.Set, cancellationToken);
+            var icon = new NotifyIcon(iconHandle, needIconDestroy, manualLock.Set, cancellationToken);
 
             manualLock.Wait(cancellationToken);
 
@@ -368,11 +355,11 @@ public sealed partial class NotifyIcon
         }
     }
 
-    private static async Task<NotifyIcon> RunAsync(nint iconHandle, bool needIconDestroy, MenuItemCollection menuItems, CancellationToken cancellationToken)
+    private static async Task<NotifyIcon> RunAsync(nint iconHandle, bool needIconDestroy, CancellationToken cancellationToken)
     {
         var manualLock = new AsyncManualResetEvent(false);
 
-        var icon = new NotifyIcon(iconHandle, needIconDestroy, menuItems, manualLock.Set, cancellationToken);
+        var icon = new NotifyIcon(iconHandle, needIconDestroy, manualLock.Set, cancellationToken);
 
         await manualLock.WaitAsync(cancellationToken);
 

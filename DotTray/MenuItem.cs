@@ -2,14 +2,21 @@
 
 using DotTray.Internal;
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
-/// Represents the base of a <see cref="NotifyIcon"/> menu item
+/// Represents a <see cref="NotifyIcon"/> menu item
 /// </summary>
-public record MenuItem
+public sealed class MenuItem : IMenuItem
 {
-    internal string text;
-    internal uint fState;
+    private static readonly Rgb DefaultBackgroundColor = new Rgb(255, 255, 255);
+    private static readonly Rgb DefaultBackgroundHoverColor = new Rgb(0, 120, 215);
+    private static readonly Rgb DefaultBackgroundDisabledColor = new Rgb(255, 255, 255);
+    private static readonly Rgb DefaultTextColor = new Rgb(0, 0, 0);
+    private static readonly Rgb DefaultTextHoverColor = new Rgb(255, 255, 255);
+    private static readonly Rgb DefaultTextDisabledColor = new Rgb(109, 109, 109);
+
+    private string text;
     private Rgb backgroundColor;
     private Rgb backgroundHoverColor;
     private Rgb backgroundDisabledColor;
@@ -17,19 +24,40 @@ public record MenuItem
     private Rgb textHoverColor;
     private Rgb textDisabledColor;
 
+    internal uint fState;
+
     internal event Action? Changed;
 
     /// <summary>
     /// The displayed text
     /// </summary>
-    public string Text
+    public required string Text
     {
         get => text;
+        [MemberNotNull(nameof(text))]
         set
         {
             if (text == value) return;
 
             text = value;
+            Update();
+        }
+    }
+
+    /// <summary>
+    /// <see langword="true"/> if this <see cref="MenuItem"/> is checked, otherwise <see langword="false"/>
+    /// <see langword="null"/> if this <see cref="MenuItem"/> is not checkable
+    /// </summary>
+    public bool? IsChecked
+    {
+        get => (fState & Native.MFS_CHECKED) != 0;
+        set
+        {
+            if ((fState & Native.MFS_CHECKED) != 0 == value) return;
+
+            if (value.GetValueOrDefault()) fState |= Native.MFS_CHECKED;
+            else fState &= ~Native.MFS_CHECKED;
+
             Update();
         }
     }
@@ -142,24 +170,51 @@ public record MenuItem
     }
 
     /// <summary>
-    /// The <see cref="Action{MenuItemClickedArgs}"/> to invoke if this <see cref="MenuItem"/> is clicked
+    /// The <see cref="Action{MenuItemInteractionArgs}"/> to invoke if this <see cref="MenuItem"/> is interacted with
     /// </summary>
-    public Action<MenuItemClickedArgs>? Click { get; set; }
+    public Action<MenuItemClickedArgs>? Clicked { get; set; }
 
-    internal MenuItem(string text, bool? isChecked, bool isDisabled, Rgb backgroundColor, Rgb backgroundHoverColor, Rgb backgroundDisabledColor, Rgb textColor, Rgb textHoverColor, Rgb textDisabledColor)
+    /// <summary>
+    /// The submenu for this <see cref="MenuItem"/>
+    /// </summary>
+    public MenuItemCollection SubMenu { get; }
+
+    [SetsRequiredMembers]
+    internal MenuItem(string text) : this(text,
+        null,
+        false,
+        DefaultBackgroundColor,
+        DefaultBackgroundHoverColor,
+        DefaultBackgroundDisabledColor,
+        DefaultTextColor,
+        DefaultTextHoverColor,
+        DefaultTextDisabledColor,
+        []) { }
+
+    [SetsRequiredMembers]
+    internal MenuItem(
+        string text,
+        bool? isChecked,
+        bool isDisabled,
+        Rgb backgroundColor,
+        Rgb backgroundHoverColor,
+        Rgb backgroundDisabledColor,
+        Rgb textColor,
+        Rgb textHoverColor,
+        Rgb textDisabledColor,
+        MenuItemCollection subMenu)
     {
-        this.text = text;
-
-        fState = isChecked ?? false ? Native.MFS_CHECKED : 0;
-        fState = isDisabled ? Native.MFS_DISABLED : 0;
-
-        this.backgroundColor = backgroundColor;
-        this.backgroundHoverColor = backgroundHoverColor;
-        this.backgroundDisabledColor = backgroundDisabledColor;
-        this.textColor = textColor;
-        this.textHoverColor = textHoverColor;
-        this.textDisabledColor = textDisabledColor;
+        Text = text;
+        IsChecked = isChecked;
+        IsDisabled = isDisabled;
+        BackgroundColor = backgroundColor;
+        BackgroundHoverColor = backgroundHoverColor;
+        BackgroundDisabledColor = backgroundDisabledColor;
+        TextColor = textColor;
+        TextHoverColor = textHoverColor;
+        TextDisabledColor = textDisabledColor;
+        SubMenu = subMenu;
     }
 
-    private protected void Update() => Changed?.Invoke();
+    private void Update() => Changed?.Invoke();
 }

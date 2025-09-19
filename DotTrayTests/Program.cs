@@ -10,64 +10,44 @@ sealed class Program
     static async Task Main()
     {
         var cts = new CancellationTokenSource();
-        MenuItemCollection menuItems =
-        [
-            new MenuItem
-            {
-                Text = "Test",
-                BackgroundColor = new Rgb(255, 0, 0),
-                BackgroundDisabledColor = new Rgb(0, 255, 0),
-                BackgroundHoverColor = new Rgb(0, 0, 255),
-                IsChecked = true,
-                Click = (args) =>
-                {
-                    Console.WriteLine(args.MenuItem.IsChecked.HasValue ? args.MenuItem.IsChecked.Value : "NULL");
-                    args.MenuItem.Text = "Neuer Text";
-                }
-            },
-            SeparatorItem.Instance,
-            new MenuItem
-            {
-                Text = "Test 2",
-                IsChecked = null,
-                SubMenu =
-                [
-                    new MenuItem
-                    {
-                        Text = "Test Sub 1",
-                        IsChecked = false,
-                        IsDisabled = true,
-                        Click = (args) => Console.WriteLine(args.MenuItem.IsChecked.HasValue ? args.MenuItem.IsChecked.Value : "NULL")
-                    }
-                ]
-            },
-            SeparatorItem.Instance,
-            new MenuItem
-            {
-                Text = ":o"//"Comically looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong Text"
-            },
-            SeparatorItem.Instance,
-            new MenuItem
-            {
-                Text = "EXIT",
-                Click = _ => cts.Cancel()
-            }
-        ];
 
         var tempPath = CreateTestIcon() ?? throw new InvalidOperationException("Icon could not be created");
 
-        var tray = await NotifyIcon.RunAsync(tempPath, menuItems, cts.Token);
-        var tray2 = await NotifyIcon.RunAsync(tempPath, menuItems.Copy(), cts.Token);
-        tray.SetToolTip("🔔 This is a long string with emoji 😊 and more");
-        tray2.SetToolTip("Second Icon :)");
+        var tray = await NotifyIcon.RunAsync(tempPath, cts.Token);
 
-        tray.MouseButtons = MouseButton.Middle;
+        var menuItem = tray.MenuItems.Add("Test");
+        menuItem.BackgroundColor = new Rgb(255, 0, 0);
+        menuItem.BackgroundDisabledColor = new Rgb(0, 255, 0);
+        menuItem.BackgroundHoverColor = new Rgb(0, 0, 255);
+        menuItem.IsChecked = true;
+        menuItem.Clicked = (args) =>
+        {
+            Console.WriteLine(args.MenuItem.IsChecked.HasValue ? args.MenuItem.IsChecked.Value : "NULL");
+            args.MenuItem.Text = "Neuer Text";
+        };
+
+        tray.MenuItems.AddSeparator();
+
+        menuItem = tray.MenuItems.Add("Test 2");
+        menuItem = menuItem.SubMenu.Add("Test Sub 1");
+
+        menuItem.IsChecked = false;
+        menuItem.IsDisabled = true;
+        menuItem.Clicked = (args) => Console.WriteLine(args.MenuItem.IsChecked.HasValue ? args.MenuItem.IsChecked.Value : "NULL");
+
+        tray.MenuItems.AddSeparator();
+
+        menuItem = tray.MenuItems.Add("Exit");
+        menuItem.Clicked = _ => cts.Cancel();
+
+        tray.SetToolTip("🔔 This is a long string with emoji 😊 and more");
+
+        tray.MouseButtons = MouseButton.Left;
         tray.MenuShowing += args => Console.WriteLine("Showing: " + args);
         tray.MenuHiding += () => Console.WriteLine("Hiding");
 
         Console.ReadLine();
 
-        tray.MenuItems.Insert(tray.MenuItems.Count - 1, new MenuItem { Text = "New Item test" });
         tray.ShowBalloon(new BalloonNotification
         {
             Icon = BalloonNotificationIcon.User,

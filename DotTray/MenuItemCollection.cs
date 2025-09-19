@@ -7,9 +7,9 @@ using System.Collections.Generic;
 /// <summary>
 /// Represents a <see cref="MenuItem"/> collection
 /// </summary>
-public sealed class MenuItemCollection : IReadOnlyList<MenuItem>
+public sealed class MenuItemCollection : IReadOnlyList<IMenuItem>
 {
-    private readonly List<MenuItem> _items;
+    private readonly List<IMenuItem> _items;
 
     internal event Action? EntriesChanged;
 
@@ -19,22 +19,40 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItem>
     internal MenuItemCollection() => _items = [];
 
     /// <inheritdoc/>
-    public MenuItem this[int index] => _items[index];
+    public IMenuItem this[int index] => _items[index];
 
     /// <summary>
-    /// Adds a new menu item and returns it
+    /// Adds a <see cref="MenuItem"/> to the collection
     /// </summary>
-    /// <typeparam name="T">The type of menu item to add</typeparam>
-    /// <param name="text">The text of the added menu item</param>
+    /// <param name="text">The display text</param>
     /// <returns><see cref="MenuItem"/></returns>
-    public MenuItem Add<T>(string text) where T : MenuItem
+    public MenuItem Add(string text)
     {
+        var item = new MenuItem(text);
+        item.Changed += Update;
 
+        _items.Add(item);
+        Update();
 
-        _items.Add(newItem);
-        EntriesChanged?.Invoke();
+        return item;
+    }
 
-        return newItem;
+    /// <summary>
+    /// Adds a <see cref="SeparatorItem"/> to the collection
+    /// </summary>
+    public void AddSeparator() => _items.Add(SeparatorItem.Instance);
+
+    /// <summary>
+    /// Removes a <see cref="MenuItem"/> at a specified index
+    /// </summary>
+    /// <param name="index">The index to remove the item at</param>
+    public void RemoveAt(int index)
+    {
+        var item = _items[index];
+        if (item is MenuItem menuItem) menuItem.Changed -= Update;
+
+        _items.RemoveAt(index);
+        Update();
     }
 
     /// <summary>
@@ -42,35 +60,19 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItem>
     /// </summary>
     public void Clear()
     {
+        foreach (var item in _items)
+        {
+            if (item is MenuItem menuItem) menuItem.Changed -= Update;
+        }
+
         _items.Clear();
-        EntriesChanged?.Invoke();
+        Update();
     }
 
     /// <inheritdoc/>
-    public bool Contains(MenuItem item) => _items.Contains(item);
+    public IEnumerator<IMenuItem> GetEnumerator() => _items.GetEnumerator();
 
-    /// <inheritdoc/>
-    public void CopyTo(MenuItem[] array, int arrayIndex) => _items.CopyTo(array, arrayIndex);
-
-    /// <inheritdoc/>
-    public int IndexOf(MenuItem item) => _items.IndexOf(item);
-
-    /// <inheritdoc/>
-    public void Insert(int index, MenuItem item)
-    {
-        _items.Insert(index, item);
-        EntriesChanged?.Invoke();
-    }
-
-    /// <inheritdoc/>
-    public void RemoveAt(int index)
-    {
-        _items.RemoveAt(index);
-        EntriesChanged?.Invoke();
-    }
-
-    /// <inheritdoc/>
-    public IEnumerator<MenuItem> GetEnumerator() => _items.GetEnumerator();
+    private void Update() => EntriesChanged?.Invoke();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

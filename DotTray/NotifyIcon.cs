@@ -79,7 +79,7 @@ public sealed partial class NotifyIcon : IDisposable
     /// </summary>
     public event Action? MenuHiding;
 
-    private NotifyIcon(nint icoHandle, bool needsIcoDestroy, MenuItemCollection menuItems, Action onInitializationFinished, CancellationToken cancellationToken)
+    private NotifyIcon(nint icoHandle, bool needsIcoDestroy, Action onInitializationFinished, CancellationToken cancellationToken)
     {
         this.icoHandle = icoHandle;
         this.needsIcoDestroy = needsIcoDestroy;
@@ -94,11 +94,11 @@ public sealed partial class NotifyIcon : IDisposable
         menuRebuildQueued = false;
         nextCommandId = 1000;
 
-        MenuItems = menuItems;
+        MenuItems = [];
         ToolTip = "";
         MouseButtons = MouseButton.Left | MouseButton.Right;
 
-        MonitorMenuItems(MenuItems);
+        MonitorMenuItems(true);
 
         _trayLoopThread = new Thread(() =>
         {
@@ -243,7 +243,7 @@ public sealed partial class NotifyIcon : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        MonitorMenuItems(MenuItems, true);
+        MonitorMenuItems(false);
         Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_QUIT, 0, 0);
 
         if (_trayLoopThread.IsAlive) _trayLoopThread.Join();
@@ -269,23 +269,7 @@ public sealed partial class NotifyIcon : IDisposable
     /// <exception cref="FileNotFoundException"></exception>
     /// <exception cref="FileLoadException"></exception>
     public static NotifyIcon Run(string icoPath, CancellationToken cancellationToken)
-        => Run(PrepareIconHandle(icoPath), true, [], cancellationToken);
-
-    /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon"/> instance synchronously
-    /// </summary>
-    /// <remarks>
-    /// This will block until the <see cref="NotifyIcon"/> instance is ready or an <see cref="Exception"/> occurs
-    /// </remarks>
-    /// <param name="icoPath">The path to a .ico file</param>
-    /// <param name="menuItems">The initial <see cref="MenuItemCollection"/></param>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon"/> instance</param>
-    /// <returns><see cref="NotifyIcon"/></returns>
-    /// <exception cref="ArgumentException"></exception>
-    /// <exception cref="FileNotFoundException"></exception>
-    /// <exception cref="FileLoadException"></exception>
-    public static NotifyIcon Run(string icoPath, MenuItemCollection menuItems, CancellationToken cancellationToken)
-        => Run(PrepareIconHandle(icoPath), true, menuItems, cancellationToken);
+        => Run(PrepareIconHandle(icoPath), true, cancellationToken);
 
     /// <summary>
     /// Creates and runs a <see cref="NotifyIcon"/> instance synchronously
@@ -302,26 +286,7 @@ public sealed partial class NotifyIcon : IDisposable
     {
         return icoHandle == nint.Zero
             ? throw new ArgumentNullException(nameof(icoHandle), "The handle cannot be null")
-            : Run(icoHandle, false, [], cancellationToken);
-    }
-
-    /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon"/> instance synchronously
-    /// </summary>
-    /// <remarks>
-    /// This will block until the <see cref="NotifyIcon"/> instance is ready or an <see cref="Exception"/> occurs.<br/>
-    /// <paramref name="icoHandle"/> will not be destroyed, the responsibility lies with the caller
-    /// </remarks>
-    /// <param name="icoHandle">The handle of a .ico file</param>
-    /// <param name="menuItems">The initial <see cref="MenuItemCollection"/></param>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon"/> instance</param>
-    /// <returns><see cref="NotifyIcon"/></returns>
-    /// <exception cref="ArgumentNullException"></exception>
-    public static NotifyIcon Run(nint icoHandle, MenuItemCollection menuItems, CancellationToken cancellationToken)
-    {
-        return icoHandle == nint.Zero
-            ? throw new ArgumentNullException(nameof(icoHandle), "The handle cannot be null")
-            : Run(icoHandle, false, menuItems, cancellationToken);
+            : Run(icoHandle, false, cancellationToken);
     }
 
     /// <summary>
@@ -334,20 +299,7 @@ public sealed partial class NotifyIcon : IDisposable
     /// <exception cref="FileNotFoundException"></exception>
     /// <exception cref="FileLoadException"></exception>
     public static Task<NotifyIcon> RunAsync(string icoPath, CancellationToken cancellationToken)
-        => RunAsync(PrepareIconHandle(icoPath), true, [], cancellationToken);
-
-    /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon"/> instance asynchronously
-    /// </summary>
-    /// <param name="icoPath">The path to a .ico file</param>
-    /// <param name="menuItems">The initial <see cref="MenuItemCollection"/></param>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon"/> instance</param>
-    /// <returns><see cref="NotifyIcon"/></returns>
-    /// <exception cref="ArgumentException"></exception>
-    /// <exception cref="FileNotFoundException"></exception>
-    /// <exception cref="FileLoadException"></exception>
-    public static Task<NotifyIcon> RunAsync(string icoPath, MenuItemCollection menuItems, CancellationToken cancellationToken)
-        => RunAsync(PrepareIconHandle(icoPath), true, menuItems, cancellationToken);
+        => RunAsync(PrepareIconHandle(icoPath), true, cancellationToken);
 
     /// <summary>
     /// Creates and runs a <see cref="NotifyIcon"/> instance asynchronously
@@ -363,24 +315,6 @@ public sealed partial class NotifyIcon : IDisposable
     {
         return icoHandle == nint.Zero
             ? throw new ArgumentNullException(nameof(icoHandle), "The handle cannot be null")
-            : RunAsync(icoHandle, false, [], cancellationToken);
-    }
-
-    /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon"/> instance asynchronously
-    /// </summary>
-    /// <remarks>
-    /// <paramref name="icoHandle"/> will not be destroyed, the responsibility lies with the caller
-    /// </remarks>
-    /// <param name="icoHandle">The handle of a .ico file</param>
-    /// <param name="menuItems">The initial <see cref="MenuItemCollection"/></param>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon"/> instance</param>
-    /// <returns><see cref="NotifyIcon"/></returns>
-    /// <exception cref="ArgumentNullException"></exception>
-    public static Task<NotifyIcon> RunAsync(nint icoHandle, MenuItemCollection menuItems, CancellationToken cancellationToken)
-    {
-        return icoHandle == nint.Zero
-            ? throw new ArgumentNullException(nameof(icoHandle), "The handle cannot be null")
-            : RunAsync(icoHandle, false, menuItems, cancellationToken);
+            : RunAsync(icoHandle, false, cancellationToken);
     }
 }
