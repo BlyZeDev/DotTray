@@ -93,7 +93,7 @@ public sealed partial class NotifyIcon
 
                         Native.SetForegroundWindow(hWnd);
                         Native.GetCursorPos(out var pos);
-                        Native.TrackPopupMenu(trayMenu, Native.TPM_RIGHTBUTTON, pos.x, pos.y, 0, hWnd, 0);
+                        Native.TrackPopupMenu(trayMenuHWnd, Native.TPM_RIGHTBUTTON, pos.x, pos.y, 0, hWnd, 0);
 
                         MenuHiding?.Invoke();
                     }
@@ -322,18 +322,17 @@ public sealed partial class NotifyIcon
                 {
                     menuRebuildQueued = false;
 
-                    if (trayMenu != nint.Zero)
+                    if (trayMenuHWnd != nint.Zero)
                     {
-                        Native.DestroyMenu(trayMenu);
-                        trayMenu = nint.Zero;
+                        Native.DestroyMenu(trayMenuHWnd);
+                        trayMenuHWnd = nint.Zero;
                     }
-                    trayMenu = Native.CreatePopupMenu();
+                    trayMenuHWnd = Native.CreatePopupMenu();
 
                     _menuActions.Clear();
-                    _subMenus.Clear();
 
                     nextCommandId = 1000;
-                    BuildMenu(trayMenu, MenuItems);
+                    BuildMenu(trayMenuHWnd, MenuItems);
                 }
                 return nint.Zero;
 

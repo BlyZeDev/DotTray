@@ -34,7 +34,6 @@ public sealed partial class NotifyIcon : IDisposable
     private readonly uint _trayId;
 
     private readonly Dictionary<int, Action> _menuActions;
-    private readonly Dictionary<string, nint> _subMenus;
 
     private nint icoHandle;
     private bool needsIcoDestroy;
@@ -42,11 +41,13 @@ public sealed partial class NotifyIcon : IDisposable
     private nint instanceHandle;
     private GCHandle thisHandle;
     private nint hWnd;
-    private nint trayMenu;
 
     private BalloonNotification? nextBalloon;
     private bool menuRebuildQueued;
     private int nextCommandId;
+
+    private nint trayMenuHWnd;
+    private int hoveredItemIndex;
 
     /// <summary>
     /// The <see cref="MenuItemCollection"/> of this <see cref="NotifyIcon"/> instance
@@ -89,10 +90,11 @@ public sealed partial class NotifyIcon : IDisposable
         var windowClassName = $"{nameof(DotTray)}NotifyIconWindow{_trayId}";
 
         _menuActions = [];
-        _subMenus = [];
 
         menuRebuildQueued = false;
         nextCommandId = 1000;
+
+        hoveredItemIndex = -1;
 
         MenuItems = [];
         ToolTip = "";
@@ -124,7 +126,6 @@ public sealed partial class NotifyIcon : IDisposable
 
             hWnd = Native.CreateWindowEx(0, windowClassName, "", 0, 0, 0, 0, 0, 0, 0, instanceHandle, 0);
             thisHandle = GCHandle.Alloc(this, GCHandleType.Normal);
-
             Native.SetWindowLongPtr(hWnd, Native.GWLP_USERDATA, GCHandle.ToIntPtr(thisHandle));
 
             onInitializationFinished();
@@ -164,10 +165,10 @@ public sealed partial class NotifyIcon : IDisposable
 
                 if (needsIcoDestroy) Native.DestroyIcon(icoHandle);
 
-                if (trayMenu != nint.Zero)
+                if (trayMenuHWnd != nint.Zero)
                 {
-                    Native.DestroyMenu(trayMenu);
-                    trayMenu = nint.Zero;
+                    Native.DestroyMenu(trayMenuHWnd);
+                    trayMenuHWnd = nint.Zero;
                 }
 
                 if (hWnd != nint.Zero)
@@ -231,11 +232,11 @@ public sealed partial class NotifyIcon : IDisposable
     /// <param name="balloon">The balloon notification to show</param>
     public void ShowBalloon(BalloonNotification balloon)
     {
-        Interlocked.Exchange(ref nextBalloon, balloon with
+        nextBalloon = balloon with
         {
             Title = balloon.Title.Length > NOTIFYICONDATA.SZINFOTITLE_LENGTH ? balloon.Title[..NOTIFYICONDATA.SZINFOTITLE_LENGTH] : balloon.Title,
             Message = balloon.Message.Length > NOTIFYICONDATA.SZINFO_LENGTH ? balloon.Message[..NOTIFYICONDATA.SZINFO_LENGTH] : balloon.Message
-        });
+        };
 
         Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_BALLOON, 0, 0);
     }
