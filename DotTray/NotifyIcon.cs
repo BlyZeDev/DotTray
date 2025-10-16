@@ -47,7 +47,6 @@ public sealed partial class NotifyIcon : IDisposable
     private int nextCommandId;
 
     private nint trayMenuHWnd;
-    private int hoveredItemIndex;
 
     /// <summary>
     /// The <see cref="MenuItemCollection"/> of this <see cref="NotifyIcon"/> instance
@@ -93,8 +92,6 @@ public sealed partial class NotifyIcon : IDisposable
 
         menuRebuildQueued = false;
         nextCommandId = 1000;
-
-        hoveredItemIndex = -1;
 
         MenuItems = [];
         ToolTip = "";

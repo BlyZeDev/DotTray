@@ -91,9 +91,17 @@ public sealed partial class NotifyIcon
                     {
                         MenuShowing?.Invoke(clickedButton);
 
+                        /*
                         Native.SetForegroundWindow(hWnd);
                         Native.GetCursorPos(out var pos);
                         Native.TrackPopupMenu(trayMenuHWnd, Native.TPM_RIGHTBUTTON, pos.x, pos.y, 0, hWnd, 0);
+                        */
+
+                        Native.GetCursorPos(out var pos);
+                        using (var popup = new PopupMenu(hWnd, MenuItems, pos, _trayId))
+                        {
+                            popup.ShowModal();
+                        }
 
                         MenuHiding?.Invoke();
                     }

@@ -11,9 +11,28 @@ internal static unsafe class Native
     private const string Shell32 = "shell32.dll";
     private const string Gdi32 = "gdi32.dll";
     private const string GdiPlus = "gdiplus.dll";
+    private const string DwmApi = "dwmapi.dll";
 
     public const int GWLP_USERDATA = -21;
 
+    public const uint WS_POPUP = 0x80000000;
+    public const uint WS_VISIBLE = 0x10000000;
+    public const uint WS_CLIPSIBLINGS = 0x04000000;
+    public const uint WS_CLIPCHILDREN = 0x02000000;
+
+    public const uint CS_HREDRAW = 0x0002;
+    public const uint CS_VREDRAW = 0x0001;
+
+    public const int HTCLIENT = 1;
+    public const int GA_ROOT = 2;
+
+    public const int SW_SHOWNOACTIVATE = 4;
+
+    public const int WM_PAINT = 0x000F;
+
+    public const int WM_KILLFOCUS = 0x0008;
+    public const int WM_TIMER = 0x0113;
+    public const int WM_DESTROY = 0x0002;
     public const int WM_COMMAND = 0x0111;
 
     public const int WM_APP = 0x8000;
@@ -28,6 +47,9 @@ internal static unsafe class Native
     public const uint WM_DRAWITEM = 0x002B;
     public const uint WM_DELETEITEM = 0x002D;
 
+    public const int WM_MOUSEMOVE = 0x0200;
+    public const int WM_LBUTTONDOWN = 0x0201;
+    public const int WM_KEYDOWN = 0x0100;
     public const int WM_LBUTTONUP = 0x202;
     public const int WM_RBUTTONUP = 0x205;
     public const int WM_MBUTTONUP = 0x208;
@@ -83,7 +105,7 @@ internal static unsafe class Native
     public const uint DT_RIGHT = 0x0002;
     public const uint DT_VCENTER = 0x0004;
     public const uint DT_SINGLELINE = 0x0020;
-    public const uint DT_NOPREFIX = 0x800;
+    public const uint DT_NOPREFIX = 0x0800;
     public const uint DT_END_ELLIPSIS = 0x8000;
 
     public const uint DFC_MENU = 2;
@@ -100,6 +122,18 @@ internal static unsafe class Native
     public const int COLOR_HIGHLIGHT = 13;
     public const int COLOR_HIGHLIGHTTEXT = 14;
     public const int COLOR_GRAYTEXT = 17;
+
+    public const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+    public const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
+
+    public const int DWMWCP_DEFAULT = 0;
+    public const int DWMWCP_ROUND = 2;
+
+    public const int DWMSBT_AUTO = 0;
+    public const int DWMSBT_NONE = 1;
+    public const int DWMSBT_MAINWINDOW = 2;
+    public const int DWMSBT_TRANSIENTWINDOW = 3;
+    public const int DWMSBT_TABBEDWINDOW = 4;
 
     public const uint TPM_RIGHTBUTTON = 0x0002;
 
@@ -131,7 +165,23 @@ internal static unsafe class Native
 
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ShowWindow(nint hWnd, int nCmdShow);
+
+    [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool UpdateWindow(nint hWnd);
+
+    [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool DestroyWindow(nint hWnd);
+
+    [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SetCapture(nint hWnd);
+
+    [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ReleaseCapture();
 
     [DllImport(User32, SetLastError = true)]
     public static extern nint CreatePopupMenu();
@@ -202,6 +252,10 @@ internal static unsafe class Native
 
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetClientRect(nint hWnd, out RECT lpRect);
+
+    [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool FillRect(nint hdc, ref RECT lprc, nint hbr);
 
     [DllImport(Gdi32, SetLastError = true)]
@@ -232,7 +286,23 @@ internal static unsafe class Native
     public static extern nint CreateSolidBrush(int color);
 
     [DllImport(Gdi32, SetLastError = true)]
-    public static extern nint CreatePen(int fnPenStyle, int nWidth, int crColor);
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool MoveToEx(nint hdc, int X, int Y, nint lpPoint);
+
+    [DllImport(Gdi32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool LineTo(nint hdc, int nXEnd, int nYEnd);
+
+    [DllImport(Gdi32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool Polygon(nint hdc, POINT* pts, int count);
+
+    [DllImport(Gdi32, SetLastError = true)]
+    public static extern IntPtr CreatePen(int fnPenStyle, int nWidth, uint crColor);
+
+    [DllImport(Gdi32, CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool TextOut(nint hdc, int x, int y, string lpString, int c);
 
     [DllImport(Gdi32, SetLastError = true)]
     public static extern nint SelectObject(nint hdc, nint h);
@@ -276,6 +346,9 @@ internal static unsafe class Native
 
     [DllImport(GdiPlus, SetLastError = true)]
     public static extern int GdipSetPenEndCap(nint pen, int lineCap);
+
+    [DllImport(DwmApi, SetLastError = true)]
+    public static extern int DwmSetWindowAttribute(nint hwnd, int attr, ref int attrValue, int attrSize);
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true)]
     public delegate nint WndProc(nint hWnd, uint msg, nint wParam, nint lParam);
