@@ -98,7 +98,7 @@ public sealed partial class NotifyIcon
                         */
 
                         Native.GetCursorPos(out var pos);
-                        using (var popup = new PopupMenu(hWnd, MenuItems, pos, _trayId))
+                        using (var popup = new PopupMenu(hWnd,this, MenuItems, pos, _trayId))
                         {
                             popup.ShowModal();
                         }

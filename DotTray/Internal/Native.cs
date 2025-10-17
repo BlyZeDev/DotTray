@@ -16,6 +16,9 @@ internal static unsafe class Native
     public const int GWLP_USERDATA = -21;
 
     public const uint WS_POPUP = 0x80000000;
+    public const uint WS_BORDER = 0x00800000;
+    public const uint WS_EX_NOACTIVATE = 0x08000000;
+    public const uint WS_EX_TOOLWINDOW = 0x00000080;
     public const uint WS_VISIBLE = 0x10000000;
     public const uint WS_CLIPSIBLINGS = 0x04000000;
     public const uint WS_CLIPCHILDREN = 0x02000000;
@@ -28,12 +31,14 @@ internal static unsafe class Native
 
     public const int SW_SHOWNOACTIVATE = 4;
 
-    public const int WM_PAINT = 0x000F;
+    public const uint WM_ERASEBKGND = 0x0014;
+    public const uint WM_PAINT = 0x000F;
 
-    public const int WM_KILLFOCUS = 0x0008;
-    public const int WM_TIMER = 0x0113;
-    public const int WM_DESTROY = 0x0002;
-    public const int WM_COMMAND = 0x0111;
+    public const uint WM_KILLFOCUS = 0x0008;
+    public const uint WM_TIMER = 0x0113;
+    public const uint WM_DESTROY = 0x0002;
+    public const uint WM_COMMAND = 0x0111;
+    public const uint WM_QUIT = 0x0012;
 
     public const int WM_APP = 0x8000;
     public const uint WM_APP_TRAYICON = WM_APP + 1;
@@ -140,6 +145,12 @@ internal static unsafe class Native
     public const uint IMAGE_ICON = 1;
     public const uint LR_LOADFROMFILE = 0x00000010;
 
+    public static readonly nint HWND_TOPMOST = new(-1);
+
+    public const uint SWP_NOMOVE = 0x0002;
+    public const uint SWP_NOSIZE = 0x0001;
+    public const uint SWP_NOACTIVATE = 0x0010;
+
     [DllImport(User32, SetLastError = true)]
     public static extern int GetSystemMetrics(int nIndex);
 
@@ -169,11 +180,25 @@ internal static unsafe class Native
 
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
+
+    [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool UpdateWindow(nint hWnd);
 
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool DestroyWindow(nint hWnd);
+
+    [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool InvalidateRect(nint hWnd, nint lpRect, bool bErase);
+
+    [DllImport(User32, SetLastError = true)]
+    public static extern nint GetDesktopWindow();
+
+    [DllImport(User32, SetLastError = true)]
+    public static extern nint SetActiveWindow(nint hWnd);
 
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -204,6 +229,10 @@ internal static unsafe class Native
 
     [DllImport(User32, SetLastError = true)]
     public static extern nint DefWindowProc(nint hWnd, uint msg, nint wParam, nint lParam);
+
+    [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool PeekMessage(out MSG lpMsg, nint hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
 
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -253,6 +282,10 @@ internal static unsafe class Native
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetClientRect(nint hWnd, out RECT lpRect);
+
+    [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ClientToScreen(nint hWnd, ref POINT lpPoint);
 
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

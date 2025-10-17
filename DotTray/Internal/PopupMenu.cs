@@ -10,6 +10,7 @@ internal sealed class PopupMenu : IDisposable
     private const int ItemHeight = 28;
 
     private readonly string _windowClassName;
+    private readonly NotifyIcon _ownerIcon;
     private readonly nint _ownerHWnd;
     private readonly nint _hWnd;
     private readonly nint _instanceHandle;
@@ -19,12 +20,14 @@ internal sealed class PopupMenu : IDisposable
 
     private bool disposed;
     private int hoverIndex;
+    private PopupMenu? subMenuPopup;
 
-    public PopupMenu(nint ownerHWnd, MenuItemCollection items, POINT screenPos, uint trayId)
+    private PopupMenu(nint ownerHWnd, NotifyIcon icon, MenuItemCollection items, POINT screenPos, string windowClassName)
     {
-        _windowClassName = $"{nameof(DotTray)}NotifyIconWindow{trayId}_Popup";
+        _windowClassName = windowClassName;
         _closed = new AutoResetEvent(false);
 
+        _ownerIcon = icon;
         _ownerHWnd = ownerHWnd;
         _items = items;
         _instanceHandle = Native.GetModuleHandle(null);
@@ -76,12 +79,12 @@ internal sealed class PopupMenu : IDisposable
         }
 
         _hWnd = Native.CreateWindowEx(
-            0x80 | 0x08 | 0x08000000,
+            Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE,
             _windowClassName,
             "",
-            Native.WS_POPUP | Native.WS_CLIPSIBLINGS | Native.WS_CLIPCHILDREN,
+            Native.WS_POPUP | Native.WS_CLIPSIBLINGS | Native.WS_CLIPCHILDREN | Native.WS_BORDER,
             screenPos.x, screenPos.y, maxWidth, items.Count * ItemHeight,
-            nint.Zero, nint.Zero, _instanceHandle, nint.Zero);
+            _ownerHWnd, nint.Zero, _instanceHandle, nint.Zero);
 
         try
         {
@@ -96,16 +99,45 @@ internal sealed class PopupMenu : IDisposable
         Native.ShowWindow(_hWnd, Native.SW_SHOWNOACTIVATE);
         Native.UpdateWindow(_hWnd);
 
+        Native.SetWindowPos(
+            _hWnd,
+            Native.HWND_TOPMOST,
+            0, 0, 0, 0,
+            Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
+
         _ = Native.SetCapture(_hWnd);
 
         hoverIndex = -1;
     }
 
-    public void ShowModal() => _closed.WaitOne();
+    public PopupMenu(nint ownerHWnd, NotifyIcon icon, MenuItemCollection items, POINT screenPos, uint trayId)
+        : this(ownerHWnd, icon, items, screenPos, $"{nameof(DotTray)}NotifyIconWindow{trayId}_Popup") { }
+
+    public void ShowModal()
+    {
+        Native.ShowWindow(_hWnd, Native.SW_SHOWNOACTIVATE);
+        Native.UpdateWindow(_hWnd);
+
+        while (!_closed.WaitOne(0))
+        {
+            while (Native.PeekMessage(out var msg, nint.Zero, 0, 0, 1))
+            {
+                if (msg.message == Native.WM_QUIT) return;
+
+                Native.TranslateMessage(ref msg);
+                Native.DispatchMessage(ref msg);
+            }
+        }
+    }
 
     public void Dispose()
     {
         if (disposed) return;
+
+        _ = Native.ReleaseCapture();
+        _ = Native.DestroyWindow(_hWnd);
+        _closed.Set();
+
         disposed = true;
     }
 
@@ -113,12 +145,99 @@ internal sealed class PopupMenu : IDisposable
     {
         switch (msg)
         {
+            case Native.WM_ERASEBKGND: return 1;
+
             case Native.WM_PAINT: Paint(); return nint.Zero;
-            case Native.WM_KILLFOCUS: Close(); return IntPtr.Zero;
-            case Native.WM_DESTROY: return IntPtr.Zero;
+
+            case Native.WM_MOUSEMOVE: UpdateHover((short)((lParam.ToInt32() >> 16) & 0xFFFF)); return nint.Zero;
+            case Native.WM_LBUTTONDOWN: HandleClick((short)((lParam.ToInt32() >> 16) & 0xFFFF)); return nint.Zero;
+
+            case Native.WM_KEYDOWN: if (wParam.ToInt32() == (int)ConsoleKey.Escape) Dispose(); return nint.Zero;
+
+            case Native.WM_KILLFOCUS: Dispose(); return nint.Zero;
+            case Native.WM_DESTROY: return nint.Zero;
         }
 
         return Native.DefWindowProc(hWnd, msg, wParam, lParam);
+    }
+
+    private void UpdateHover(int mouseY)
+    {
+        var index = mouseY / ItemHeight;
+        if (index < 0 || index >= _items.Count)
+        {
+            if (hoverIndex != -1)
+            {
+                hoverIndex = -1;
+                CloseSubmenu();
+                Native.InvalidateRect(_hWnd, nint.Zero, true);
+            }
+
+            return;
+        }
+
+        if (index == hoverIndex) return;
+
+        hoverIndex = index;
+        Native.InvalidateRect(_hWnd, nint.Zero, true);
+
+        if (_items[index] is MenuItem menuItem)
+        {
+            if (menuItem.SubMenu.Count > 0) ShowSubmenu(index, menuItem.SubMenu);
+            else CloseSubmenu();
+        }
+        else CloseSubmenu();
+    }
+
+    private void HandleClick(int mouseY)
+    {
+        var index = mouseY / ItemHeight;
+        if (index < 0 || index >= _items.Count)
+        {
+            Dispose();
+            return;
+        }
+
+        if (_items[index] is not MenuItem menuItem) return;
+
+        if (menuItem.SubMenu.Count > 0) return;
+
+        if (menuItem.IsChecked.HasValue) menuItem.IsChecked = !menuItem.IsChecked;
+
+        menuItem.Clicked?.Invoke(new MenuItemClickedArgs
+        {
+            Icon = _ownerIcon,
+            MenuItem = menuItem
+        });
+
+        Dispose();
+    }
+
+    private void ShowSubmenu(int index, MenuItemCollection subMenu)
+    {
+        if (subMenuPopup is not null) return;
+
+        CloseSubmenu();
+
+        Native.GetClientRect(_hWnd, out var rect);
+
+        var pos = new POINT
+        {
+            x = rect.Right,
+            y = index * ItemHeight
+        };
+        Native.ClientToScreen(_hWnd, ref pos);
+
+        subMenuPopup = new PopupMenu(_ownerHWnd, _ownerIcon, subMenu, pos, unchecked((uint)Environment.TickCount));
+        subMenuPopup.ShowModal();
+    }
+
+    private void CloseSubmenu()
+    {
+        if (subMenuPopup is null) return;
+
+        subMenuPopup.Dispose();
+        subMenuPopup = null;
     }
 
     private void Paint()
@@ -150,7 +269,7 @@ internal sealed class PopupMenu : IDisposable
                     Native.DeleteObject(hoverBrush);
                 }
 
-                if (entry is MenuItem mi)
+                if (entry is MenuItem menuItem)
                 {
                     RECT rcCheck = new()
                     {
@@ -160,7 +279,7 @@ internal sealed class PopupMenu : IDisposable
                         Bottom = rcItem.Top + (ItemHeight + 16) / 2
                     };
 
-                    if (mi.IsChecked.HasValue && mi.IsChecked.Value)
+                    if (menuItem.IsChecked.GetValueOrDefault())
                     {
                         var hPen = Native.CreatePen(Native.PS_SOLID, 2, new Rgb(255, 255, 255));
                         var oldPen = Native.SelectObject(hdc, hPen);
@@ -175,13 +294,13 @@ internal sealed class PopupMenu : IDisposable
 
                     int textLeft = rcCheck.Right + 6;
                     int textTop = rcItem.Top + 6;
-                    var textColor = mi.IsDisabled ? new Rgb(0, 0, 0) : new Rgb(200, 200, 200);
+                    var textColor = menuItem.IsDisabled ? new Rgb(0, 0, 0) : new Rgb(200, 200, 200);
                     _ = Native.SetTextColor(hdc, textColor);
                     _ = Native.SetBkMode(hdc, Native.TRANSPARENT);
 
-                    Native.TextOut(hdc, textLeft, textTop + (ItemHeight - 16) / 2, mi.Text, mi.Text.Length);
+                    Native.TextOut(hdc, textLeft, textTop + (ItemHeight - 16) / 2, menuItem.Text, menuItem.Text.Length);
 
-                    if (mi.SubMenu.Count > 0)
+                    if (menuItem.SubMenu.Count > 0)
                     {
                         int arrowX = rcClient.Right - 12;
                         int arrowY = rcItem.Top + (ItemHeight / 2);
@@ -224,16 +343,5 @@ internal sealed class PopupMenu : IDisposable
         {
             _ = Native.ReleaseDC(_hWnd, hdc);
         }
-    }
-
-    private void Close()
-    {
-        if (disposed) return;
-
-        _ = Native.ReleaseCapture();
-        _ = Native.DestroyWindow(_hWnd);
-        _closed.Set();
-
-        Dispose();
     }
 }

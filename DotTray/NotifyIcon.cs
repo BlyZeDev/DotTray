@@ -27,8 +27,8 @@ public sealed partial class NotifyIcon : IDisposable
     private const int CHECKBOX_AREA = 20;
     private const int ARROW_AREA = 12;
 
+    private static uint totalIcons;
     private static nint gdipToken;
-    private static uint nextTrayId;
 
     private readonly Thread _trayLoopThread;
     private readonly uint _trayId;
@@ -84,8 +84,8 @@ public sealed partial class NotifyIcon : IDisposable
         this.icoHandle = icoHandle;
         this.needsIcoDestroy = needsIcoDestroy;
 
-        nextTrayId++;
-        _trayId = nextTrayId;
+        totalIcons++;
+        _trayId = unchecked((uint)Environment.TickCount);
         var windowClassName = $"{nameof(DotTray)}NotifyIconWindow{_trayId}";
 
         _menuActions = [];
@@ -246,8 +246,8 @@ public sealed partial class NotifyIcon : IDisposable
 
         if (_trayLoopThread.IsAlive) _trayLoopThread.Join();
 
-        nextTrayId--;
-        if (nextTrayId == 0)
+        totalIcons--;
+        if (totalIcons == 0)
         {
             Native.GdiplusShutdown(gdipToken);
             gdipToken = nint.Zero;
