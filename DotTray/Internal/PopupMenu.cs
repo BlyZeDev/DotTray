@@ -8,7 +8,9 @@ using System.Threading;
 
 internal sealed class PopupMenu : IDisposable
 {
-    private const int ItemHeight = 28;
+    private const int CheckBoxArea = 24;
+    private const int ArrowArea = 12;
+    private const int ItemHeight = 20;
 
     private readonly string _windowClassName;
     private readonly NotifyIcon _ownerIcon;
@@ -53,13 +55,14 @@ internal sealed class PopupMenu : IDisposable
         var hdc = PInvoke.GetDC(nint.Zero);
         var maxWidth = 160;
 
+        RECT rect;
         try
         {
             for (int i = 0; i < _items.Count; i++)
             {
                 if (_items[i] is MenuItem menuItem)
                 {
-                    var rect = new RECT
+                    rect = new RECT
                     {
                         Left = 0,
                         Top = 0,
@@ -67,9 +70,9 @@ internal sealed class PopupMenu : IDisposable
                         Bottom = ItemHeight
                     };
 
-                    _ = PInvoke.DrawText(hdc, menuItem.Text, -1, ref rect, 0x0400);
+                    _ = PInvoke.DrawText(hdc, menuItem.Text, -1, ref rect, PInvoke.DT_CALCRECT);
 
-                    var itemTotal = rect.Right - rect.Left + 44 + (menuItem.SubMenu.Count > 0 ? 12 : 0);
+                    var itemTotal = rect.Right - rect.Left + CheckBoxArea + (menuItem.SubMenu.Count > 0 ? ArrowArea : 0);
                     if (itemTotal > maxWidth) maxWidth = itemTotal;
                 }
             }
@@ -79,7 +82,22 @@ internal sealed class PopupMenu : IDisposable
             _ = PInvoke.ReleaseDC(nint.Zero, hdc);
         }
 
-        var maxHeight = items.Count * ItemHeight;
+        var windowRect = new RECT
+        {
+            Left = 0,
+            Top = 0,
+            Right = maxWidth,
+            Bottom = _items.Count * ItemHeight
+        };
+
+        PInvoke.AdjustWindowRectEx(
+            ref windowRect,
+            PInvoke.WS_POPUP | PInvoke.WS_CLIPSIBLINGS | PInvoke.WS_CLIPCHILDREN | PInvoke.WS_BORDER,
+            false,
+            PInvoke.WS_EX_TOOLWINDOW | PInvoke.WS_EX_NOACTIVATE);
+
+        var windowWidth = windowRect.Right - windowRect.Left;
+        var windowHeight = windowRect.Bottom - windowRect.Top;
 
         var screenWidth = PInvoke.GetSystemMetrics(PInvoke.SM_CXSCREEN);
         var screenHeight = PInvoke.GetSystemMetrics(PInvoke.SM_CYSCREEN);
@@ -87,8 +105,8 @@ internal sealed class PopupMenu : IDisposable
         var x = screenPos.x;
         var y = screenPos.y;
 
-        if (x + maxWidth > screenWidth) x = screenWidth - maxWidth - 1;
-        if (y + maxHeight > screenHeight) y = screenHeight - maxHeight - 1;
+        if (x + windowWidth > screenWidth) x = screenWidth - windowWidth - 1;
+        if (y + windowHeight > screenHeight) y = screenHeight - windowHeight - 1;
 
         if (x < 0) x = 0;
         if (y < 0) y = 0;
@@ -98,9 +116,9 @@ internal sealed class PopupMenu : IDisposable
             _windowClassName,
             "",
             PInvoke.WS_POPUP | PInvoke.WS_CLIPSIBLINGS | PInvoke.WS_CLIPCHILDREN | PInvoke.WS_BORDER,
-            screenPos.x, screenPos.y, maxWidth, maxHeight,
+            x, y - 10, windowWidth, windowHeight,
             _ownerHWnd, nint.Zero, _instanceHandle, nint.Zero);
-        
+
         try
         {
             var pref = PInvoke.DWMWCP_ROUND;
@@ -254,7 +272,7 @@ internal sealed class PopupMenu : IDisposable
                 }
                 else
                 {
-                    int sepY = (rcItem.Top + rcItem.Bottom) / 2;
+                    var sepY = (rcItem.Top + rcItem.Bottom) / 2;
                     var hPen = PInvoke.CreatePen(PInvoke.PS_SOLID, 1, new Rgb(80, 80, 80));
                     var oldPen = PInvoke.SelectObject(memDC, hPen);
                     PInvoke.MoveToEx(memDC, 8, sepY, IntPtr.Zero);

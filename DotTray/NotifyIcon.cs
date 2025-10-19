@@ -22,11 +22,6 @@ using System.Threading.Tasks;
 [SupportedOSPlatform("Windows")]
 public sealed partial class NotifyIcon : IDisposable
 {
-    private const int MENU_PADDING_X = 12;
-    private const int MENU_PADDING_Y = 6;
-    private const int CHECKBOX_AREA = 20;
-    private const int ARROW_AREA = 12;
-
     private static uint totalIcons;
     private static nint gdipToken;
 
@@ -41,8 +36,6 @@ public sealed partial class NotifyIcon : IDisposable
     private nint hWnd;
 
     private BalloonNotification? nextBalloon;
-    private bool menuRebuildQueued;
-    private int nextCommandId;
 
     private nint trayMenuHWnd;
 
@@ -85,9 +78,6 @@ public sealed partial class NotifyIcon : IDisposable
         totalIcons++;
         _trayId = unchecked((uint)Environment.TickCount);
         var windowClassName = $"{nameof(DotTray)}NotifyIconWindow{_trayId}";
-
-        menuRebuildQueued = false;
-        nextCommandId = 1000;
 
         MenuItems = [];
         ToolTip = "";
@@ -134,7 +124,6 @@ public sealed partial class NotifyIcon : IDisposable
 
             using (var registration = cancellationToken.Register(() => PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_QUIT, 0, 0)))
             {
-                PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_REBUILD, 0, 0);
                 PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_TOOLTIP, 0, 0);
 
                 while (PInvoke.GetMessage(out var message, nint.Zero, 0, 0))

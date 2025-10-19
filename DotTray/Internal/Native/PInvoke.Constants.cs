@@ -42,7 +42,6 @@ internal static partial class PInvoke
     public const uint WM_APP_TRAYICON_ICON = WM_APP + 2;
     public const uint WM_APP_TRAYICON_TOOLTIP = WM_APP + 3;
     public const uint WM_APP_TRAYICON_BALLOON = WM_APP + 4;
-    public const uint WM_APP_TRAYICON_REBUILD = WM_APP + 99;
     public const uint WM_APP_TRAYICON_QUIT = WM_APP + 100;
 
     public const uint WM_MEASUREITEM = 0x002C;
@@ -109,6 +108,7 @@ internal static partial class PInvoke
     public const uint DT_SINGLELINE = 0x0020;
     public const uint DT_NOPREFIX = 0x0800;
     public const uint DT_END_ELLIPSIS = 0x8000;
+    public const uint DT_CALCRECT = 0x0400;
 
     public const uint DFC_MENU = 2;
 
