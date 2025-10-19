@@ -1,6 +1,7 @@
 ﻿namespace DotTray;
 
 using DotTray.Internal;
+using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using System;
 using System.IO;
@@ -20,7 +21,7 @@ public sealed partial class NotifyIcon
 
                 if (menuItem.SubMenu.Count > 0)
                 {
-                    subMenu = Native.CreatePopupMenu();
+                    subMenu = PInvoke.CreatePopupMenu();
                     BuildMenu(subMenu, menuItem.SubMenu);
                 }
 
@@ -41,49 +42,35 @@ public sealed partial class NotifyIcon
 
                 var handle = GCHandle.Alloc(menuItem, GCHandleType.Normal);
 
-                Native.AppendMenu(menuHandle, Native.MF_OWNERDRAW, id, null);
+                PInvoke.AppendMenu(menuHandle, PInvoke.MF_OWNERDRAW, id, null);
 
                 var menuItemInfo = new MENUITEMINFO
                 {
                     cbSize = (uint)Marshal.SizeOf<MENUITEMINFO>(),
-                    fMask = Native.MIIM_DATA | Native.MIIM_SUBMENU | Native.MIIM_STATE,
+                    fMask = PInvoke.MIIM_DATA | PInvoke.MIIM_SUBMENU | PInvoke.MIIM_STATE,
                     dwItemData = GCHandle.ToIntPtr(handle),
                     hSubMenu = subMenu,
                     fState = menuItem.fState
                 };
-                Native.SetMenuItemInfo(menuHandle, (uint)id, false, ref menuItemInfo);
+                PInvoke.SetMenuItemInfo(menuHandle, (uint)id, false, ref menuItemInfo);
             }
-            else Native.AppendMenu(menuHandle, Native.MF_SEPARATOR, 0, null!);
+            else PInvoke.AppendMenu(menuHandle, PInvoke.MF_SEPARATOR, 0, null!);
         }
     }
 
-    private void MonitorMenuItems(bool attach)
-    {
-        MenuItems.EntriesChanged -= OnMenuItemChange;
-        if (attach) MenuItems.EntriesChanged += OnMenuItemChange;
-    }
-
-    private void OnMenuItemChange()
-    {
-        if (menuRebuildQueued) return;
-
-        menuRebuildQueued = true;
-        Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_REBUILD, 0, 0);
-    }
-
-    private void SetIcon(nint icoHandle, bool needsIcoDestroy) => Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_ICON, icoHandle, needsIcoDestroy ? 1 : 0);
+    private void SetIcon(nint icoHandle, bool needsIcoDestroy) => PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_ICON, icoHandle, needsIcoDestroy ? 1 : 0);
 
     private unsafe nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
     {
         switch (msg)
         {
-            case Native.WM_APP_TRAYICON:
+            case PInvoke.WM_APP_TRAYICON:
                 {
                     var clickedButton = (int)lParam switch
                     {
-                        Native.WM_LBUTTONUP => MouseButton.Left,
-                        Native.WM_RBUTTONUP => MouseButton.Right,
-                        Native.WM_MBUTTONUP => MouseButton.Middle,
+                        PInvoke.WM_LBUTTONUP => MouseButton.Left,
+                        PInvoke.WM_RBUTTONUP => MouseButton.Right,
+                        PInvoke.WM_MBUTTONUP => MouseButton.Middle,
                         _ => MouseButton.None
                     };
 
@@ -91,31 +78,15 @@ public sealed partial class NotifyIcon
                     {
                         MenuShowing?.Invoke(clickedButton);
 
-                        /*
-                        Native.SetForegroundWindow(hWnd);
-                        Native.GetCursorPos(out var pos);
-                        Native.TrackPopupMenu(trayMenuHWnd, Native.TPM_RIGHTBUTTON, pos.x, pos.y, 0, hWnd, 0);
-                        */
-
-                        Native.GetCursorPos(out var pos);
-                        using (var popup = new PopupMenu(hWnd,this, MenuItems, pos, _trayId))
-                        {
-                            popup.ShowModal();
-                        }
-
+                        PInvoke.GetCursorPos(out var pos);
+                        using (_ = PopupMenu.Show(hWnd, this, MenuItems, pos, _trayId)) { }
+                        
                         MenuHiding?.Invoke();
                     }
                 }
                 break;
 
-            case Native.WM_COMMAND:
-                {
-                    var command = (int)(wParam & 0xFFFF);
-                    if (_menuActions.TryGetValue(command, out var action)) action();
-                }
-                break;
-
-            case Native.WM_MEASUREITEM:
+            case PInvoke.WM_MEASUREITEM:
                 {
                     var measureItemStruct = Marshal.PtrToStructure<MEASUREITEMSTRUCT>(lParam);
 
@@ -126,7 +97,7 @@ public sealed partial class NotifyIcon
                     }
                     else
                     {
-                        var hdc = Native.GetDC(nint.Zero);
+                        var hdc = PInvoke.GetDC(nint.Zero);
                         if (hdc == nint.Zero)
                         {
                             measureItemStruct.itemWidth = 80;
@@ -136,8 +107,8 @@ public sealed partial class NotifyIcon
                         {
                             var menuItem = (MenuItem)GCHandle.FromIntPtr(measureItemStruct.itemData).Target!;
 
-                            Native.GetTextExtentPoint32(hdc, menuItem.Text, menuItem.Text.Length, out var size);
-                            _ = Native.ReleaseDC(nint.Zero, hdc);
+                            PInvoke.GetTextExtentPoint32(hdc, menuItem.Text, menuItem.Text.Length, out var size);
+                            _ = PInvoke.ReleaseDC(nint.Zero, hdc);
 
                             var extra = CHECKBOX_AREA + MENU_PADDING_X * 2;
                             if (menuItem.SubMenu.Count > 0) extra += ARROW_AREA;
@@ -152,7 +123,7 @@ public sealed partial class NotifyIcon
                     return 1;
                 }
 
-            case Native.WM_DRAWITEM:
+            case PInvoke.WM_DRAWITEM:
                 {
                     var drawItemStruct = Marshal.PtrToStructure<DRAWITEMSTRUCT>(lParam);
 
@@ -163,52 +134,52 @@ public sealed partial class NotifyIcon
                     var hdc = drawItemStruct.hDC;
                     var rect = drawItemStruct.rcItem;
 
-                    var isDisabled = (drawItemStruct.itemState & Native.ODS_DISABLED) != 0;
-                    var isSelected = (drawItemStruct.itemState & Native.ODS_SELECTED) != 0;
+                    var isDisabled = (drawItemStruct.itemState & PInvoke.ODS_DISABLED) != 0;
+                    var isSelected = (drawItemStruct.itemState & PInvoke.ODS_SELECTED) != 0;
 
                     int textColor;
                     nint brushHandle;
                     if (isDisabled)
                     {
-                        brushHandle = Native.CreateSolidBrush(menuItem.BackgroundDisabledColor);
+                        brushHandle = PInvoke.CreateSolidBrush(menuItem.BackgroundDisabledColor);
                         textColor = menuItem.TextDisabledColor;
                     }
                     else
                     {
                         if (isSelected)
                         {
-                            brushHandle = Native.CreateSolidBrush(menuItem.BackgroundHoverColor);
+                            brushHandle = PInvoke.CreateSolidBrush(menuItem.BackgroundHoverColor);
                             textColor = menuItem.TextHoverColor;
                         }
                         else
                         {
-                            brushHandle = Native.CreateSolidBrush(menuItem.BackgroundColor);
+                            brushHandle = PInvoke.CreateSolidBrush(menuItem.BackgroundColor);
                             textColor = menuItem.TextColor;
                         }
                     }
 
-                    var oldBrush = Native.SelectObject(hdc, brushHandle);
-                    var oldPen = Native.SelectObject(hdc, Native.GetStockObject(Native.NULL_PEN));
+                    var oldBrush = PInvoke.SelectObject(hdc, brushHandle);
+                    var oldPen = PInvoke.SelectObject(hdc, PInvoke.GetStockObject(PInvoke.NULL_PEN));
 
-                    Native.RoundRect(hdc, rect.Left, rect.Top, rect.Right, rect.Bottom, 0, 0);
+                    PInvoke.RoundRect(hdc, rect.Left, rect.Top, rect.Right, rect.Bottom, 0, 0);
 
-                    Native.SelectObject(hdc, oldBrush);
-                    Native.SelectObject(hdc, oldPen);
-                    Native.DeleteObject(brushHandle);
+                    PInvoke.SelectObject(hdc, oldBrush);
+                    PInvoke.SelectObject(hdc, oldPen);
+                    PInvoke.DeleteObject(brushHandle);
 
-                    _ = Native.SetTextColor(hdc, textColor);
-                    _ = Native.SetBkMode(hdc, Native.TRANSPARENT);
+                    _ = PInvoke.SetTextColor(hdc, textColor);
+                    _ = PInvoke.SetBkMode(hdc, PInvoke.TRANSPARENT);
 
-                    if ((drawItemStruct.itemState & Native.ODS_CHECKED) != 0)
+                    if ((drawItemStruct.itemState & PInvoke.ODS_CHECKED) != 0)
                     {
                         var checkX = rect.Left + 4;
                         var checkY = rect.Top + (rect.Bottom - rect.Top - 16) / 2;
 
                         if (gdipToken == nint.Zero)
                         {
-                            var pen = Native.CreatePen(Native.PS_SOLID, 2, new Rgb(255, 255, 255));
-                            oldPen = Native.SelectObject(hdc, pen);
-                            oldBrush = Native.SelectObject(hdc, Native.GetStockObject(Native.NULL_BRUSH));
+                            var pen = PInvoke.CreatePen(PInvoke.PS_SOLID, 2, new Rgb(255, 255, 255));
+                            oldPen = PInvoke.SelectObject(hdc, pen);
+                            oldBrush = PInvoke.SelectObject(hdc, PInvoke.GetStockObject(PInvoke.NULL_BRUSH));
 
                             const int PointsLength = 4;
                             var points = stackalloc POINT[PointsLength]
@@ -219,11 +190,11 @@ public sealed partial class NotifyIcon
                                 new POINT { x = checkX + 14, y = checkY + 2  }
                             };
 
-                            Native.Polyline(hdc, points, PointsLength);
+                            PInvoke.Polyline(hdc, points, PointsLength);
 
-                            Native.SelectObject(hdc, oldPen);
-                            Native.SelectObject(hdc, oldBrush);
-                            Native.DeleteObject(pen);
+                            PInvoke.SelectObject(hdc, oldPen);
+                            PInvoke.SelectObject(hdc, oldBrush);
+                            PInvoke.DeleteObject(pen);
                         }
                         else
                         {
@@ -235,29 +206,29 @@ public sealed partial class NotifyIcon
                                 new POINT { x = checkX + 14, y = checkY + 2  }
                             };
 
-                            _ = Native.GdipCreateFromHDC(hdc, out var graphicsHandle);
-                            _ = Native.GdipSetSmoothingMode(graphicsHandle, 4);
-                            _ = Native.GdipCreatePen1(0xFFFFFFFF, 2f, 2, out var pen);
+                            _ = PInvoke.GdipCreateFromHDC(hdc, out var graphicsHandle);
+                            _ = PInvoke.GdipSetSmoothingMode(graphicsHandle, 4);
+                            _ = PInvoke.GdipCreatePen1(0xFFFFFFFF, 2f, 2, out var pen);
 
-                            _ = Native.GdipSetPenLineJoin(pen, 2);
-                            _ = Native.GdipSetPenStartCap(pen, 2);
-                            _ = Native.GdipSetPenEndCap(pen, 2);
+                            _ = PInvoke.GdipSetPenLineJoin(pen, 2);
+                            _ = PInvoke.GdipSetPenStartCap(pen, 2);
+                            _ = PInvoke.GdipSetPenEndCap(pen, 2);
 
-                            _ = Native.GdipDrawLinesI(graphicsHandle, pen, points, PointsLength);
+                            _ = PInvoke.GdipDrawLinesI(graphicsHandle, pen, points, PointsLength);
 
-                            _ = Native.GdipDeletePen(pen);
-                            _ = Native.GdipDeleteGraphics(graphicsHandle);
+                            _ = PInvoke.GdipDeletePen(pen);
+                            _ = PInvoke.GdipDeleteGraphics(graphicsHandle);
                         }
                     }
 
                     rect.Left += CHECKBOX_AREA + 5;
 
-                    _ = Native.DrawText(hdc, menuItem.Text, -1, ref rect, Native.DT_SINGLELINE | Native.DT_VCENTER | Native.DT_NOPREFIX | Native.DT_END_ELLIPSIS);
+                    _ = PInvoke.DrawText(hdc, menuItem.Text, -1, ref rect, PInvoke.DT_SINGLELINE | PInvoke.DT_VCENTER | PInvoke.DT_NOPREFIX | PInvoke.DT_END_ELLIPSIS);
 
                     return 1;
                 }
 
-            case Native.WM_DELETEITEM:
+            case PInvoke.WM_DELETEITEM:
                 {
                     var deleteItemStruct = Marshal.PtrToStructure<DELETEITEMSTRUCT>(lParam);
 
@@ -270,42 +241,42 @@ public sealed partial class NotifyIcon
                     return 1;
                 }
 
-            case Native.WM_APP_TRAYICON_ICON:
+            case PInvoke.WM_APP_TRAYICON_ICON:
                 {
                     var iconData = new NOTIFYICONDATA
                     {
                         cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                         hWnd = hWnd,
                         uID = _trayId,
-                        uFlags = Native.NIF_ICON,
-                        uCallbackMessage = Native.WM_APP_TRAYICON,
+                        uFlags = PInvoke.NIF_ICON,
+                        uCallbackMessage = PInvoke.WM_APP_TRAYICON,
                         hIcon = wParam
                     };
-                    Native.Shell_NotifyIcon(Native.NIM_MODIFY, ref iconData);
+                    PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
 
-                    if (needsIcoDestroy) Native.DestroyIcon(icoHandle);
+                    if (needsIcoDestroy) PInvoke.DestroyIcon(icoHandle);
 
                     icoHandle = wParam;
                     needsIcoDestroy = lParam != 0;
                 }
                 break;
 
-            case Native.WM_APP_TRAYICON_TOOLTIP:
+            case PInvoke.WM_APP_TRAYICON_TOOLTIP:
                 {
                     var iconData = new NOTIFYICONDATA
                     {
                         cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                         hWnd = hWnd,
                         uID = _trayId,
-                        uFlags = Native.NIF_TIP,
+                        uFlags = PInvoke.NIF_TIP,
                         szTip = ToolTip
                     };
 
-                    Native.Shell_NotifyIcon(Native.NIM_MODIFY, ref iconData);
+                    PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
                 }
                 break;
 
-            case Native.WM_APP_TRAYICON_BALLOON:
+            case PInvoke.WM_APP_TRAYICON_BALLOON:
                 if (nextBalloon is not null)
                 {
                     var iconData = new NOTIFYICONDATA
@@ -314,40 +285,38 @@ public sealed partial class NotifyIcon
                         hWnd = hWnd,
                         uID = _trayId,
                         hIcon = (nextBalloon.Icon is BalloonNotificationIcon.User) ? icoHandle : nint.Zero,
-                        uFlags = Native.NIF_INFO,
-                        dwInfoFlags = (uint)nextBalloon.Icon | (nextBalloon.NoSound ? Native.NIIF_NOSOUND : 0),
+                        uFlags = PInvoke.NIF_INFO,
+                        dwInfoFlags = (uint)nextBalloon.Icon | (nextBalloon.NoSound ? PInvoke.NIIF_NOSOUND : 0),
                         szInfoTitle = nextBalloon.Title,
                         szInfo = nextBalloon.Message
                     };
 
                     nextBalloon = null;
 
-                    Native.Shell_NotifyIcon(Native.NIM_MODIFY, ref iconData);
+                    PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
                 }
                 break;
 
-            case Native.WM_APP_TRAYICON_REBUILD:
+            case PInvoke.WM_APP_TRAYICON_REBUILD:
                 {
                     menuRebuildQueued = false;
 
                     if (trayMenuHWnd != nint.Zero)
                     {
-                        Native.DestroyMenu(trayMenuHWnd);
+                        PInvoke.DestroyMenu(trayMenuHWnd);
                         trayMenuHWnd = nint.Zero;
                     }
-                    trayMenuHWnd = Native.CreatePopupMenu();
-
-                    _menuActions.Clear();
+                    trayMenuHWnd = PInvoke.CreatePopupMenu();
 
                     nextCommandId = 1000;
                     BuildMenu(trayMenuHWnd, MenuItems);
                 }
                 return nint.Zero;
 
-            case Native.WM_APP_TRAYICON_QUIT: Native.PostQuitMessage(0); break;
+            case PInvoke.WM_APP_TRAYICON_QUIT: PInvoke.PostQuitMessage(0); break;
         }
 
-        return Native.DefWindowProc(hWnd, msg, wParam, lParam);
+        return PInvoke.DefWindowProc(hWnd, msg, wParam, lParam);
     }
 
     private static NotifyIcon Run(nint iconHandle, bool needIconDestroy, CancellationToken cancellationToken)
@@ -378,7 +347,7 @@ public sealed partial class NotifyIcon
         if (!Path.GetExtension(icoPath).Equals(".ico", StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("The path needs to point to an .ico file", nameof(icoPath));
         if (!File.Exists(icoPath)) throw new FileNotFoundException("The .ico file could not be found", icoPath);
 
-        var handle = Native.LoadImage(nint.Zero, icoPath, Native.IMAGE_ICON, 16, 16, Native.LR_LOADFROMFILE);
+        var handle = PInvoke.LoadImage(nint.Zero, icoPath, PInvoke.IMAGE_ICON, 16, 16, PInvoke.LR_LOADFROMFILE);
         return handle == nint.Zero ? throw new FileLoadException("The .ico file could not be loaded", icoPath) : handle;
     }
 }

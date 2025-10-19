@@ -1,6 +1,6 @@
 ﻿namespace DotTray;
 
-using DotTray.Internal;
+using DotTray.Internal.Native;
 using System;
 using System.Diagnostics.CodeAnalysis;
 
@@ -50,13 +50,13 @@ public sealed class MenuItem : IMenuItem
     /// </summary>
     public bool? IsChecked
     {
-        get => (fState & Native.MFS_CHECKED) != 0;
+        get => (fState & PInvoke.MFS_CHECKED) != 0;
         set
         {
-            if ((fState & Native.MFS_CHECKED) != 0 == value) return;
+            if ((fState & PInvoke.MFS_CHECKED) != 0 == value) return;
 
-            if (value.GetValueOrDefault()) fState |= Native.MFS_CHECKED;
-            else fState &= ~Native.MFS_CHECKED;
+            if (value.GetValueOrDefault()) fState |= PInvoke.MFS_CHECKED;
+            else fState &= ~PInvoke.MFS_CHECKED;
 
             Update();
         }
@@ -67,13 +67,13 @@ public sealed class MenuItem : IMenuItem
     /// </summary>
     public bool IsDisabled
     {
-        get => (fState & Native.MFS_DISABLED) != 0;
+        get => (fState & PInvoke.MFS_DISABLED) != 0;
         set
         {
-            if ((fState & Native.MFS_DISABLED) != 0 == value) return;
+            if ((fState & PInvoke.MFS_DISABLED) != 0 == value) return;
 
-            if (value) fState |= Native.MFS_DISABLED;
-            else fState &= ~Native.MFS_DISABLED;
+            if (value) fState |= PInvoke.MFS_DISABLED;
+            else fState &= ~PInvoke.MFS_DISABLED;
             
             Update();
         }

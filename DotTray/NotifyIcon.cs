@@ -1,6 +1,6 @@
 ﻿namespace DotTray;
 
-using DotTray.Internal;
+using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using System;
 using System.Collections.Generic;
@@ -32,8 +32,6 @@ public sealed partial class NotifyIcon : IDisposable
 
     private readonly Thread _trayLoopThread;
     private readonly uint _trayId;
-
-    private readonly Dictionary<int, Action> _menuActions;
 
     private nint icoHandle;
     private bool needsIcoDestroy;
@@ -88,16 +86,12 @@ public sealed partial class NotifyIcon : IDisposable
         _trayId = unchecked((uint)Environment.TickCount);
         var windowClassName = $"{nameof(DotTray)}NotifyIconWindow{_trayId}";
 
-        _menuActions = [];
-
         menuRebuildQueued = false;
         nextCommandId = 1000;
 
         MenuItems = [];
         ToolTip = "";
         MouseButtons = MouseButton.Left | MouseButton.Right;
-
-        MonitorMenuItems(true);
 
         _trayLoopThread = new Thread(() =>
         {
@@ -107,23 +101,23 @@ public sealed partial class NotifyIcon : IDisposable
                 {
                     GdiplusVersion = 1
                 };
-                _ = Native.GdiplusStartup(out gdipToken, ref input, out _);
+                _ = PInvoke.GdiplusStartup(out gdipToken, ref input, out _);
             }
 
-            instanceHandle = Native.GetModuleHandle(null);
+            instanceHandle = PInvoke.GetModuleHandle(null);
 
-            var wndProc = new Native.WndProc(WndProcFunc);
+            var wndProc = new PInvoke.WndProc(WndProcFunc);
             var wndClass = new WNDCLASS
             {
                 lpfnWndProc = Marshal.GetFunctionPointerForDelegate(wndProc),
                 hInstance = instanceHandle,
                 lpszClassName = windowClassName
             };
-            Native.RegisterClass(ref wndClass);
+            PInvoke.RegisterClass(ref wndClass);
 
-            hWnd = Native.CreateWindowEx(0, windowClassName, "", 0, 0, 0, 0, 0, 0, 0, instanceHandle, 0);
+            hWnd = PInvoke.CreateWindowEx(0, windowClassName, "", 0, 0, 0, 0, 0, 0, 0, instanceHandle, 0);
             thisHandle = GCHandle.Alloc(this, GCHandleType.Normal);
-            Native.SetWindowLongPtr(hWnd, Native.GWLP_USERDATA, GCHandle.ToIntPtr(thisHandle));
+            PInvoke.SetWindowLongPtr(hWnd, PInvoke.GWLP_USERDATA, GCHandle.ToIntPtr(thisHandle));
 
             onInitializationFinished();
 
@@ -132,23 +126,23 @@ public sealed partial class NotifyIcon : IDisposable
                 cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                 hWnd = hWnd,
                 uID = _trayId,
-                uFlags = Native.NIF_MESSAGE | Native.NIF_ICON,
-                uCallbackMessage = Native.WM_APP_TRAYICON,
+                uFlags = PInvoke.NIF_MESSAGE | PInvoke.NIF_ICON,
+                uCallbackMessage = PInvoke.WM_APP_TRAYICON,
                 hIcon = icoHandle
             };
-            Native.Shell_NotifyIcon(Native.NIM_ADD, ref iconData);
+            PInvoke.Shell_NotifyIcon(PInvoke.NIM_ADD, ref iconData);
 
-            using (var registration = cancellationToken.Register(() => Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_QUIT, 0, 0)))
+            using (var registration = cancellationToken.Register(() => PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_QUIT, 0, 0)))
             {
-                Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_REBUILD, 0, 0);
-                Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_TOOLTIP, 0, 0);
+                PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_REBUILD, 0, 0);
+                PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_TOOLTIP, 0, 0);
 
-                while (Native.GetMessage(out var message, nint.Zero, 0, 0))
+                while (PInvoke.GetMessage(out var message, nint.Zero, 0, 0))
                 {
                     if (hWnd == message.hwnd)
                     {
-                        Native.TranslateMessage(ref message);
-                        Native.DispatchMessage(ref message);
+                        PInvoke.TranslateMessage(ref message);
+                        PInvoke.DispatchMessage(ref message);
                     }
                 }
 
@@ -158,25 +152,25 @@ public sealed partial class NotifyIcon : IDisposable
                     hWnd = hWnd,
                     uID = _trayId
                 };
-                Native.Shell_NotifyIcon(Native.NIM_DELETE, ref iconData);
+                PInvoke.Shell_NotifyIcon(PInvoke.NIM_DELETE, ref iconData);
 
-                if (needsIcoDestroy) Native.DestroyIcon(icoHandle);
+                if (needsIcoDestroy) PInvoke.DestroyIcon(icoHandle);
 
                 if (trayMenuHWnd != nint.Zero)
                 {
-                    Native.DestroyMenu(trayMenuHWnd);
+                    PInvoke.DestroyMenu(trayMenuHWnd);
                     trayMenuHWnd = nint.Zero;
                 }
 
                 if (hWnd != nint.Zero)
                 {
-                    Native.SetWindowLongPtr(hWnd, Native.GWLP_USERDATA, nint.Zero);
+                    PInvoke.SetWindowLongPtr(hWnd, PInvoke.GWLP_USERDATA, nint.Zero);
                     if (thisHandle.IsAllocated) thisHandle.Free();
 
-                    Native.DestroyWindow(hWnd);
+                    PInvoke.DestroyWindow(hWnd);
                     hWnd = nint.Zero;
 
-                    Native.UnregisterClass(windowClassName, instanceHandle);
+                    PInvoke.UnregisterClass(windowClassName, instanceHandle);
                     instanceHandle = nint.Zero;
                 }
             }
@@ -220,7 +214,7 @@ public sealed partial class NotifyIcon : IDisposable
         if (ToolTip.Equals(toolTip, StringComparison.Ordinal)) return;
 
         ToolTip = toolTip;
-        Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_TOOLTIP, 0, 0);
+        PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_TOOLTIP, 0, 0);
     }
 
     /// <summary>
@@ -235,21 +229,20 @@ public sealed partial class NotifyIcon : IDisposable
             Message = balloon.Message.Length > NOTIFYICONDATA.SZINFO_LENGTH ? balloon.Message[..NOTIFYICONDATA.SZINFO_LENGTH] : balloon.Message
         };
 
-        Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_BALLOON, 0, 0);
+        PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_BALLOON, 0, 0);
     }
 
     /// <inheritdoc/>
     public void Dispose()
     {
-        MonitorMenuItems(false);
-        Native.PostMessage(hWnd, Native.WM_APP_TRAYICON_QUIT, 0, 0);
+        PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_QUIT, 0, 0);
 
         if (_trayLoopThread.IsAlive) _trayLoopThread.Join();
 
         totalIcons--;
         if (totalIcons == 0)
         {
-            Native.GdiplusShutdown(gdipToken);
+            PInvoke.GdiplusShutdown(gdipToken);
             gdipToken = nint.Zero;
         }
     }
