@@ -1,5 +1,6 @@
 ﻿namespace DotTray;
 
+using DotTray.Internal;
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using System;
@@ -35,9 +36,8 @@ public sealed partial class NotifyIcon : IDisposable
     private GCHandle thisHandle;
     private nint hWnd;
 
+    private PopupMenu? popupMenu;
     private BalloonNotification? nextBalloon;
-
-    private nint trayMenuHWnd;
 
     /// <summary>
     /// The <see cref="MenuItemCollection"/> of this <see cref="NotifyIcon"/> instance
@@ -144,12 +144,6 @@ public sealed partial class NotifyIcon : IDisposable
                 PInvoke.Shell_NotifyIcon(PInvoke.NIM_DELETE, ref iconData);
 
                 if (needsIcoDestroy) PInvoke.DestroyIcon(icoHandle);
-
-                if (trayMenuHWnd != nint.Zero)
-                {
-                    PInvoke.DestroyMenu(trayMenuHWnd);
-                    trayMenuHWnd = nint.Zero;
-                }
 
                 if (hWnd != nint.Zero)
                 {

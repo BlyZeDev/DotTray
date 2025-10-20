@@ -19,15 +19,12 @@ internal sealed class PopupMenu : IDisposable
     private readonly nint _instanceHandle;
     private readonly MenuItemCollection _items;
     private readonly PInvoke.WndProc _wndProcFunc;
-    private readonly AutoResetEvent _closed;
 
-    private bool disposed;
     private int hoverIndex;
 
     private PopupMenu(nint ownerHWnd, NotifyIcon icon, MenuItemCollection items, POINT screenPos, string windowClassName)
     {
         _windowClassName = windowClassName;
-        _closed = new AutoResetEvent(false);
 
         _ownerIcon = icon;
         _ownerHWnd = ownerHWnd;
@@ -140,27 +137,20 @@ internal sealed class PopupMenu : IDisposable
 
         _ = PInvoke.SetCapture(_hWnd);
 
-        while (!_closed.WaitOne(0))
+        while (PInvoke.PeekMessage(out var msg, nint.Zero, 0, 0, 1))
         {
-            while (PInvoke.PeekMessage(out var msg, nint.Zero, 0, 0, 1))
-            {
-                if (msg.message == PInvoke.WM_QUIT) return;
+            if (msg.message == PInvoke.WM_QUIT) break;
 
-                PInvoke.TranslateMessage(ref msg);
-                PInvoke.DispatchMessage(ref msg);
-            }
+            PInvoke.TranslateMessage(ref msg);
+            PInvoke.DispatchMessage(ref msg);
         }
-
-        _ = PInvoke.ReleaseCapture();
-        _ = PInvoke.DestroyWindow(_hWnd);
     }
 
     public void Dispose()
     {
-        if (disposed) return;
-        disposed = true;
-
-        _closed.Set();
+        _ = PInvoke.ReleaseCapture();
+        _ = PInvoke.DestroyWindow(_hWnd);
+        PInvoke.UnregisterClass(_windowClassName, _instanceHandle);
     }
 
     private nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)

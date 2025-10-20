@@ -29,10 +29,17 @@ public sealed partial class NotifyIcon
 
                     if (clickedButton is not MouseButton.None && MouseButtons.HasFlag(clickedButton))
                     {
+                        if (popupMenu is not null)
+                        {
+                            popupMenu.Dispose();
+                            popupMenu = null;
+                        }
+
                         MenuShowing?.Invoke(clickedButton);
 
                         PInvoke.GetCursorPos(out var pos);
-                        using (_ = PopupMenu.Show(hWnd, this, MenuItems, pos, _trayId)) { }
+
+                        popupMenu = PopupMenu.Show(hWnd, this, MenuItems, pos, _trayId);
                         
                         MenuHiding?.Invoke();
                     }
