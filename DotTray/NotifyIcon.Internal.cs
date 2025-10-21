@@ -31,17 +31,19 @@ public sealed partial class NotifyIcon
                     {
                         if (popupMenu is not null)
                         {
+                            popupMenu.Closed -= MenuHiding;
                             popupMenu.Dispose();
                             popupMenu = null;
+
+                            MenuHiding?.Invoke();
                         }
 
                         MenuShowing?.Invoke(clickedButton);
 
                         PInvoke.GetCursorPos(out var pos);
 
-                        popupMenu = PopupMenu.Show(hWnd, this, MenuItems, pos, _trayId);
-                        
-                        MenuHiding?.Invoke();
+                        popupMenu = PopupMenu.Show(hWnd, this, MenuItems, pos, _popupWindowClassName, instanceHandle);
+                        popupMenu.Closed += MenuHiding;
                     }
                 }
                 break;
@@ -52,8 +54,8 @@ public sealed partial class NotifyIcon
                     {
                         cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                         hWnd = hWnd,
-                        uID = _trayId,
-                        uFlags = PInvoke.NIF_ICON,
+                        guidItem = _trayId,
+                        uFlags = PInvoke.NIF_ICON | PInvoke.NIF_GUID,
                         uCallbackMessage = PInvoke.WM_APP_TRAYICON,
                         hIcon = wParam
                     };
@@ -72,8 +74,8 @@ public sealed partial class NotifyIcon
                     {
                         cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                         hWnd = hWnd,
-                        uID = _trayId,
-                        uFlags = PInvoke.NIF_TIP,
+                        guidItem = _trayId,
+                        uFlags = PInvoke.NIF_TIP | PInvoke.NIF_GUID,
                         szTip = ToolTip
                     };
 
@@ -88,9 +90,9 @@ public sealed partial class NotifyIcon
                     {
                         cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                         hWnd = hWnd,
-                        uID = _trayId,
+                        guidItem = _trayId,
                         hIcon = (nextBalloon.Icon is BalloonNotificationIcon.User) ? icoHandle : nint.Zero,
-                        uFlags = PInvoke.NIF_INFO,
+                        uFlags = PInvoke.NIF_INFO | PInvoke.NIF_GUID,
                         dwInfoFlags = (uint)nextBalloon.Icon | (nextBalloon.NoSound ? PInvoke.NIIF_NOSOUND : 0),
                         szInfoTitle = nextBalloon.Title,
                         szInfo = nextBalloon.Message
@@ -102,7 +104,7 @@ public sealed partial class NotifyIcon
                 }
                 break;
 
-            case PInvoke.WM_APP_TRAYICON_QUIT: PInvoke.PostQuitMessage(0); break;
+            case PInvoke.WM_DESTROY: PInvoke.PostQuitMessage(0); return 0;
         }
 
         return PInvoke.DefWindowProc(hWnd, msg, wParam, lParam);

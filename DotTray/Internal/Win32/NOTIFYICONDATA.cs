@@ -1,5 +1,6 @@
 ﻿namespace DotTray.Internal.Win32;
 
+using System;
 using System.Runtime.InteropServices;
 
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -25,4 +26,6 @@ internal struct NOTIFYICONDATA
     [MarshalAs(UnmanagedType.ByValTStr, SizeConst = SZINFOTITLE_LENGTH)]
     public string szInfoTitle;
     public uint dwInfoFlags;
+    public Guid guidItem;
+    public nint hBalloonIcon;
 }

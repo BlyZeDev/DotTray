@@ -9,12 +9,14 @@ internal static partial class PInvoke
     private const string GdiPlus = "gdiplus.dll";
     private const string DwmApi = "dwmapi.dll";
 
+    public const int GWLP_WNDPROC = -4;
     public const int GWLP_USERDATA = -21;
 
     public const uint WS_POPUP = 0x80000000;
     public const uint WS_BORDER = 0x00800000;
     public const uint WS_EX_NOACTIVATE = 0x08000000;
     public const uint WS_EX_TOOLWINDOW = 0x00000080;
+    public const uint WS_EX_TOPMOST = 0x00000008;
     public const uint WS_VISIBLE = 0x10000000;
     public const uint WS_CLIPSIBLINGS = 0x04000000;
     public const uint WS_CLIPCHILDREN = 0x02000000;
@@ -35,6 +37,7 @@ internal static partial class PInvoke
     public const uint WM_TIMER = 0x0113;
     public const uint WM_DESTROY = 0x0002;
     public const uint WM_COMMAND = 0x0111;
+    public const uint WM_CLOSE = 0x0010;
     public const uint WM_QUIT = 0x0012;
 
     public const int WM_APP = 0x8000;
@@ -42,7 +45,8 @@ internal static partial class PInvoke
     public const uint WM_APP_TRAYICON_ICON = WM_APP + 2;
     public const uint WM_APP_TRAYICON_TOOLTIP = WM_APP + 3;
     public const uint WM_APP_TRAYICON_BALLOON = WM_APP + 4;
-    public const uint WM_APP_TRAYICON_QUIT = WM_APP + 100;
+
+    public const uint WM_APP_POPUP_CLOSE = WM_APP + 50;
 
     public const uint WM_MEASUREITEM = 0x002C;
     public const uint WM_DRAWITEM = 0x002B;
@@ -80,6 +84,7 @@ internal static partial class PInvoke
     public const uint NIF_ICON = 0x00000002;
     public const uint NIF_TIP = 0x00000004;
     public const uint NIF_INFO = 0x00000010;
+    public const uint NIF_GUID = 0x00000020;
 
     public const uint NIIF_NONE = 0x00000000;
     public const uint NIIF_INFO = 0x00000001;
@@ -149,4 +154,6 @@ internal static partial class PInvoke
     public const uint SWP_NOMOVE = 0x0002;
     public const uint SWP_NOSIZE = 0x0001;
     public const uint SWP_NOACTIVATE = 0x0010;
+
+    public const int VK_ESCAPE = 0x1B;
 }

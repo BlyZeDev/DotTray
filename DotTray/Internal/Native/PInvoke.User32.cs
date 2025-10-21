@@ -155,4 +155,7 @@ internal static partial class PInvoke
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool EndPaint(nint hWnd, ref PAINTSTRUCT lpPaint);
+
+    [DllImport(User32, SetLastError = true)]
+    public static extern short GetAsyncKeyState(int vKey);
 }

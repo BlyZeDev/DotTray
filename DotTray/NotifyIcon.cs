@@ -4,7 +4,6 @@ using DotTray.Internal;
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -26,14 +25,14 @@ public sealed partial class NotifyIcon : IDisposable
     private static uint totalIcons;
     private static nint gdipToken;
 
+    private readonly string _popupWindowClassName;
     private readonly Thread _trayLoopThread;
-    private readonly uint _trayId;
+    private readonly Guid _trayId;
 
     private nint icoHandle;
     private bool needsIcoDestroy;
 
     private nint instanceHandle;
-    private GCHandle thisHandle;
     private nint hWnd;
 
     private PopupMenu? popupMenu;
@@ -76,8 +75,9 @@ public sealed partial class NotifyIcon : IDisposable
         this.needsIcoDestroy = needsIcoDestroy;
 
         totalIcons++;
-        _trayId = unchecked((uint)Environment.TickCount);
+        _trayId = Guid.CreateVersion7();
         var windowClassName = $"{nameof(DotTray)}NotifyIconWindow{_trayId}";
+        _popupWindowClassName = $"{windowClassName}_Popup";
 
         MenuItems = [];
         ToolTip = "";
@@ -105,41 +105,46 @@ public sealed partial class NotifyIcon : IDisposable
             };
             PInvoke.RegisterClass(ref wndClass);
 
-            hWnd = PInvoke.CreateWindowEx(0, windowClassName, "", 0, 0, 0, 0, 0, 0, 0, instanceHandle, 0);
-            thisHandle = GCHandle.Alloc(this, GCHandleType.Normal);
-            PInvoke.SetWindowLongPtr(hWnd, PInvoke.GWLP_USERDATA, GCHandle.ToIntPtr(thisHandle));
+            var popupWndProc = new PInvoke.WndProc((hWnd, msg, wParam, lParam) => PInvoke.DefWindowProc(hWnd, msg, wParam, lParam));
+            var popupWndClass = new WNDCLASS
+            {
+                lpfnWndProc = Marshal.GetFunctionPointerForDelegate(popupWndProc),
+                hInstance = instanceHandle,
+                lpszClassName = _popupWindowClassName
+            };
+            PInvoke.RegisterClass(ref popupWndClass);
 
-            onInitializationFinished();
+            hWnd = PInvoke.CreateWindowEx(0, windowClassName, "", 0, 0, 0, 0, 0, nint.Zero, nint.Zero, instanceHandle, nint.Zero);
 
             var iconData = new NOTIFYICONDATA
             {
                 cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                 hWnd = hWnd,
-                uID = _trayId,
-                uFlags = PInvoke.NIF_MESSAGE | PInvoke.NIF_ICON,
+                guidItem = _trayId,
+                uFlags = PInvoke.NIF_MESSAGE | PInvoke.NIF_ICON | PInvoke.NIF_GUID,
                 uCallbackMessage = PInvoke.WM_APP_TRAYICON,
                 hIcon = icoHandle
             };
             PInvoke.Shell_NotifyIcon(PInvoke.NIM_ADD, ref iconData);
 
-            using (var registration = cancellationToken.Register(() => PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_QUIT, 0, 0)))
+            onInitializationFinished();
+
+            using (var registration = cancellationToken.Register(() => PInvoke.PostMessage(hWnd, PInvoke.WM_CLOSE, 0, 0)))
             {
                 PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_TOOLTIP, 0, 0);
 
                 while (PInvoke.GetMessage(out var message, nint.Zero, 0, 0))
                 {
-                    if (hWnd == message.hwnd)
-                    {
-                        PInvoke.TranslateMessage(ref message);
-                        PInvoke.DispatchMessage(ref message);
-                    }
+                    PInvoke.TranslateMessage(ref message);
+                    PInvoke.DispatchMessage(ref message);
                 }
 
                 iconData = new NOTIFYICONDATA
                 {
                     cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                     hWnd = hWnd,
-                    uID = _trayId
+                    guidItem = _trayId,
+                    uFlags = PInvoke.NIF_GUID
                 };
                 PInvoke.Shell_NotifyIcon(PInvoke.NIM_DELETE, ref iconData);
 
@@ -147,18 +152,17 @@ public sealed partial class NotifyIcon : IDisposable
 
                 if (hWnd != nint.Zero)
                 {
-                    PInvoke.SetWindowLongPtr(hWnd, PInvoke.GWLP_USERDATA, nint.Zero);
-                    if (thisHandle.IsAllocated) thisHandle.Free();
-
                     PInvoke.DestroyWindow(hWnd);
                     hWnd = nint.Zero;
 
+                    PInvoke.UnregisterClass(_popupWindowClassName, instanceHandle);
                     PInvoke.UnregisterClass(windowClassName, instanceHandle);
                     instanceHandle = nint.Zero;
                 }
             }
 
             GC.KeepAlive(wndProc);
+            GC.KeepAlive(popupWndProc);
         });
         _trayLoopThread.SetApartmentState(ApartmentState.STA);
         _trayLoopThread.Start();
@@ -218,7 +222,7 @@ public sealed partial class NotifyIcon : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_QUIT, 0, 0);
+        PInvoke.PostMessage(hWnd, PInvoke.WM_CLOSE, 0, 0);
 
         if (_trayLoopThread.IsAlive) _trayLoopThread.Join();
 

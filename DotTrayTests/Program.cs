@@ -48,6 +48,7 @@ sealed class Program
 
         Console.ReadLine();
 
+        Console.WriteLine("Showing Balloon Notification");
         tray.ShowBalloon(new BalloonNotification
         {
             Icon = BalloonNotificationIcon.User,
@@ -58,6 +59,7 @@ sealed class Program
 
         Console.ReadLine();
 
+        Console.WriteLine("Destroying Tray Icon");
         cts.Cancel();
         tray.Dispose();
 

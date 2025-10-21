@@ -5,7 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
-/// Represents a <see cref="MenuItem"/> collection
+/// Represents a collection of <see cref="MenuItem"/>
 /// </summary>
 public sealed class MenuItemCollection : IReadOnlyList<IMenuItem>
 {
