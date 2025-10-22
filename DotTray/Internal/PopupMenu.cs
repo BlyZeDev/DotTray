@@ -4,7 +4,6 @@ using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using System;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 internal sealed class PopupMenu : IDisposable
 {
@@ -45,6 +44,16 @@ internal sealed class PopupMenu : IDisposable
         _wndProc = new PInvoke.WndProc(WndProcFunc);
         PInvoke.SetWindowLongPtr(_hWnd, PInvoke.GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProc));
 
+        try
+        {
+            var cornerRadius = PInvoke.DWMWCP_ROUND;
+            _ = PInvoke.DwmSetWindowAttribute(_hWnd, PInvoke.DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerRadius, sizeof(int));
+
+            var backdrop = PInvoke.DWMSBT_TRANSIENTWINDOW;
+            _ = PInvoke.DwmSetWindowAttribute(_hWnd, PInvoke.DWMWA_SYSTEMBACKDROP_TYPE, ref backdrop, sizeof(int));
+        }
+        catch (Exception) { }
+
         PInvoke.ShowWindow(_hWnd, PInvoke.SW_SHOWNOACTIVATE);
         PInvoke.UpdateWindow(_hWnd);
     }
@@ -65,7 +74,22 @@ internal sealed class PopupMenu : IDisposable
 
     private void HandlePaint()
     {
+        PInvoke.GetClientRect(_hWnd, out var clientRect);
 
+        var paintHandle = PInvoke.BeginPaint(_hWnd, out var paint);
+        var dcHandle = PInvoke.CreateCompatibleDC(paintHandle);
+        var bmpHandle = PInvoke.CreateCompatibleBitmap(paintHandle, clientRect.Right, clientRect.Bottom);
+
+        try
+        {
+            //Paint
+        }
+        finally
+        {
+            PInvoke.DeleteObject(bmpHandle);
+            PInvoke.DeleteDC(dcHandle);
+            PInvoke.EndPaint(_hWnd, ref paint);
+        }
     }
 
     private void CalcWindowPos(POINT mousePos, out int x, out int y, out int width, out int height)
