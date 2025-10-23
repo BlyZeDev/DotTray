@@ -42,7 +42,7 @@ public sealed partial class NotifyIcon
 
                         PInvoke.GetCursorPos(out var pos);
 
-                        popupMenu = PopupMenu.Show(hWnd, this, MenuItems, pos, _popupWindowClassName, instanceHandle);
+                        popupMenu = PopupMenu.Show(hWnd, this, pos, _popupWindowClassName, instanceHandle);
                         popupMenu.Closed += MenuHiding;
                     }
                 }

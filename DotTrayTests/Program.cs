@@ -38,8 +38,8 @@ sealed class Program
         menuItem.Clicked = (args) => Console.WriteLine(args.MenuItem.IsChecked.HasValue ? args.MenuItem.IsChecked.Value : "NULL");
 
         var separator = tray.MenuItems.AddSeparator();
-        separator.LineColor = new TrayColor(0, 0, 255);
-        separator.LineThickness = 2.5f;
+        separator.LineColor = new TrayColor(0, 255, 255);
+        separator.LineThickness = 5f;
 
         menuItem = tray.MenuItems.Add("Exit");
         menuItem.Clicked = _ => cts.Cancel();

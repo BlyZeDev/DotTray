@@ -29,7 +29,7 @@ internal static partial class PInvoke
     public static extern int GdipDeletePen(nint pen);
 
     [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipDrawLineI(nint graphics, nint pen, int x1, int y1, int x2, int y2);
+    public static extern int GdipDrawLine(nint graphics, nint pen, float x1, float y1, float x2, float y2);
 
     [DllImport(GdiPlus, SetLastError = true)]
     public static extern unsafe int GdipDrawLinesI(nint graphics, nint pen, POINT* points, int count);
@@ -50,5 +50,5 @@ internal static partial class PInvoke
     public static extern int GdipDeleteBrush(nint brush);
 
     [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipFillRectangleI(nint graphics, nint brush, int x, int y, int width, int height);
+    public static extern int GdipFillRectangle(nint graphics, nint brush, float x, float y, float width, float height);
 }

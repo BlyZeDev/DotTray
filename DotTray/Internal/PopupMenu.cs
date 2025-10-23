@@ -13,6 +13,7 @@ internal sealed class PopupMenu : IDisposable
     private const int CheckBoxWidth = 16;
     private const int TextPadding = 4;
     private const int SubmenuArrowWidth = 12;
+    private const int SeparatorPadding = (CheckBoxWidth + TextPadding + SubmenuArrowWidth) / 2;
 
     private readonly nint _ownerHWnd;
     private readonly NotifyIcon _ownerIcon;
@@ -26,11 +27,11 @@ internal sealed class PopupMenu : IDisposable
 
     public event Action? Closed;
 
-    private PopupMenu(nint ownerHWnd, NotifyIcon ownerIcon, MenuItemCollection menuItems, POINT mousePos, string popupWindowClassName, nint instanceHandle)
+    private PopupMenu(nint ownerHWnd, NotifyIcon ownerIcon, POINT mousePos, string popupWindowClassName, nint instanceHandle)
     {
         _ownerHWnd = ownerHWnd;
         _ownerIcon = ownerIcon;
-        _menuItems = menuItems;
+        _menuItems = ownerIcon.MenuItems;
 
         hoverIndex = -1;
 
@@ -86,13 +87,15 @@ internal sealed class PopupMenu : IDisposable
 
             _ = PInvoke.GdipCreateSolidFill(_ownerIcon.PopupMenuColor.ToGdiPlus(), out var bgBrush);
 
-            _ = PInvoke.GdipFillRectangleI(
+            _ = PInvoke.GdipFillRectangle(
                 graphicsHandle,
                 bgBrush,
                 clientRect.Left,
                 clientRect.Top,
                 clientRect.Right - clientRect.Left,
                 clientRect.Bottom - clientRect.Top);
+
+            _ = PInvoke.GdipDeleteBrush(bgBrush);
 
             for (int i = 0; i < _menuItems.Count; i++)
             {
@@ -112,7 +115,7 @@ internal sealed class PopupMenu : IDisposable
 
                     _ = PInvoke.GdipCreateSolidFill(backgroundColor.ToGdiPlus(), out var hoverBrush);
 
-                    _ = PInvoke.GdipFillRectangleI(
+                    _ = PInvoke.GdipFillRectangle(
                         graphicsHandle,
                         hoverBrush,
                         itemRect.Left,
@@ -126,12 +129,11 @@ internal sealed class PopupMenu : IDisposable
                 {
                     var y = itemRect.Top + ItemHeight / 2;
                     _ = PInvoke.GdipCreatePen1(separatorItem.LineColor.ToGdiPlus(), separatorItem.LineThickness, PInvoke.UnitPixel, out var pen);
-                    _ = PInvoke.GdipDrawLineI(graphicsHandle, pen, itemRect.Left + TextPadding, y, itemRect.Right - TextPadding, y);
+                    _ = PInvoke.GdipDrawLine(graphicsHandle, pen, itemRect.Left + SeparatorPadding, y, itemRect.Right - SeparatorPadding - 1f, y);
                     _ = PInvoke.GdipDeletePen(pen);
                 }
             }
 
-            _ = PInvoke.GdipDeleteBrush(bgBrush);
             _ = PInvoke.GdipDeleteGraphics(graphicsHandle);
         }
         finally
@@ -172,6 +174,6 @@ internal sealed class PopupMenu : IDisposable
         if (y + height > screenHeight) y = screenHeight - height;
     }
 
-    public static PopupMenu Show(nint ownerHWnd, NotifyIcon notifyIcon, MenuItemCollection menuItems, POINT mousePos, string popupWindowClassName, nint instanceHandle)
-        => new PopupMenu(ownerHWnd, notifyIcon, menuItems, mousePos, popupWindowClassName, instanceHandle);
+    public static PopupMenu Show(nint ownerHWnd, NotifyIcon notifyIcon, POINT mousePos, string popupWindowClassName, nint instanceHandle)
+        => new PopupMenu(ownerHWnd, notifyIcon, mousePos, popupWindowClassName, instanceHandle);
 }
