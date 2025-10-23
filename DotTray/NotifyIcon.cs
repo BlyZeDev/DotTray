@@ -22,6 +22,10 @@ using System.Threading.Tasks;
 [SupportedOSPlatform("Windows")]
 public sealed partial class NotifyIcon : IDisposable
 {
+    private static readonly string DefaultToolTip = "";
+    private static readonly MouseButton DefaultMouseButtons = MouseButton.Left | MouseButton.Right;
+    private static readonly TrayColor DefaultPopupMenuColor = new TrayColor(40, 40, 40);
+
     private static uint totalIcons;
     private static nint gdipToken;
 
@@ -60,6 +64,11 @@ public sealed partial class NotifyIcon : IDisposable
     public MouseButton MouseButtons { get; set; }
 
     /// <summary>
+    /// The background color of the popup menu
+    /// </summary>
+    public TrayColor PopupMenuColor { get; set; }
+
+    /// <summary>
     /// Fired if the icon menu is showing by clicking <see cref="MouseButtons"/>
     /// </summary>
     public event Action<MouseButton>? MenuShowing;
@@ -80,8 +89,9 @@ public sealed partial class NotifyIcon : IDisposable
         _popupWindowClassName = $"{windowClassName}_Popup";
 
         MenuItems = [];
-        ToolTip = "";
-        MouseButtons = MouseButton.Left | MouseButton.Right;
+        ToolTip = DefaultToolTip;
+        MouseButtons = DefaultMouseButtons;
+        PopupMenuColor = DefaultPopupMenuColor;
 
         _trayLoopThread = new Thread(() =>
         {

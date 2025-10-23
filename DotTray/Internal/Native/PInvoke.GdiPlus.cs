@@ -1,6 +1,8 @@
 ﻿namespace DotTray.Internal.Native;
 
 using DotTray.Internal.Win32;
+using System;
+using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 
 internal static partial class PInvoke
@@ -27,6 +29,9 @@ internal static partial class PInvoke
     public static extern int GdipDeletePen(nint pen);
 
     [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipDrawLineI(nint graphics, nint pen, int x1, int y1, int x2, int y2);
+
+    [DllImport(GdiPlus, SetLastError = true)]
     public static extern unsafe int GdipDrawLinesI(nint graphics, nint pen, POINT* points, int count);
 
     [DllImport(GdiPlus, SetLastError = true)]
@@ -37,4 +42,13 @@ internal static partial class PInvoke
 
     [DllImport(GdiPlus, SetLastError = true)]
     public static extern int GdipSetPenEndCap(nint pen, int lineCap);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipCreateSolidFill(uint color, out nint brush);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipDeleteBrush(nint brush);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipFillRectangleI(nint graphics, nint brush, int x, int y, int width, int height);
 }

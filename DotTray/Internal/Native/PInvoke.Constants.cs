@@ -46,8 +46,6 @@ internal static partial class PInvoke
     public const uint WM_APP_TRAYICON_TOOLTIP = WM_APP + 3;
     public const uint WM_APP_TRAYICON_BALLOON = WM_APP + 4;
 
-    public const uint WM_APP_POPUP_CLOSE = WM_APP + 50;
-
     public const uint WM_MEASUREITEM = 0x002C;
     public const uint WM_DRAWITEM = 0x002B;
     public const uint WM_DELETEITEM = 0x002D;
@@ -156,4 +154,20 @@ internal static partial class PInvoke
     public const uint SWP_NOACTIVATE = 0x0010;
 
     public const int VK_ESCAPE = 0x1B;
+
+    public const int SmoothingModeInvalid = -1;
+    public const int SmoothingModeDefault = 0;
+    public const int SmoothingModeHighSpeed = 1;
+    public const int SmoothingModeHighQuality = 2;
+    public const int SmoothingModeNone = 3;
+    public const int SmoothingModeAntiAlias = 4;
+    public const int SmoothingModeAntiAlias8x8 = 5;
+
+    public const int UnitWorld = 0;
+    public const int UnitDisplay = 1;
+    public const int UnitPixel = 2;
+    public const int UnitPoint = 3;
+    public const int UnitInch = 4;
+    public const int UnitDocument = 5;
+    public const int UnitMillimeter = 6;
 }

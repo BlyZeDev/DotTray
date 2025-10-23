@@ -9,24 +9,22 @@ using System.Diagnostics.CodeAnalysis;
 /// </summary>
 public sealed class MenuItem : IMenuItem
 {
-    private static readonly Rgb DefaultBackgroundColor = new Rgb(255, 255, 255);
-    private static readonly Rgb DefaultBackgroundHoverColor = new Rgb(0, 120, 215);
-    private static readonly Rgb DefaultBackgroundDisabledColor = new Rgb(255, 255, 255);
-    private static readonly Rgb DefaultTextColor = new Rgb(0, 0, 0);
-    private static readonly Rgb DefaultTextHoverColor = new Rgb(255, 255, 255);
-    private static readonly Rgb DefaultTextDisabledColor = new Rgb(109, 109, 109);
+    private static readonly TrayColor DefaultBackgroundColor = new TrayColor(255, 255, 255);
+    private static readonly TrayColor DefaultBackgroundHoverColor = new TrayColor(0, 120, 215);
+    private static readonly TrayColor DefaultBackgroundDisabledColor = new TrayColor(255, 255, 255);
+    private static readonly TrayColor DefaultTextColor = new TrayColor(0, 0, 0);
+    private static readonly TrayColor DefaultTextHoverColor = new TrayColor(255, 255, 255);
+    private static readonly TrayColor DefaultTextDisabledColor = new TrayColor(109, 109, 109);
 
     private string text;
-    private Rgb backgroundColor;
-    private Rgb backgroundHoverColor;
-    private Rgb backgroundDisabledColor;
-    private Rgb textColor;
-    private Rgb textHoverColor;
-    private Rgb textDisabledColor;
+    private TrayColor backgroundColor;
+    private TrayColor backgroundHoverColor;
+    private TrayColor backgroundDisabledColor;
+    private TrayColor textColor;
+    private TrayColor textHoverColor;
+    private TrayColor textDisabledColor;
 
     internal uint fState;
-
-    internal event Action? Changed;
 
     /// <summary>
     /// The displayed text
@@ -40,7 +38,6 @@ public sealed class MenuItem : IMenuItem
             if (text == value) return;
 
             text = value;
-            Update();
         }
     }
 
@@ -57,8 +54,6 @@ public sealed class MenuItem : IMenuItem
 
             if (value.GetValueOrDefault()) fState |= PInvoke.MFS_CHECKED;
             else fState &= ~PInvoke.MFS_CHECKED;
-
-            Update();
         }
     }
 
@@ -74,15 +69,13 @@ public sealed class MenuItem : IMenuItem
 
             if (value) fState |= PInvoke.MFS_DISABLED;
             else fState &= ~PInvoke.MFS_DISABLED;
-            
-            Update();
         }
     }
 
     /// <summary>
     /// The default background color
     /// </summary>
-    public Rgb BackgroundColor
+    public TrayColor BackgroundColor
     {
         get => backgroundColor;
         set
@@ -90,14 +83,13 @@ public sealed class MenuItem : IMenuItem
             if (backgroundColor == value) return;
 
             backgroundColor = value;
-            Update();
         }
     }
 
     /// <summary>
     /// The background color if this item is hovered over
     /// </summary>
-    public Rgb BackgroundHoverColor
+    public TrayColor BackgroundHoverColor
     {
         get => backgroundHoverColor;
         set
@@ -105,14 +97,13 @@ public sealed class MenuItem : IMenuItem
             if (backgroundHoverColor == value) return;
 
             backgroundHoverColor = value;
-            Update();
         }
     }
 
     /// <summary>
     /// The background color if this item is disabled
     /// </summary>
-    public Rgb BackgroundDisabledColor
+    public TrayColor BackgroundDisabledColor
     {
         get => backgroundDisabledColor;
         set
@@ -120,14 +111,13 @@ public sealed class MenuItem : IMenuItem
             if (backgroundDisabledColor == value) return;
 
             backgroundDisabledColor = value;
-            Update();
         }
     }
 
     /// <summary>
     /// The default text color
     /// </summary>
-    public Rgb TextColor
+    public TrayColor TextColor
     {
         get => textColor;
         set
@@ -135,14 +125,13 @@ public sealed class MenuItem : IMenuItem
             if (textColor == value) return;
 
             textColor = value;
-            Update();
         }
     }
 
     /// <summary>
     /// The text color if this item is hovered over
     /// </summary>
-    public Rgb TextHoverColor
+    public TrayColor TextHoverColor
     {
         get => textHoverColor;
         set
@@ -150,14 +139,13 @@ public sealed class MenuItem : IMenuItem
             if (textHoverColor == value) return;
 
             textHoverColor = value;
-            Update();
         }
     }
 
     /// <summary>
     /// The text color if this item is disabled
     /// </summary>
-    public Rgb TextDisabledColor
+    public TrayColor TextDisabledColor
     {
         get => textDisabledColor;
         set
@@ -165,7 +153,6 @@ public sealed class MenuItem : IMenuItem
             if (textDisabledColor == value) return;
 
             textDisabledColor = value;
-            Update();
         }
     }
 
@@ -196,12 +183,12 @@ public sealed class MenuItem : IMenuItem
         string text,
         bool? isChecked,
         bool isDisabled,
-        Rgb backgroundColor,
-        Rgb backgroundHoverColor,
-        Rgb backgroundDisabledColor,
-        Rgb textColor,
-        Rgb textHoverColor,
-        Rgb textDisabledColor,
+        TrayColor backgroundColor,
+        TrayColor backgroundHoverColor,
+        TrayColor backgroundDisabledColor,
+        TrayColor textColor,
+        TrayColor textHoverColor,
+        TrayColor textDisabledColor,
         MenuItemCollection subMenu)
     {
         Text = text;
@@ -215,6 +202,4 @@ public sealed class MenuItem : IMenuItem
         TextDisabledColor = textDisabledColor;
         SubMenu = subMenu;
     }
-
-    private void Update() => Changed?.Invoke();
 }

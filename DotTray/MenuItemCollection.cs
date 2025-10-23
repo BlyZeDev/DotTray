@@ -1,6 +1,5 @@
 ﻿namespace DotTray;
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -10,8 +9,6 @@ using System.Collections.Generic;
 public sealed class MenuItemCollection : IReadOnlyList<IMenuItem>
 {
     private readonly List<IMenuItem> _items;
-
-    internal event Action? EntriesChanged;
 
     /// <inheritdoc/>
     public int Count => _items.Count;
@@ -29,10 +26,8 @@ public sealed class MenuItemCollection : IReadOnlyList<IMenuItem>
     public MenuItem Add(string text)
     {
         var item = new MenuItem(text);
-        item.Changed += Update;
 
         _items.Add(item);
-        Update();
 
         return item;
     }
@@ -40,39 +35,29 @@ public sealed class MenuItemCollection : IReadOnlyList<IMenuItem>
     /// <summary>
     /// Adds a <see cref="SeparatorItem"/> to the collection
     /// </summary>
-    public void AddSeparator() => _items.Add(SeparatorItem.Instance);
+    /// <returns><see cref="SeparatorItem"/></returns>
+    public SeparatorItem AddSeparator()
+    {
+        var separatorItem = new SeparatorItem();
+
+        _items.Add(separatorItem);
+
+        return separatorItem;
+    }
 
     /// <summary>
     /// Removes a <see cref="MenuItem"/> at a specified index
     /// </summary>
     /// <param name="index">The index to remove the item at</param>
-    public void RemoveAt(int index)
-    {
-        var item = _items[index];
-        if (item is MenuItem menuItem) menuItem.Changed -= Update;
-
-        _items.RemoveAt(index);
-        Update();
-    }
+    public void RemoveAt(int index) => _items.RemoveAt(index);
 
     /// <summary>
     /// Clears the collection
     /// </summary>
-    public void Clear()
-    {
-        foreach (var item in _items)
-        {
-            if (item is MenuItem menuItem) menuItem.Changed -= Update;
-        }
-
-        _items.Clear();
-        Update();
-    }
+    public void Clear() => _items.Clear();
 
     /// <inheritdoc/>
     public IEnumerator<IMenuItem> GetEnumerator() => _items.GetEnumerator();
-
-    private void Update() => EntriesChanged?.Invoke();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

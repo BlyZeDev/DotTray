@@ -16,9 +16,9 @@ sealed class Program
         var tray = await NotifyIcon.RunAsync(tempPath, cts.Token);
 
         var menuItem = tray.MenuItems.Add("Test");
-        menuItem.BackgroundColor = new Rgb(255, 0, 0);
-        menuItem.BackgroundDisabledColor = new Rgb(0, 255, 0);
-        menuItem.BackgroundHoverColor = new Rgb(0, 0, 255);
+        menuItem.BackgroundColor = new TrayColor(255, 0, 0);
+        menuItem.BackgroundDisabledColor = new TrayColor(0, 255, 0);
+        menuItem.BackgroundHoverColor = new TrayColor(0, 0, 255);
         menuItem.IsChecked = true;
         menuItem.Clicked = (args) =>
         {
@@ -29,13 +29,17 @@ sealed class Program
         tray.MenuItems.AddSeparator();
 
         menuItem = tray.MenuItems.Add("Test 2");
+        menuItem.BackgroundColor = new TrayColor(255, 255, 255, 50);
+
         menuItem = menuItem.SubMenu.Add("Test Sub 1");
 
         menuItem.IsChecked = false;
         menuItem.IsDisabled = true;
         menuItem.Clicked = (args) => Console.WriteLine(args.MenuItem.IsChecked.HasValue ? args.MenuItem.IsChecked.Value : "NULL");
 
-        tray.MenuItems.AddSeparator();
+        var separator = tray.MenuItems.AddSeparator();
+        separator.LineColor = new TrayColor(0, 0, 255);
+        separator.LineThickness = 2.5f;
 
         menuItem = tray.MenuItems.Add("Exit");
         menuItem.Clicked = _ => cts.Cancel();
@@ -56,6 +60,11 @@ sealed class Program
             Message = "You have done something wrong. You're cooked :(",
             NoSound = false
         });
+
+        Console.ReadLine();
+
+        Console.WriteLine("Adding Extra menu item");
+        tray.MenuItems.Add("- EXTRA -");
 
         Console.ReadLine();
 
