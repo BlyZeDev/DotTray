@@ -24,6 +24,8 @@ internal static partial class PInvoke
     public const uint CS_HREDRAW = 0x0002;
     public const uint CS_VREDRAW = 0x0001;
 
+    public const uint SPI_GETNONCLIENTMETRICS = 0x0029;
+
     public const int HTCLIENT = 1;
     public const int GA_ROOT = 2;
     public const int SRCCOPY = 0x00CC0020;

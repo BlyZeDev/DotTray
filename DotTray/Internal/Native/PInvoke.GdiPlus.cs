@@ -32,7 +32,7 @@ internal static partial class PInvoke
     public static extern int GdipDrawLine(nint graphics, nint pen, float x1, float y1, float x2, float y2);
 
     [DllImport(GdiPlus, SetLastError = true)]
-    public static extern unsafe int GdipDrawLinesI(nint graphics, nint pen, POINT* points, int count);
+    public static unsafe extern int GdipDrawLines(nint graphics, nint pen, POINTF* points, int count);
 
     [DllImport(GdiPlus, SetLastError = true)]
     public static extern int GdipSetPenLineJoin(nint pen, int lineJoin);
@@ -51,4 +51,7 @@ internal static partial class PInvoke
 
     [DllImport(GdiPlus, SetLastError = true)]
     public static extern int GdipFillRectangle(nint graphics, nint brush, float x, float y, float width, float height);
+
+    [DllImport(GdiPlus, CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern int GdipDrawString(nint graphics, string text, int length, nint font, ref RECT layoutRect, nint stringFormat, nint brush);
 }

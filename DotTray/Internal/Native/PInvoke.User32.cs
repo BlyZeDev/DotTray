@@ -158,4 +158,8 @@ internal static partial class PInvoke
 
     [DllImport(User32, SetLastError = true)]
     public static extern short GetAsyncKeyState(int vKey);
+
+    [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, ref NONCLIENTMETRICS pvParam, uint fWinIni);
 }

@@ -97,6 +97,8 @@ internal sealed class PopupMenu : IDisposable
 
             _ = PInvoke.GdipDeleteBrush(bgBrush);
 
+            const int Points = 3;
+            POINTF* points = stackalloc POINTF[Points];
             for (int i = 0; i < _menuItems.Count; i++)
             {
                 var itemTop = clientRect.Top + i * ItemHeight;
@@ -110,10 +112,10 @@ internal sealed class PopupMenu : IDisposable
 
                 if (_menuItems[i] is MenuItem menuItem)
                 {
-                    var backgroundColor = menuItem.IsDisabled
-                        ? menuItem.BackgroundDisabledColor : (i == hoverIndex ? menuItem.BackgroundHoverColor : menuItem.BackgroundColor);
+                    var backgroundColor = (menuItem.IsDisabled
+                        ? menuItem.BackgroundDisabledColor : (i == hoverIndex ? menuItem.BackgroundHoverColor : menuItem.BackgroundColor)).ToGdiPlus();
 
-                    _ = PInvoke.GdipCreateSolidFill(backgroundColor.ToGdiPlus(), out var hoverBrush);
+                    _ = PInvoke.GdipCreateSolidFill(backgroundColor, out var hoverBrush);
 
                     _ = PInvoke.GdipFillRectangle(
                         graphicsHandle,
@@ -122,6 +124,42 @@ internal sealed class PopupMenu : IDisposable
                         itemRect.Top,
                         itemRect.Right - itemRect.Left,
                         ItemHeight);
+
+                    var textColor = (menuItem.IsDisabled
+                        ? menuItem.TextDisabledColor : (i == hoverIndex ? menuItem.TextHoverColor : menuItem.TextColor)).ToGdiPlus();
+
+                    var checkLeft = itemRect.Left + TextPadding;
+                    var checkSize = CheckBoxWidth;
+                    var checkTop = itemRect.Top + (ItemHeight - checkSize) / 2;
+
+                    var textLeft = checkLeft + checkSize + TextPadding;
+                    var textRight = itemRect.Right - SubmenuArrowWidth - TextPadding;
+
+                    var arrowLeft = itemRect.Right - SubmenuArrowWidth + TextPadding;
+                    var arrowTop = itemRect.Top + (ItemHeight - SubmenuArrowWidth) / 2;
+
+                    if (menuItem.IsChecked.GetValueOrDefault())
+                    {
+                        _ = PInvoke.GdipCreatePen1(textColor, 2f, PInvoke.UnitPixel, out var pen);
+
+                        points[0] = new POINTF { X = itemRect.Left + 3.5f, Y = itemRect.Top + 8f };
+                        points[1] = new POINTF { X = itemRect.Left + 7f, Y = itemRect.Top + 12.5f };
+                        points[2] = new POINTF { X = itemRect.Left + 12.5f, Y = itemRect.Top + 4.5f };
+
+                        _ = PInvoke.GdipDrawLines(graphicsHandle, pen, points, Points);
+                        _ = PInvoke.GdipDeletePen(pen);
+                    }
+
+                    var textRect = new RECT
+                    {
+                        Left = textLeft,
+                        Top = itemRect.Top,
+                        Right = textRight,
+                        Bottom = itemRect.Bottom
+                    };
+                    _ = PInvoke.GdipCreateSolidFill(textColor, out var textBrush);
+                    _ = PInvoke.GdipDrawString(graphicsHandle, menuItem.Text, menuItem.Text.Length, nint.Zero, ref textRect, nint.Zero, textBrush);
+                    _ = PInvoke.GdipDeleteBrush(textBrush);
 
                     _ = PInvoke.GdipDeleteBrush(hoverBrush);
                 }
