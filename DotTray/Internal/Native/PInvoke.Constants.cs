@@ -172,4 +172,6 @@ internal static partial class PInvoke
     public const int UnitInch = 4;
     public const int UnitDocument = 5;
     public const int UnitMillimeter = 6;
+
+    public const int StringFormatFlagsNoWrap = 0x00001000;
 }

@@ -25,6 +25,7 @@ public sealed class MenuItem : IMenuItem
     private TrayColor textDisabledColor;
 
     internal uint fState;
+    internal bool HasSubMenu => SubMenu.Count > 0;
 
     /// <summary>
     /// The displayed text

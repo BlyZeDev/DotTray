@@ -53,5 +53,32 @@ internal static partial class PInvoke
     public static extern int GdipFillRectangle(nint graphics, nint brush, float x, float y, float width, float height);
 
     [DllImport(GdiPlus, CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern int GdipDrawString(nint graphics, string text, int length, nint font, ref RECT layoutRect, nint stringFormat, nint brush);
+    public static extern int GdipMeasureString(nint graphics, string text, int length, nint font, ref RECTF layoutRect, nint stringFormat, out RECTF boundingBox, out int codepointsFitted, out int linesFilled);
+
+    [DllImport(GdiPlus, CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern int GdipDrawString(nint graphics, string text, int length, nint font, ref RECTF layoutRect, nint stringFormat, nint brush);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipGetGenericFontFamilySansSerif(out nint fontFamily);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipGetGenericFontFamilySerif(out nint fontFamily);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipGetGenericFontFamilyMonospace(out nint fontFamily);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipCreateFont(nint fontFamily, float emSize, int style, int unit, out nint font);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipDeleteFont(nint font);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipCreateStringFormat(int formatAttributes, int language, out nint format);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipSetStringFormatFlags(nint format, int flags);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipDeleteStringFormat(nint format);
 }

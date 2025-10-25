@@ -42,6 +42,7 @@ sealed class Program
         separator.LineThickness = 5f;
 
         menuItem = tray.MenuItems.Add("Exit");
+        menuItem.TextColor = new TrayColor(255, 0, 0);
         menuItem.Clicked = _ => cts.Cancel();
 
         tray.SetToolTip("🔔 This is a long string with emoji 😊 and more");
@@ -64,7 +65,7 @@ sealed class Program
         Console.ReadLine();
 
         Console.WriteLine("Adding Extra menu item");
-        tray.MenuItems.Add("- EXTRA -");
+        tray.MenuItems.Add("---------------- EXTRA ----------------");
 
         Console.ReadLine();
 
