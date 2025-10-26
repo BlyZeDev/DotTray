@@ -24,7 +24,6 @@ public sealed partial class NotifyIcon : IDisposable
 {
     private static readonly string DefaultToolTip = "";
     private static readonly MouseButton DefaultMouseButtons = MouseButton.Left | MouseButton.Right;
-    private static readonly TrayColor DefaultPopupMenuColor = new TrayColor(40, 40, 40);
 
     private static uint totalIcons;
     private static nint gdipToken;
@@ -91,7 +90,7 @@ public sealed partial class NotifyIcon : IDisposable
         MenuItems = [];
         ToolTip = DefaultToolTip;
         MouseButtons = DefaultMouseButtons;
-        PopupMenuColor = DefaultPopupMenuColor;
+        PopupMenuColor = DefaultColors.PopupMenuColor;
 
         _trayLoopThread = new Thread(() =>
         {

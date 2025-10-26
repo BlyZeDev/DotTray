@@ -62,12 +62,6 @@ internal static partial class PInvoke
     public static extern int GdipGetGenericFontFamilySansSerif(out nint fontFamily);
 
     [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipGetGenericFontFamilySerif(out nint fontFamily);
-
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipGetGenericFontFamilyMonospace(out nint fontFamily);
-
-    [DllImport(GdiPlus, SetLastError = true)]
     public static extern int GdipCreateFont(nint fontFamily, float emSize, int style, int unit, out nint font);
 
     [DllImport(GdiPlus, SetLastError = true)]

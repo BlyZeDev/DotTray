@@ -1,22 +1,16 @@
 ﻿namespace DotTray;
 
-using DotTray.Internal.Native;
+using DotTray.Internal;
 using System;
-using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// Represents a <see cref="NotifyIcon"/> menu item
 /// </summary>
 public sealed class MenuItem : IMenuItem
 {
-    private static readonly TrayColor DefaultBackgroundColor = new TrayColor(255, 255, 255);
-    private static readonly TrayColor DefaultBackgroundHoverColor = new TrayColor(0, 120, 215);
-    private static readonly TrayColor DefaultBackgroundDisabledColor = new TrayColor(255, 255, 255);
-    private static readonly TrayColor DefaultTextColor = new TrayColor(0, 0, 0);
-    private static readonly TrayColor DefaultTextHoverColor = new TrayColor(255, 255, 255);
-    private static readonly TrayColor DefaultTextDisabledColor = new TrayColor(109, 109, 109);
-
     private string text;
+    private bool? isChecked;
+    private bool isDisabled;
     private TrayColor backgroundColor;
     private TrayColor backgroundHoverColor;
     private TrayColor backgroundDisabledColor;
@@ -24,21 +18,26 @@ public sealed class MenuItem : IMenuItem
     private TrayColor textHoverColor;
     private TrayColor textDisabledColor;
 
-    internal uint fState;
+    private event Action? updated;
+    event Action? IMenuItem.Updated
+    {
+        add => updated += value;
+        remove => updated -= value;
+    }
     internal bool HasSubMenu => SubMenu.Count > 0;
 
     /// <summary>
     /// The displayed text
     /// </summary>
-    public required string Text
+    public string Text
     {
         get => text;
-        [MemberNotNull(nameof(text))]
         set
         {
             if (text == value) return;
 
             text = value;
+            Update();
         }
     }
 
@@ -48,13 +47,13 @@ public sealed class MenuItem : IMenuItem
     /// </summary>
     public bool? IsChecked
     {
-        get => (fState & PInvoke.MFS_CHECKED) != 0;
+        get => isChecked;
         set
         {
-            if ((fState & PInvoke.MFS_CHECKED) != 0 == value) return;
+            if (isChecked == value) return;
 
-            if (value.GetValueOrDefault()) fState |= PInvoke.MFS_CHECKED;
-            else fState &= ~PInvoke.MFS_CHECKED;
+            isChecked = value;
+            Update();
         }
     }
 
@@ -63,13 +62,13 @@ public sealed class MenuItem : IMenuItem
     /// </summary>
     public bool IsDisabled
     {
-        get => (fState & PInvoke.MFS_DISABLED) != 0;
+        get => isDisabled;
         set
         {
-            if ((fState & PInvoke.MFS_DISABLED) != 0 == value) return;
+            if (isDisabled == value) return;
 
-            if (value) fState |= PInvoke.MFS_DISABLED;
-            else fState &= ~PInvoke.MFS_DISABLED;
+            isDisabled = value;
+            Update();
         }
     }
 
@@ -84,6 +83,7 @@ public sealed class MenuItem : IMenuItem
             if (backgroundColor == value) return;
 
             backgroundColor = value;
+            Update();
         }
     }
 
@@ -98,6 +98,7 @@ public sealed class MenuItem : IMenuItem
             if (backgroundHoverColor == value) return;
 
             backgroundHoverColor = value;
+            Update();
         }
     }
 
@@ -112,6 +113,7 @@ public sealed class MenuItem : IMenuItem
             if (backgroundDisabledColor == value) return;
 
             backgroundDisabledColor = value;
+            Update();
         }
     }
 
@@ -126,6 +128,7 @@ public sealed class MenuItem : IMenuItem
             if (textColor == value) return;
 
             textColor = value;
+            Update();
         }
     }
 
@@ -140,6 +143,7 @@ public sealed class MenuItem : IMenuItem
             if (textHoverColor == value) return;
 
             textHoverColor = value;
+            Update();
         }
     }
 
@@ -154,6 +158,7 @@ public sealed class MenuItem : IMenuItem
             if (textDisabledColor == value) return;
 
             textDisabledColor = value;
+            Update();
         }
     }
 
@@ -167,40 +172,19 @@ public sealed class MenuItem : IMenuItem
     /// </summary>
     public MenuItemCollection SubMenu { get; }
 
-    [SetsRequiredMembers]
-    internal MenuItem(string text) : this(text,
-        null,
-        false,
-        DefaultBackgroundColor,
-        DefaultBackgroundHoverColor,
-        DefaultBackgroundDisabledColor,
-        DefaultTextColor,
-        DefaultTextHoverColor,
-        DefaultTextDisabledColor,
-        []) { }
-
-    [SetsRequiredMembers]
-    internal MenuItem(
-        string text,
-        bool? isChecked,
-        bool isDisabled,
-        TrayColor backgroundColor,
-        TrayColor backgroundHoverColor,
-        TrayColor backgroundDisabledColor,
-        TrayColor textColor,
-        TrayColor textHoverColor,
-        TrayColor textDisabledColor,
-        MenuItemCollection subMenu)
+    internal MenuItem(string text)
     {
-        Text = text;
-        IsChecked = isChecked;
-        IsDisabled = isDisabled;
-        BackgroundColor = backgroundColor;
-        BackgroundHoverColor = backgroundHoverColor;
-        BackgroundDisabledColor = backgroundDisabledColor;
-        TextColor = textColor;
-        TextHoverColor = textHoverColor;
-        TextDisabledColor = textDisabledColor;
-        SubMenu = subMenu;
+        this.text = text;
+        isChecked = null;
+        isDisabled = false;
+        backgroundColor = DefaultColors.MenuItemBackgroundColor;
+        backgroundHoverColor = DefaultColors.MenuItemBackgroundHoverColor;
+        backgroundDisabledColor = DefaultColors.MenuItemBackgroundDisabledColor;
+        textColor = DefaultColors.MenuItemTextColor;
+        textHoverColor = DefaultColors.MenuItemTextHoverColor;
+        textDisabledColor = DefaultColors.MenuItemTextDisabledColor;
+        SubMenu = [];
     }
+
+    private void Update() => updated?.Invoke();
 }

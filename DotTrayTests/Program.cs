@@ -66,6 +66,7 @@ sealed class Program
 
         Console.WriteLine("Adding Extra menu item");
         tray.MenuItems.Add("---------------- EXTRA ----------------");
+        ((MenuItem)tray.MenuItems[0]).Text = ((MenuItem)tray.MenuItems[0]).Text + " - NEW";
 
         Console.ReadLine();
 

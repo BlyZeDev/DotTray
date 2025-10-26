@@ -1,5 +1,6 @@
 ﻿namespace DotTray;
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -9,6 +10,8 @@ using System.Collections.Generic;
 public sealed class MenuItemCollection : IReadOnlyList<IMenuItem>
 {
     private readonly List<IMenuItem> _items;
+
+    internal event Action? Updated;
 
     /// <inheritdoc/>
     public int Count => _items.Count;
@@ -26,8 +29,10 @@ public sealed class MenuItemCollection : IReadOnlyList<IMenuItem>
     public MenuItem Add(string text)
     {
         var item = new MenuItem(text);
+        ((IMenuItem)item).Updated += Update;
 
         _items.Add(item);
+        Update();
 
         return item;
     }
@@ -38,26 +43,42 @@ public sealed class MenuItemCollection : IReadOnlyList<IMenuItem>
     /// <returns><see cref="SeparatorItem"/></returns>
     public SeparatorItem AddSeparator()
     {
-        var separatorItem = new SeparatorItem();
+        var item = new SeparatorItem();
+        ((IMenuItem)item).Updated += Update;
 
-        _items.Add(separatorItem);
+        _items.Add(item);
+        Update();
 
-        return separatorItem;
+        return item;
     }
 
     /// <summary>
     /// Removes a <see cref="MenuItem"/> at a specified index
     /// </summary>
     /// <param name="index">The index to remove the item at</param>
-    public void RemoveAt(int index) => _items.RemoveAt(index);
+    public void RemoveAt(int index)
+    {
+        _items[index].Updated -= Update;
+        _items.RemoveAt(index);
+    }
 
     /// <summary>
     /// Clears the collection
     /// </summary>
-    public void Clear() => _items.Clear();
+    public void Clear()
+    {
+        foreach (var item in _items)
+        {
+            item.Updated -= Update;
+        }
+
+        _items.Clear();
+    }
 
     /// <inheritdoc/>
     public IEnumerator<IMenuItem> GetEnumerator() => _items.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    private void Update() => Updated?.Invoke();
 }

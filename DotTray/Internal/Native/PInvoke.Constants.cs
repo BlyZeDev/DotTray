@@ -149,11 +149,8 @@ internal static partial class PInvoke
     public const uint IMAGE_ICON = 1;
     public const uint LR_LOADFROMFILE = 0x00000010;
 
-    public static readonly nint HWND_TOPMOST = new(-1);
-
-    public const uint SWP_NOMOVE = 0x0002;
-    public const uint SWP_NOSIZE = 0x0001;
     public const uint SWP_NOACTIVATE = 0x0010;
+    public const uint SWP_ZORDER = 0x0004;
 
     public const int VK_ESCAPE = 0x1B;
 

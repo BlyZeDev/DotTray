@@ -11,18 +11,20 @@ internal sealed class PopupMenu : IDisposable
 {
     private const int ScreenMargin = 10;
 
-    private const float FontSize = 14f;
+    private const float FontSize = 16f;
 
-    private const int ItemHeight = 24;
+    private const int ItemHeight = 28;
+
     private const int CheckBoxPoints = 3;
     private const int CheckBoxWidth = 16;
-    private const int TextPadding = 4;
+    private const int TextPadding = 8;
     private const int SubmenuArrowWidth = 12;
     private const int SeparatorPadding = (CheckBoxWidth + TextPadding + SubmenuArrowWidth) / 4;
 
     private readonly nint _ownerHWnd;
     private readonly NotifyIcon _ownerIcon;
     private readonly MenuItemCollection _menuItems;
+    private readonly POINT _mousePos;
 
     private readonly nint _hWnd;
     private readonly PInvoke.WndProc _wndProc;
@@ -37,6 +39,9 @@ internal sealed class PopupMenu : IDisposable
         _ownerHWnd = ownerHWnd;
         _ownerIcon = ownerIcon;
         _menuItems = ownerIcon.MenuItems;
+        _mousePos = mousePos;
+
+        _menuItems.Updated += MenuItemUpdated;
 
         hoverIndex = -1;
 
@@ -65,7 +70,20 @@ internal sealed class PopupMenu : IDisposable
         PInvoke.UpdateWindow(_hWnd);
     }
 
-    public void Dispose() => PInvoke.PostMessage(_hWnd, PInvoke.WM_CLOSE, 0, 0);
+    public void Dispose()
+    {
+        _menuItems.Updated -= MenuItemUpdated;
+        PInvoke.PostMessage(_hWnd, PInvoke.WM_CLOSE, 0, 0);
+    }
+
+    private void MenuItemUpdated()
+    {
+        CalcWindowPos(_mousePos, out var x, out var y, out var width, out var height);
+
+        PInvoke.SetWindowPos(_hWnd, nint.Zero, x, y, width, height, PInvoke.SWP_NOACTIVATE | PInvoke.SWP_ZORDER);
+
+        PInvoke.InvalidateRect(_hWnd, nint.Zero, true);
+    }
 
     private nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
     {
@@ -96,25 +114,33 @@ internal sealed class PopupMenu : IDisposable
             _ = PInvoke.GdipCreateFont(fontFamily, FontSize, 0, PInvoke.UnitPixel, out var font);
 
             POINTF* points = stackalloc POINTF[CheckBoxPoints];
+            var itemTop = (float)clientRect.Top;
             for (int i = 0; i < _menuItems.Count; i++)
             {
-                var itemTop = clientRect.Top + i * ItemHeight;
                 var itemRect = new RECTF
                 {
                     X = clientRect.Left,
                     Y = itemTop,
-                    Width = clientRect.Right - clientRect.Left,
-                    Height = ItemHeight,
+                    Width = clientRect.Right - clientRect.Left
                 };
 
                 if (_menuItems[i] is MenuItem menuItem)
                 {
+                    itemRect.Height = ItemHeight;
+
                     var backgroundColor = (menuItem.IsDisabled ? menuItem.BackgroundDisabledColor : (i == hoverIndex ? menuItem.BackgroundHoverColor : menuItem.BackgroundColor)).ToGdiPlus();
                     var textColor = (menuItem.IsDisabled ? menuItem.TextDisabledColor : (i == hoverIndex ? menuItem.TextHoverColor : menuItem.TextColor)).ToGdiPlus();
 
                     DrawMenuItem(graphicsHandle, itemRect, menuItem, font, backgroundColor, textColor, points);
                 }
-                else if (_menuItems[i] is SeparatorItem separatorItem) DrawSeparatorItem(graphicsHandle, separatorItem, itemRect);
+                else if (_menuItems[i] is SeparatorItem separatorItem)
+                {
+                    itemRect.Height = MathF.Ceiling(separatorItem.LineThickness * 2f);
+
+                    DrawSeparatorItem(graphicsHandle, separatorItem, itemRect);
+                }
+
+                itemTop += itemRect.Height;
             }
 
             _ = PInvoke.GdipDeleteFont(font);
@@ -146,12 +172,17 @@ internal sealed class PopupMenu : IDisposable
             Height = ItemHeight
         };
 
+        height = 0;
         for (int i = 0; i < _menuItems.Count; i++)
         {
-            if (_menuItems[i] is not MenuItem menuItem) continue;
+            if (_menuItems[i] is MenuItem menuItem)
+            {
+                height += ItemHeight;
 
-            _ = PInvoke.GdipMeasureString(graphicsHandle, menuItem.Text, menuItem.Text.Length, font, ref layout, nint.Zero, out var boundingBox, out _, out _);
-            if (boundingBox.Width > maxTextWidth) maxTextWidth = boundingBox.Width;
+                _ = PInvoke.GdipMeasureString(graphicsHandle, menuItem.Text, menuItem.Text.Length, font, ref layout, nint.Zero, out var boundingBox, out _, out _);
+                if (boundingBox.Width > maxTextWidth) maxTextWidth = boundingBox.Width;
+            }
+            else if (_menuItems[i] is SeparatorItem separatorItem) height += (int)MathF.Ceiling(separatorItem.LineThickness * 2f);
         }
 
         _ = PInvoke.GdipDeleteFont(font);
@@ -162,7 +193,6 @@ internal sealed class PopupMenu : IDisposable
         y = mousePos.y;
 
         width = (int)Math.Ceiling(CheckBoxWidth + TextPadding * 3 + maxTextWidth + SubmenuArrowWidth);
-        height = ItemHeight * _menuItems.Count;
 
         if (x + width > screenWidth - ScreenMargin) x = screenWidth - width - ScreenMargin;
         if (y + height > screenHeight - ScreenMargin) y = screenHeight - height - ScreenMargin;
@@ -211,38 +241,42 @@ internal sealed class PopupMenu : IDisposable
 
     private static void DrawSeparatorItem(nint graphicsHandle, SeparatorItem separatorItem, RECTF itemRect)
     {
-        var y = itemRect.Y + ItemHeight / 2;
+        _ = PInvoke.GdipCreateSolidFill(separatorItem.BackgroundColor.ToGdiPlus(), out var bgBrush);
+        _ = PInvoke.GdipFillRectangle(graphicsHandle, bgBrush, itemRect.X, itemRect.Y, itemRect.Width, itemRect.Height);
+        _ = PInvoke.GdipDeleteBrush(bgBrush);
+
+        var y = itemRect.Y + itemRect.Height / 2;
         _ = PInvoke.GdipCreatePen1(separatorItem.LineColor.ToGdiPlus(), separatorItem.LineThickness, PInvoke.UnitPixel, out var pen);
         _ = PInvoke.GdipDrawLine(graphicsHandle, pen, itemRect.X + SeparatorPadding, y, itemRect.X + itemRect.Width - SeparatorPadding - 1f, y);
         _ = PInvoke.GdipDeletePen(pen);
     }
 
-    private static unsafe void DrawCheckBox(nint graphicsHandle, uint color, RECTF rect, POINTF* points)
+    private static unsafe void DrawCheckBox(nint graphicsHandle, uint color, RECTF itemRect, POINTF* points)
     {
-        var checkX = rect.X + TextPadding + (CheckBoxWidth - CheckBoxWidth) / 2f;
-        var checkY = rect.Y + rect.Height / 2f - CheckBoxWidth / 2f;
+        var checkX = itemRect.X + TextPadding / 1.35f;
+        var checkY = itemRect.Y + itemRect.Height / 2f - CheckBoxWidth / 2f;
 
-        points[0] = new POINTF { X = checkX + CheckBoxWidth * 0.15f, Y = checkY + CheckBoxWidth * 0.55f };
-        points[1] = new POINTF { X = checkX + CheckBoxWidth * 0.4f, Y = checkY + CheckBoxWidth * 0.8f };
-        points[2] = new POINTF { X = checkX + CheckBoxWidth * 0.85f, Y = checkY + CheckBoxWidth * 0.2f };
+        points[0] = new POINTF { X = checkX + CheckBoxWidth * 0.10f, Y = checkY + CheckBoxWidth * 0.55f };
+        points[1] = new POINTF { X = checkX + CheckBoxWidth * 0.40f, Y = checkY + CheckBoxWidth * 0.85f };
+        points[2] = new POINTF { X = checkX + CheckBoxWidth * 0.90f, Y = checkY + CheckBoxWidth * 0.15f };
 
-        _ = PInvoke.GdipCreatePen1(color, 2.5f, PInvoke.UnitPixel, out var pen);
+        _ = PInvoke.GdipCreatePen1(color, 3f, PInvoke.UnitPixel, out var pen);
         _ = PInvoke.GdipDrawLines(graphicsHandle, pen, points, CheckBoxPoints);
         _ = PInvoke.GdipDeletePen(pen);
     }
 
-    private static void DrawText(nint graphicsHandle, string text, nint font, uint color, RECTF rect)
+    private static void DrawText(nint graphicsHandle, string text, nint font, uint color, RECTF textRect)
     {
         _ = PInvoke.GdipCreateSolidFill(color, out var textBrush);
         _ = PInvoke.GdipCreateStringFormat(0, 0, out var format);
         _ = PInvoke.GdipSetStringFormatFlags(format, PInvoke.StringFormatFlagsNoWrap);
 
-        _ = PInvoke.GdipMeasureString(graphicsHandle, text, text.Length, font, ref rect, format, out var boundingBox, out _, out _);
+        _ = PInvoke.GdipMeasureString(graphicsHandle, text, text.Length, font, ref textRect, format, out var boundingBox, out _, out _);
 
-        rect.Y += (rect.Height - boundingBox.Height) / 2f;
-        rect.Height = boundingBox.Height;
+        textRect.Y += (textRect.Height - boundingBox.Height) / 2f + 1f;
+        textRect.Height = boundingBox.Height;
 
-        _ = PInvoke.GdipDrawString(graphicsHandle, text, text.Length, font, ref rect, format, textBrush);
+        _ = PInvoke.GdipDrawString(graphicsHandle, text, text.Length, font, ref textRect, format, textBrush);
         _ = PInvoke.GdipDeleteBrush(textBrush);
         _ = PInvoke.GdipDeleteStringFormat(format);
     }
