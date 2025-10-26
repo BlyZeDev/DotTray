@@ -68,6 +68,9 @@ internal static partial class PInvoke
     public static extern int GdipDeleteFont(nint font);
 
     [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipDeleteFontFamily(nint fontFamily);
+
+    [DllImport(GdiPlus, SetLastError = true)]
     public static extern int GdipCreateStringFormat(int formatAttributes, int language, out nint format);
 
     [DllImport(GdiPlus, SetLastError = true)]
@@ -75,4 +78,25 @@ internal static partial class PInvoke
 
     [DllImport(GdiPlus, SetLastError = true)]
     public static extern int GdipDeleteStringFormat(nint format);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipSetTextRenderingHint(nint graphics, int mode);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipSetPageUnit(nint graphics, int unit);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipSetPageScale(nint graphics, float scale);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipGetFontHeight(nint font, nint graphics, out float height);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipGetFamily(nint font, out nint fontFamily);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipGetEmHeight(nint fontFamily, int style, out ushort emHeight);
+
+    [DllImport(GdiPlus, SetLastError = true)]
+    public static extern int GdipGetCellAscent(nint fontFamily, int style, out ushort ascent);
 }

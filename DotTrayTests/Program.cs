@@ -40,6 +40,7 @@ sealed class Program
         var separator = tray.MenuItems.AddSeparator();
         separator.LineColor = new TrayColor(0, 255, 255);
         separator.LineThickness = 5f;
+        separator.BackgroundColor = new TrayColor(255, 0, 0);
 
         menuItem = tray.MenuItems.Add("Exit");
         menuItem.TextColor = new TrayColor(255, 0, 0);

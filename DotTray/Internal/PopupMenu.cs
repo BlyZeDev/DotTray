@@ -13,7 +13,7 @@ internal sealed class PopupMenu : IDisposable
 
     private const float FontSize = 16f;
 
-    private const int ItemHeight = 28;
+    private const int ItemHeight = 30;
 
     private const int CheckBoxPoints = 3;
     private const int CheckBoxWidth = 16;
@@ -105,7 +105,11 @@ internal sealed class PopupMenu : IDisposable
         {
             PInvoke.GetClientRect(_hWnd, out var clientRect);
 
-            _ = PInvoke.GdipCreateFromHDC(paintHandle, out var graphicsHandle);
+            var memoryDC = PInvoke.CreateCompatibleDC(paintHandle);
+            var bitmapHandle = PInvoke.CreateCompatibleBitmap(paintHandle, clientRect.Right - clientRect.Left, clientRect.Bottom - clientRect.Top);
+            var oldBitmapHandle = PInvoke.SelectObject(memoryDC, bitmapHandle);
+
+            _ = PInvoke.GdipCreateFromHDC(memoryDC, out var graphicsHandle);
             _ = PInvoke.GdipSetSmoothingMode(graphicsHandle, PInvoke.SmoothingModeAntiAlias8x8);
 
             DrawMenuBackground(graphicsHandle, clientRect, _ownerIcon.PopupMenuColor.ToGdiPlus());
@@ -144,7 +148,14 @@ internal sealed class PopupMenu : IDisposable
             }
 
             _ = PInvoke.GdipDeleteFont(font);
+            _ = PInvoke.GdipDeleteFontFamily(fontFamily);
             _ = PInvoke.GdipDeleteGraphics(graphicsHandle);
+
+            PInvoke.BitBlt(paintHandle, 0, 0, clientRect.Right - clientRect.Left, clientRect.Bottom - clientRect.Top, memoryDC, 0, 0, PInvoke.SRCCOPY);
+
+            _ = PInvoke.SelectObject(memoryDC, oldBitmapHandle);
+            _ = PInvoke.DeleteObject(bitmapHandle);
+            _ = PInvoke.DeleteDC(memoryDC);
         }
         finally
         {
@@ -241,9 +252,9 @@ internal sealed class PopupMenu : IDisposable
 
     private static void DrawSeparatorItem(nint graphicsHandle, SeparatorItem separatorItem, RECTF itemRect)
     {
-        _ = PInvoke.GdipCreateSolidFill(separatorItem.BackgroundColor.ToGdiPlus(), out var bgBrush);
-        _ = PInvoke.GdipFillRectangle(graphicsHandle, bgBrush, itemRect.X, itemRect.Y, itemRect.Width, itemRect.Height);
-        _ = PInvoke.GdipDeleteBrush(bgBrush);
+        _ = PInvoke.GdipCreateSolidFill(separatorItem.BackgroundColor.ToGdiPlus(), out var backgroundBrush);
+        _ = PInvoke.GdipFillRectangle(graphicsHandle, backgroundBrush, itemRect.X, itemRect.Y, itemRect.Width, itemRect.Height);
+        _ = PInvoke.GdipDeleteBrush(backgroundBrush);
 
         var y = itemRect.Y + itemRect.Height / 2;
         _ = PInvoke.GdipCreatePen1(separatorItem.LineColor.ToGdiPlus(), separatorItem.LineThickness, PInvoke.UnitPixel, out var pen);
@@ -273,7 +284,7 @@ internal sealed class PopupMenu : IDisposable
 
         _ = PInvoke.GdipMeasureString(graphicsHandle, text, text.Length, font, ref textRect, format, out var boundingBox, out _, out _);
 
-        textRect.Y += (textRect.Height - boundingBox.Height) / 2f + 1f;
+        textRect.Y += (textRect.Height - boundingBox.Height) / 2f;
         textRect.Height = boundingBox.Height;
 
         _ = PInvoke.GdipDrawString(graphicsHandle, text, text.Length, font, ref textRect, format, textBrush);
