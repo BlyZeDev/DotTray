@@ -2,6 +2,7 @@
 
 using DotTray.Internal.Win32;
 using System;
+using System.IO;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 
@@ -80,23 +81,5 @@ internal static partial class PInvoke
     public static extern int GdipDeleteStringFormat(nint format);
 
     [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipSetTextRenderingHint(nint graphics, int mode);
-
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipSetPageUnit(nint graphics, int unit);
-
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipSetPageScale(nint graphics, float scale);
-
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipGetFontHeight(nint font, nint graphics, out float height);
-
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipGetFamily(nint font, out nint fontFamily);
-
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipGetEmHeight(nint fontFamily, int style, out ushort emHeight);
-
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipGetCellAscent(nint fontFamily, int style, out ushort ascent);
+    public static extern unsafe int GdipFillPolygon(nint graphics, nint brush, POINTF* points, int count, int fillMode);
 }

@@ -18,7 +18,8 @@ internal sealed class PopupMenu : IDisposable
     private const int CheckBoxPoints = 3;
     private const int CheckBoxWidth = 16;
     private const int TextPadding = 8;
-    private const int SubmenuArrowWidth = 12;
+    private const int ArrowPoints = 3;
+    private const int SubmenuArrowWidth = 8;
     private const int SeparatorPadding = (CheckBoxWidth + TextPadding + SubmenuArrowWidth) / 4;
 
     private readonly nint _ownerHWnd;
@@ -117,7 +118,8 @@ internal sealed class PopupMenu : IDisposable
             _ = PInvoke.GdipGetGenericFontFamilySansSerif(out var fontFamily);
             _ = PInvoke.GdipCreateFont(fontFamily, FontSize, 0, PInvoke.UnitPixel, out var font);
 
-            POINTF* points = stackalloc POINTF[CheckBoxPoints];
+            POINTF* checkBoxPoints = stackalloc POINTF[CheckBoxPoints];
+            POINTF* submenuArrowPoints = stackalloc POINTF[ArrowPoints];
             var itemTop = (float)clientRect.Top;
             for (int i = 0; i < _menuItems.Count; i++)
             {
@@ -135,7 +137,7 @@ internal sealed class PopupMenu : IDisposable
                     var backgroundColor = (menuItem.IsDisabled ? menuItem.BackgroundDisabledColor : (i == hoverIndex ? menuItem.BackgroundHoverColor : menuItem.BackgroundColor)).ToGdiPlus();
                     var textColor = (menuItem.IsDisabled ? menuItem.TextDisabledColor : (i == hoverIndex ? menuItem.TextHoverColor : menuItem.TextColor)).ToGdiPlus();
 
-                    DrawMenuItem(graphicsHandle, itemRect, menuItem, font, backgroundColor, textColor, points);
+                    DrawMenuItem(graphicsHandle, itemRect, menuItem, font, backgroundColor, textColor, checkBoxPoints, submenuArrowPoints);
                 }
                 else if (_menuItems[i] is SeparatorItem separatorItem)
                 {
@@ -230,15 +232,15 @@ internal sealed class PopupMenu : IDisposable
         _ = PInvoke.GdipDeleteBrush(bgBrush);
     }
     
-    private static unsafe void DrawMenuItem(nint graphicsHandle, RECTF itemRect, MenuItem menuItem, nint font, uint backgroundColor, uint textColor, POINTF* points)
+    private static unsafe void DrawMenuItem(nint graphicsHandle, RECTF itemRect, MenuItem menuItem, nint font, uint backgroundColor, uint textColor, POINTF* checkBoxPoints, POINTF* submenuArrowPoints)
     {
         _ = PInvoke.GdipCreateSolidFill(backgroundColor, out var backgroundBrush);
         _ = PInvoke.GdipFillRectangle(graphicsHandle, backgroundBrush, itemRect.X, itemRect.Y, itemRect.Width, itemRect.Height);
         _ = PInvoke.GdipDeleteBrush(backgroundBrush);
 
-        var centerY = itemRect.Y + itemRect.Height / 2f - TextPadding - 1f;
+        var centerY = itemRect.Y + itemRect.Height / 2f - TextPadding - 1.65f;
 
-        if (menuItem.IsChecked.GetValueOrDefault()) DrawCheckBox(graphicsHandle, textColor, itemRect, centerY, points);
+        if (menuItem.IsChecked.GetValueOrDefault()) DrawCheckBox(graphicsHandle, textColor, itemRect, centerY, checkBoxPoints);
 
         var textLeft = itemRect.X + CheckBoxWidth + TextPadding;
         var textRight = itemRect.X + itemRect.Width - SubmenuArrowWidth - TextPadding;
@@ -250,6 +252,8 @@ internal sealed class PopupMenu : IDisposable
             Height = itemRect.Height
         };
         DrawText(graphicsHandle, menuItem.Text, font, textColor, textRect, centerY);
+
+        if (menuItem.HasSubMenu) DrawSubmenuArrow(graphicsHandle, textColor, itemRect, centerY + TextPadding + 0.5f, submenuArrowPoints);
     }
 
     private static void DrawSeparatorItem(nint graphicsHandle, SeparatorItem separatorItem, RECTF itemRect)
@@ -289,5 +293,18 @@ internal sealed class PopupMenu : IDisposable
         _ = PInvoke.GdipDrawString(graphicsHandle, text, text.Length, font, ref textRect, format, textBrush);
         _ = PInvoke.GdipDeleteBrush(textBrush);
         _ = PInvoke.GdipDeleteStringFormat(format);
+    }
+
+    private static unsafe void DrawSubmenuArrow(nint graphicsHandle, uint color, RECTF itemRect, float centerY, POINTF* points)
+    {
+        var arrowX = itemRect.X + itemRect.Width - TextPadding - SubmenuArrowWidth;
+
+        points[0] = new POINTF { X = arrowX, Y = centerY - 5f };
+        points[1] = new POINTF { X = arrowX + SubmenuArrowWidth, Y = centerY };
+        points[2] = new POINTF { X = arrowX, Y = centerY + 5f };
+
+        _ = PInvoke.GdipCreateSolidFill(color, out var brush);
+        _ = PInvoke.GdipFillPolygon(graphicsHandle, brush, points, ArrowPoints, 0);
+        _ = PInvoke.GdipDeleteBrush(brush);
     }
 }
