@@ -236,7 +236,9 @@ internal sealed class PopupMenu : IDisposable
         _ = PInvoke.GdipFillRectangle(graphicsHandle, backgroundBrush, itemRect.X, itemRect.Y, itemRect.Width, itemRect.Height);
         _ = PInvoke.GdipDeleteBrush(backgroundBrush);
 
-        if (menuItem.IsChecked.GetValueOrDefault()) DrawCheckBox(graphicsHandle, textColor, itemRect, points);
+        var centerY = itemRect.Y + itemRect.Height / 2f - TextPadding - 1f;
+
+        if (menuItem.IsChecked.GetValueOrDefault()) DrawCheckBox(graphicsHandle, textColor, itemRect, centerY, points);
 
         var textLeft = itemRect.X + CheckBoxWidth + TextPadding;
         var textRight = itemRect.X + itemRect.Width - SubmenuArrowWidth - TextPadding;
@@ -247,7 +249,7 @@ internal sealed class PopupMenu : IDisposable
             Width = textRight - textLeft,
             Height = itemRect.Height
         };
-        DrawText(graphicsHandle, menuItem.Text, font, textColor, textRect);
+        DrawText(graphicsHandle, menuItem.Text, font, textColor, textRect, centerY);
     }
 
     private static void DrawSeparatorItem(nint graphicsHandle, SeparatorItem separatorItem, RECTF itemRect)
@@ -262,10 +264,10 @@ internal sealed class PopupMenu : IDisposable
         _ = PInvoke.GdipDeletePen(pen);
     }
 
-    private static unsafe void DrawCheckBox(nint graphicsHandle, uint color, RECTF itemRect, POINTF* points)
+    private static unsafe void DrawCheckBox(nint graphicsHandle, uint color, RECTF itemRect, float centerY, POINTF* points)
     {
         var checkX = itemRect.X + TextPadding / 1.35f;
-        var checkY = itemRect.Y + itemRect.Height / 2f - CheckBoxWidth / 2f;
+        var checkY = centerY;
 
         points[0] = new POINTF { X = checkX + CheckBoxWidth * 0.10f, Y = checkY + CheckBoxWidth * 0.55f };
         points[1] = new POINTF { X = checkX + CheckBoxWidth * 0.40f, Y = checkY + CheckBoxWidth * 0.85f };
@@ -276,16 +278,13 @@ internal sealed class PopupMenu : IDisposable
         _ = PInvoke.GdipDeletePen(pen);
     }
 
-    private static void DrawText(nint graphicsHandle, string text, nint font, uint color, RECTF textRect)
+    private static void DrawText(nint graphicsHandle, string text, nint font, uint color, RECTF textRect, float centerY)
     {
         _ = PInvoke.GdipCreateSolidFill(color, out var textBrush);
         _ = PInvoke.GdipCreateStringFormat(0, 0, out var format);
         _ = PInvoke.GdipSetStringFormatFlags(format, PInvoke.StringFormatFlagsNoWrap);
 
-        _ = PInvoke.GdipMeasureString(graphicsHandle, text, text.Length, font, ref textRect, format, out var boundingBox, out _, out _);
-
-        textRect.Y += (textRect.Height - boundingBox.Height) / 2f;
-        textRect.Height = boundingBox.Height;
+        textRect.Y = centerY;
 
         _ = PInvoke.GdipDrawString(graphicsHandle, text, text.Length, font, ref textRect, format, textBrush);
         _ = PInvoke.GdipDeleteBrush(textBrush);
