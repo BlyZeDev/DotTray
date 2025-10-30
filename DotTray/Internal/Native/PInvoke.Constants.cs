@@ -26,6 +26,12 @@ internal static partial class PInvoke
 
     public const uint SPI_GETNONCLIENTMETRICS = 0x0029;
 
+    public const uint IMAGE_CURSOR = 2;
+    public const uint LR_SHARED = 0x00008000;
+    public const uint LR_DEFAULTSIZE = 0x00000040;
+    public const string IDC_ARROW = "32512";
+    public const string IDC_HAND = "32649";
+
     public const int HTCLIENT = 1;
     public const int GA_ROOT = 2;
     public const int SRCCOPY = 0x00CC0020;
@@ -52,6 +58,7 @@ internal static partial class PInvoke
     public const uint WM_DRAWITEM = 0x002B;
     public const uint WM_DELETEITEM = 0x002D;
 
+    public const int WM_SETCURSOR = 0x0020;
     public const int WM_MOUSEMOVE = 0x0200;
     public const int WM_LBUTTONDOWN = 0x0201;
     public const int WM_KEYDOWN = 0x0100;

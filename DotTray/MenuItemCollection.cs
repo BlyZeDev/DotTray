@@ -7,9 +7,9 @@ using System.Collections.Generic;
 /// <summary>
 /// Represents a collection of <see cref="MenuItem"/>
 /// </summary>
-public sealed class MenuItemCollection : IReadOnlyList<IMenuItem>
+public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
 {
-    private readonly List<IMenuItem> _items;
+    private readonly List<MenuItemBase> _items;
 
     internal event Action? Updated;
 
@@ -19,7 +19,7 @@ public sealed class MenuItemCollection : IReadOnlyList<IMenuItem>
     internal MenuItemCollection() => _items = [];
 
     /// <inheritdoc/>
-    public IMenuItem this[int index] => _items[index];
+    public MenuItemBase this[int index] => _items[index];
 
     /// <summary>
     /// Adds a <see cref="MenuItem"/> to the collection
@@ -29,7 +29,7 @@ public sealed class MenuItemCollection : IReadOnlyList<IMenuItem>
     public MenuItem Add(string text)
     {
         var item = new MenuItem(text);
-        ((IMenuItem)item).Updated += Update;
+        item.Updated += Update;
 
         _items.Add(item);
         Update();
@@ -44,7 +44,7 @@ public sealed class MenuItemCollection : IReadOnlyList<IMenuItem>
     public SeparatorItem AddSeparator()
     {
         var item = new SeparatorItem();
-        ((IMenuItem)item).Updated += Update;
+        item.Updated += Update;
 
         _items.Add(item);
         Update();
@@ -76,7 +76,7 @@ public sealed class MenuItemCollection : IReadOnlyList<IMenuItem>
     }
 
     /// <inheritdoc/>
-    public IEnumerator<IMenuItem> GetEnumerator() => _items.GetEnumerator();
+    public IEnumerator<MenuItemBase> GetEnumerator() => _items.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 

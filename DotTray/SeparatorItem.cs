@@ -1,12 +1,11 @@
 ﻿namespace DotTray;
 
 using DotTray.Internal;
-using System;
 
 /// <summary>
 /// Represents a <see cref="NotifyIcon"/> separator item
 /// </summary>
-public sealed class SeparatorItem : IMenuItem
+public sealed class SeparatorItem : MenuItemBase
 {
     private static readonly float DefaultLineThickness = 1f;
 
@@ -14,12 +13,7 @@ public sealed class SeparatorItem : IMenuItem
     private TrayColor lineColor;
     private float lineThickness;
 
-    private event Action? updated;
-    event Action? IMenuItem.Updated
-    {
-        add => updated += value;
-        remove => updated -= value;
-    }
+    internal override float Height => LineThickness * 2f;
 
     /// <summary>
     /// The background color of this separator
@@ -72,6 +66,4 @@ public sealed class SeparatorItem : IMenuItem
         lineColor = DefaultColors.SeparatorLineColor;
         lineThickness = DefaultLineThickness;
     }
-
-    private void Update() => updated?.Invoke();
 }

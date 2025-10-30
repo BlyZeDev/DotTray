@@ -13,14 +13,15 @@ internal sealed class PopupMenu : IDisposable
 
     private const float FontSize = 16f;
 
-    private const int ItemHeight = 30;
-
     private const int CheckBoxPoints = 3;
     private const int CheckBoxWidth = 16;
     private const int TextPadding = 8;
     private const int ArrowPoints = 3;
     private const int SubmenuArrowWidth = 8;
     private const int SeparatorPadding = (CheckBoxWidth + TextPadding + SubmenuArrowWidth) / 4;
+
+    private static readonly nint _arrowCursor;
+    private static readonly nint _handCursor;
 
     private readonly nint _ownerHWnd;
     private readonly NotifyIcon _ownerIcon;
@@ -30,10 +31,17 @@ internal sealed class PopupMenu : IDisposable
     private readonly nint _hWnd;
     private readonly PInvoke.WndProc _wndProc;
 
+    private bool isDisposed;
     private int hoverIndex;
     private PopupMenu? submenuPopup;
 
     public event Action? Closed;
+
+    static PopupMenu()
+    {
+        _arrowCursor = PInvoke.LoadCursor(nint.Zero, PInvoke.IDC_ARROW);
+        _handCursor = PInvoke.LoadCursor(nint.Zero, PInvoke.IDC_HAND);
+    }
 
     private PopupMenu(nint ownerHWnd, NotifyIcon ownerIcon, POINT mousePos, string popupWindowClassName, nint instanceHandle)
     {
@@ -67,22 +75,27 @@ internal sealed class PopupMenu : IDisposable
         var backdrop = PInvoke.DWMSBT_TRANSIENTWINDOW;
         _ = PInvoke.DwmSetWindowAttribute(_hWnd, PInvoke.DWMWA_SYSTEMBACKDROP_TYPE, ref backdrop, sizeof(int));
 
+        PInvoke.SetCapture(_hWnd);
+
         PInvoke.ShowWindow(_hWnd, PInvoke.SW_SHOWNOACTIVATE);
         PInvoke.UpdateWindow(_hWnd);
     }
 
     public void Dispose()
     {
+        if (isDisposed) return;
+        isDisposed = true;
+
         _menuItems.Updated -= MenuItemUpdated;
+
+        PInvoke.ReleaseCapture();
         PInvoke.PostMessage(_hWnd, PInvoke.WM_CLOSE, 0, 0);
     }
 
     private void MenuItemUpdated()
     {
         CalcWindowPos(_mousePos, out var x, out var y, out var width, out var height);
-
         PInvoke.SetWindowPos(_hWnd, nint.Zero, x, y, width, height, PInvoke.SWP_NOACTIVATE | PInvoke.SWP_ZORDER);
-
         PInvoke.InvalidateRect(_hWnd, nint.Zero, true);
     }
 
@@ -90,12 +103,46 @@ internal sealed class PopupMenu : IDisposable
     {
         switch (msg)
         {
+            case PInvoke.WM_MOUSEMOVE or PInvoke.WM_LBUTTONDOWN: HandleMouse(msg, lParam); return 0;
             case PInvoke.WM_PAINT: HandlePaint(); return 0;
             case PInvoke.WM_CLOSE: PInvoke.DestroyWindow(hWnd); return 0;
             case PInvoke.WM_DESTROY: Closed?.Invoke(); return 0;
         }
 
         return PInvoke.DefWindowProc(hWnd, msg, wParam, lParam);
+    }
+
+    private void HandleMouse(uint msg, nint lParam)
+    {
+        var mouseX = (short)(lParam.ToInt32() & 0xFFFF);
+        var mouseY = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
+
+        var hitIndex = CheckHit(mouseX, mouseY);
+
+        if (msg == PInvoke.WM_MOUSEMOVE)
+        {
+            if (hitIndex != hoverIndex)
+            {
+                hoverIndex = hitIndex;
+                PInvoke.InvalidateRect(_hWnd, nint.Zero, false);
+
+                var showHandCursor = hoverIndex != -1 && _menuItems[hoverIndex] is MenuItem menuItem && !menuItem.IsDisabled;
+                PInvoke.SetCursor(showHandCursor ? _handCursor : _arrowCursor);
+            }
+        }
+        else if (msg == PInvoke.WM_LBUTTONDOWN && hitIndex != -1)
+        {
+            if (_menuItems[hitIndex] is MenuItem menuItem && !menuItem.IsDisabled)
+            {
+                if (menuItem.IsChecked.HasValue) menuItem.IsChecked = !menuItem.IsChecked;
+
+                menuItem.Clicked?.Invoke(new MenuItemClickedArgs
+                {
+                    Icon = _ownerIcon,
+                    MenuItem = menuItem
+                });
+            }
+        }
     }
 
     private unsafe void HandlePaint()
@@ -127,24 +174,20 @@ internal sealed class PopupMenu : IDisposable
                 {
                     X = clientRect.Left,
                     Y = itemTop,
-                    Width = clientRect.Right - clientRect.Left
+                    Width = clientRect.Right - clientRect.Left,
+                    Height = _menuItems[i].Height
                 };
 
                 if (_menuItems[i] is MenuItem menuItem)
                 {
-                    itemRect.Height = ItemHeight;
+                    menuItem.HitBox = itemRect;
 
                     var backgroundColor = (menuItem.IsDisabled ? menuItem.BackgroundDisabledColor : (i == hoverIndex ? menuItem.BackgroundHoverColor : menuItem.BackgroundColor)).ToGdiPlus();
                     var textColor = (menuItem.IsDisabled ? menuItem.TextDisabledColor : (i == hoverIndex ? menuItem.TextHoverColor : menuItem.TextColor)).ToGdiPlus();
 
-                    DrawMenuItem(graphicsHandle, itemRect, menuItem, font, backgroundColor, textColor, checkBoxPoints, submenuArrowPoints);
+                    DrawMenuItem(graphicsHandle, menuItem, font, backgroundColor, textColor, checkBoxPoints, submenuArrowPoints);
                 }
-                else if (_menuItems[i] is SeparatorItem separatorItem)
-                {
-                    itemRect.Height = MathF.Ceiling(separatorItem.LineThickness * 2f);
-
-                    DrawSeparatorItem(graphicsHandle, separatorItem, itemRect);
-                }
+                else if (_menuItems[i] is SeparatorItem separatorItem) DrawSeparatorItem(graphicsHandle, separatorItem, itemRect);
 
                 itemTop += itemRect.Height;
             }
@@ -165,6 +208,21 @@ internal sealed class PopupMenu : IDisposable
         }
     }
 
+    private int CheckHit(int mouseX, int mouseY)
+    {
+        for (int i = 0; i < _menuItems.Count; i++)
+        {
+            if (_menuItems[i] is not MenuItem menuItem) continue;
+
+            if (mouseX > menuItem.HitBox.X
+                && mouseX < menuItem.HitBox.X + menuItem.HitBox.Width
+                && mouseY > menuItem.HitBox.Y
+                && mouseY < menuItem.HitBox.Y + menuItem.HitBox.Height) return i;
+        }
+
+        return -1;
+    }
+
     private void CalcWindowPos(POINT mousePos, out int x, out int y, out int width, out int height)
     {
         var screenWidth = PInvoke.GetSystemMetrics(PInvoke.SM_CXSCREEN);
@@ -181,8 +239,7 @@ internal sealed class PopupMenu : IDisposable
         {
             X = 0,
             Y = 0,
-            Width = float.MaxValue,
-            Height = ItemHeight
+            Width = float.MaxValue
         };
 
         height = 0;
@@ -190,12 +247,14 @@ internal sealed class PopupMenu : IDisposable
         {
             if (_menuItems[i] is MenuItem menuItem)
             {
-                height += ItemHeight;
+                layout.Height = menuItem.Height;
+
+                height += (int)MathF.Ceiling(menuItem.Height);
 
                 _ = PInvoke.GdipMeasureString(graphicsHandle, menuItem.Text, menuItem.Text.Length, font, ref layout, nint.Zero, out var boundingBox, out _, out _);
                 if (boundingBox.Width > maxTextWidth) maxTextWidth = boundingBox.Width;
             }
-            else if (_menuItems[i] is SeparatorItem separatorItem) height += (int)MathF.Ceiling(separatorItem.LineThickness * 2f);
+            else height += (int)MathF.Ceiling(_menuItems[i].Height);
         }
 
         _ = PInvoke.GdipDeleteFont(font);
@@ -232,8 +291,10 @@ internal sealed class PopupMenu : IDisposable
         _ = PInvoke.GdipDeleteBrush(bgBrush);
     }
     
-    private static unsafe void DrawMenuItem(nint graphicsHandle, RECTF itemRect, MenuItem menuItem, nint font, uint backgroundColor, uint textColor, POINTF* checkBoxPoints, POINTF* submenuArrowPoints)
+    private static unsafe void DrawMenuItem(nint graphicsHandle, MenuItem menuItem, nint font, uint backgroundColor, uint textColor, POINTF* checkBoxPoints, POINTF* submenuArrowPoints)
     {
+        var itemRect = menuItem.HitBox;
+
         _ = PInvoke.GdipCreateSolidFill(backgroundColor, out var backgroundBrush);
         _ = PInvoke.GdipFillRectangle(graphicsHandle, backgroundBrush, itemRect.X, itemRect.Y, itemRect.Width, itemRect.Height);
         _ = PInvoke.GdipDeleteBrush(backgroundBrush);

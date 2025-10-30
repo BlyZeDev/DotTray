@@ -1,12 +1,13 @@
 ﻿namespace DotTray;
 
 using DotTray.Internal;
+using DotTray.Internal.Win32;
 using System;
 
 /// <summary>
 /// Represents a <see cref="NotifyIcon"/> menu item
 /// </summary>
-public sealed class MenuItem : IMenuItem
+public sealed class MenuItem : MenuItemBase
 {
     private string text;
     private bool? isChecked;
@@ -18,12 +19,9 @@ public sealed class MenuItem : IMenuItem
     private TrayColor textHoverColor;
     private TrayColor textDisabledColor;
 
-    private event Action? updated;
-    event Action? IMenuItem.Updated
-    {
-        add => updated += value;
-        remove => updated -= value;
-    }
+    internal override float Height => 30f;
+
+    internal RECTF HitBox { get; set; }
     internal bool HasSubMenu => SubMenu.Count > 0;
 
     /// <summary>
@@ -185,6 +183,4 @@ public sealed class MenuItem : IMenuItem
         textDisabledColor = DefaultColors.MenuItemTextDisabledColor;
         SubMenu = [];
     }
-
-    private void Update() => updated?.Invoke();
 }

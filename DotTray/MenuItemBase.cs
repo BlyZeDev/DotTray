@@ -5,7 +5,11 @@ using System;
 /// <summary>
 /// Represents the base for a <see cref="NotifyIcon"/> menu item
 /// </summary>
-public interface IMenuItem
+public abstract class MenuItemBase
 {
+    internal abstract float Height { get; }
+
     internal event Action? Updated;
+
+    private protected void Update() => Updated?.Invoke();
 }

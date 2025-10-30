@@ -1,7 +1,6 @@
 ﻿namespace DotTray.Internal.Native;
 
 using DotTray.Internal.Win32;
-using System;
 using System.Runtime.InteropServices;
 
 internal static partial class PInvoke
@@ -11,6 +10,12 @@ internal static partial class PInvoke
 
     [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern nint LoadImage(nint hInst, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
+
+    [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern nint LoadCursor(nint hInst, string lpCursorName);
+
+    [DllImport(User32, SetLastError = true)]
+    public static extern nint SetCursor(nint hCursor);
 
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
