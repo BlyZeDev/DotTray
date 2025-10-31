@@ -26,7 +26,7 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// </summary>
     /// <param name="text">The display text</param>
     /// <returns><see cref="MenuItem"/></returns>
-    public MenuItem Add(string text)
+    public MenuItem AddItem(string text)
     {
         var item = new MenuItem(text);
         item.Updated += Update;

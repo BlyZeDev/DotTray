@@ -11,11 +11,22 @@ sealed class Program
     {
         var cts = new CancellationTokenSource();
 
-        var tempPath = CreateTestIcon() ?? throw new InvalidOperationException("Icon could not be created");
+        var tempPath = CreateTestIcon(StockIconId.Error) ?? throw new InvalidOperationException("Icon could not be created");
+        var tempPath2 = CreateTestIcon(StockIconId.AudioFiles) ?? throw new InvalidOperationException("Icon could not be created");
 
         var tray = await NotifyIcon.RunAsync(tempPath, cts.Token);
+        var defaultTray = await NotifyIcon.RunAsync(tempPath2, cts.Token);
 
-        var menuItem = tray.MenuItems.Add("Test");
+        defaultTray.MenuItems.AddItem("Item No. 1");
+        defaultTray.MenuItems.AddItem("Item No. 2");
+        defaultTray.MenuItems.AddSeparator();
+        defaultTray.MenuItems.AddItem("Item No. 3").IsChecked = false;
+        defaultTray.MenuItems.AddSeparator();
+        defaultTray.MenuItems.AddItem("SubMenu here").SubMenu.AddItem("Submenu Test").SubMenu.AddItem("Submenu 2 Test");
+        defaultTray.MenuItems.AddSeparator();
+        defaultTray.MenuItems.AddItem("Last Item");
+
+        var menuItem = tray.MenuItems.AddItem("Test");
         menuItem.BackgroundColor = new TrayColor(255, 0, 0);
         menuItem.BackgroundDisabledColor = new TrayColor(0, 255, 0);
         menuItem.BackgroundHoverColor = new TrayColor(0, 0, 255);
@@ -28,10 +39,10 @@ sealed class Program
 
         tray.MenuItems.AddSeparator();
 
-        menuItem = tray.MenuItems.Add("Test 2");
+        menuItem = tray.MenuItems.AddItem("Test 2");
         menuItem.BackgroundColor = new TrayColor(255, 255, 255, 50);
 
-        menuItem = menuItem.SubMenu.Add("Test Sub 1");
+        menuItem = menuItem.SubMenu.AddItem("Test Sub 1");
 
         menuItem.IsChecked = false;
         menuItem.IsDisabled = true;
@@ -42,7 +53,7 @@ sealed class Program
         separator.LineThickness = 5f;
         separator.BackgroundColor = new TrayColor(255, 0, 0);
 
-        menuItem = tray.MenuItems.Add("Exit");
+        menuItem = tray.MenuItems.AddItem("Exit");
         menuItem.TextColor = new TrayColor(255, 0, 0);
         menuItem.Clicked = _ => cts.Cancel();
 
@@ -66,7 +77,7 @@ sealed class Program
         Console.ReadLine();
 
         Console.WriteLine("Adding Extra menu item");
-        tray.MenuItems.Add("---------------- EXTRA ----------------");
+        tray.MenuItems.AddItem("---------------- EXTRA ----------------");
         ((MenuItem)tray.MenuItems[0]).Text = ((MenuItem)tray.MenuItems[0]).Text + " - NEW";
 
         Console.ReadLine();
@@ -85,11 +96,11 @@ sealed class Program
     }
 
     [SupportedOSPlatform("windows")]
-    private static string? CreateTestIcon()
+    private static string? CreateTestIcon(StockIconId id, StockIconOptions options = StockIconOptions.SmallIcon)
     {
         var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.CreateVersion7()}.ico");
 
-        using (var icon = SystemIcons.GetStockIcon(StockIconId.Error, StockIconOptions.SmallIcon))
+        using (var icon = SystemIcons.GetStockIcon(id, options))
         {
             if (icon is null) return null;
 

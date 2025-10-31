@@ -1,6 +1,7 @@
 ﻿namespace DotTray.Internal.Native;
 
 using DotTray.Internal.Win32;
+using System;
 using System.Runtime.InteropServices;
 
 internal static partial class PInvoke
@@ -12,7 +13,7 @@ internal static partial class PInvoke
     public static extern nint LoadImage(nint hInst, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
 
     [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern nint LoadCursor(nint hInst, string lpCursorName);
+    public static extern nint LoadCursor(nint hInst, int lpCursorName);
 
     [DllImport(User32, SetLastError = true)]
     public static extern nint SetCursor(nint hCursor);
@@ -162,9 +163,19 @@ internal static partial class PInvoke
     public static extern bool EndPaint(nint hWnd, ref PAINTSTRUCT lpPaint);
 
     [DllImport(User32, SetLastError = true)]
-    public static extern short GetAsyncKeyState(int vKey);
+    public static extern nint WindowFromPoint(POINT Point);
 
-    [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
+    [DllImport(User32, SetLastError = true)]
+    public static extern nint SetWindowsHookEx(int idHook, nint lpfn, nint hmod, uint dwThreadId);
+
+    [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, ref NONCLIENTMETRICS pvParam, uint fWinIni);
+    public static extern bool UnhookWindowsHookEx(nint hhk);
+
+    [DllImport(User32, SetLastError = true)]
+    public static extern nint CallNextHookEx(nint hhk, int nCode, nint wParam, nint lParam);
+
+    [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetWindowRect(nint hWnd, out RECT lpRect);
 }

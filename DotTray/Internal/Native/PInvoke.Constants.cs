@@ -14,12 +14,18 @@ internal static partial class PInvoke
 
     public const uint WS_POPUP = 0x80000000;
     public const uint WS_BORDER = 0x00800000;
+    public const uint WS_EX_LAYERED = 0x00080000;
     public const uint WS_EX_NOACTIVATE = 0x08000000;
     public const uint WS_EX_TOOLWINDOW = 0x00000080;
     public const uint WS_EX_TOPMOST = 0x00000008;
+    public const uint WS_EX_TRANSPARENT = 0x00000020;
     public const uint WS_VISIBLE = 0x10000000;
     public const uint WS_CLIPSIBLINGS = 0x04000000;
     public const uint WS_CLIPCHILDREN = 0x02000000;
+
+    public const int WH_MOUSE_LL = 14;
+
+    public const uint MONITOR_DEFAULTTONEAREST = 0x02;
 
     public const uint CS_HREDRAW = 0x0002;
     public const uint CS_VREDRAW = 0x0001;
@@ -29,8 +35,10 @@ internal static partial class PInvoke
     public const uint IMAGE_CURSOR = 2;
     public const uint LR_SHARED = 0x00008000;
     public const uint LR_DEFAULTSIZE = 0x00000040;
-    public const string IDC_ARROW = "32512";
-    public const string IDC_HAND = "32649";
+    public const int IDC_ARROW = 32512;
+    public const int IDC_HAND = 32649;
+
+    public const uint LWA_ALPHA = 0x02;
 
     public const int HTCLIENT = 1;
     public const int GA_ROOT = 2;
@@ -41,7 +49,7 @@ internal static partial class PInvoke
     public const uint WM_ERASEBKGND = 0x0014;
     public const uint WM_PAINT = 0x000F;
 
-    public const uint WM_KILLFOCUS = 0x0008;
+    public const uint WM_CAPTURECHANGED = 0x0215;
     public const uint WM_TIMER = 0x0113;
     public const uint WM_DESTROY = 0x0002;
     public const uint WM_COMMAND = 0x0111;
@@ -58,6 +66,7 @@ internal static partial class PInvoke
     public const uint WM_DRAWITEM = 0x002B;
     public const uint WM_DELETEITEM = 0x002D;
 
+    public const int WM_NCHITTEST = 0x0084;
     public const int WM_SETCURSOR = 0x0020;
     public const int WM_MOUSEMOVE = 0x0200;
     public const int WM_LBUTTONDOWN = 0x0201;
