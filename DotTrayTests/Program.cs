@@ -22,7 +22,7 @@ sealed class Program
         defaultTray.MenuItems.AddSeparator();
         defaultTray.MenuItems.AddItem("Item No. 3").IsChecked = false;
         defaultTray.MenuItems.AddSeparator();
-        defaultTray.MenuItems.AddItem("SubMenu here").SubMenu.AddItem("Submenu Test").SubMenu.AddItem("Submenu 2 Test");
+        var testItem = defaultTray.MenuItems.AddItem("SubMenu here").SubMenu.AddItem("Submenu Test").SubMenu.AddItem("Submenu 2 Test").SubMenu.AddItem("Submenu 3 Test");
         defaultTray.MenuItems.AddSeparator();
         defaultTray.MenuItems.AddItem("Last Item");
 
@@ -79,6 +79,10 @@ sealed class Program
         Console.WriteLine("Adding Extra menu item");
         tray.MenuItems.AddItem("---------------- EXTRA ----------------");
         ((MenuItem)tray.MenuItems[0]).Text = ((MenuItem)tray.MenuItems[0]).Text + " - NEW";
+
+        await Task.Delay(5000);
+
+        testItem.Text = "NEW TEXT AFTER 5 SECONDS !!!";
 
         Console.ReadLine();
 
