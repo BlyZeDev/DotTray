@@ -100,7 +100,7 @@ internal sealed class PopupMenu : IDisposable
     private void MenuItemUpdated()
     {
         PInvoke.GetWindowRect(_hWnd, out var windowRect);
-        CalcWindowPos(_menuItems, new POINT
+        CalcWindowSize(_menuItems, new POINT
         {
             x = windowRect.Left,
             y = windowRect.Top
@@ -131,47 +131,33 @@ internal sealed class PopupMenu : IDisposable
 
         var hitIndex = CheckHit(mouseX, mouseY);
 
-        if (msg == PInvoke.WM_MOUSEMOVE)
+        if (msg == PInvoke.WM_MOUSEMOVE && hitIndex != hoverIndex)
         {
-            if (hitIndex != hoverIndex)
+            hoverIndex = hitIndex;
+            PInvoke.InvalidateRect(_hWnd, nint.Zero, false);
+
+            submenuPopup?.Dispose();
+            submenuPopup = null;
+
+            if (hoverIndex != -1 && _menuItems[hoverIndex] is MenuItem menuItem && !menuItem.IsDisabled)
             {
-                hoverIndex = hitIndex;
-                PInvoke.InvalidateRect(_hWnd, nint.Zero, false);
+                PInvoke.SetCursor(_handCursor);
 
-                if (hoverIndex != -1 && _menuItems[hoverIndex] is MenuItem menuItem && !menuItem.IsDisabled)
+                if (menuItem.HasSubMenu)
                 {
-                    PInvoke.SetCursor(_handCursor);
-
-                    submenuPopup?.Dispose();
-                    submenuPopup = null;
-
-                    if (menuItem.HasSubMenu)
+                    var topLeft = new POINT
                     {
-                        var topLeft = new POINT
-                        {
-                            x = (int)MathF.Ceiling(menuItem.HitBox.X + menuItem.HitBox.Width),
-                            y = (int)MathF.Ceiling(menuItem.HitBox.Y)
-                        };
-                        PInvoke.ClientToScreen(_hWnd, ref topLeft);
-                        
-                        CalcWindowPos(menuItem.SubMenu, topLeft, out _, out var y, out var width, out var height);
+                        x = (int)MathF.Ceiling(menuItem.HitBox.X + menuItem.HitBox.Width),
+                        y = (int)MathF.Ceiling(menuItem.HitBox.Y)
+                    };
+                    PInvoke.ClientToScreen(_hWnd, ref topLeft);
 
-                        PInvoke.GetWindowRect(_hWnd, out var parentRect);
+                    CalcWindowSize(menuItem.SubMenu, topLeft, out var x, out var y, out var width, out var height);
 
-                        var screenWidth = PInvoke.GetSystemMetrics(PInvoke.SM_CXSCREEN);
-                        int x;
-
-                        if (topLeft.x + width > screenWidth - ScreenMargin) x = parentRect.Left - width;
-                        else x = topLeft.x;
-
-                        if (x < ScreenMargin) x = ScreenMargin;
-                        if (x + width > screenWidth - ScreenMargin) x = Math.Max(ScreenMargin, screenWidth - width - ScreenMargin);
-
-                        submenuPopup = new PopupMenu(_hWnd, _ownerIcon, menuItem.SubMenu, x, y, width, height, _popupWindowClassName, _instanceHandle);
-                    }
+                    submenuPopup = new PopupMenu(_hWnd, _ownerIcon, menuItem.SubMenu, x, y, width, height, _popupWindowClassName, _instanceHandle);
                 }
-                else PInvoke.SetCursor(_arrowCursor);
             }
+            else PInvoke.SetCursor(_arrowCursor);
         }
         else if (msg == PInvoke.WM_LBUTTONDOWN && hitIndex != -1)
         {
@@ -270,7 +256,7 @@ internal sealed class PopupMenu : IDisposable
 
     public static PopupMenu Show(nint ownerHWnd, NotifyIcon notifyIcon, POINT mousePos, string popupWindowClassName, nint instanceHandle)
     {
-        CalcWindowPos(notifyIcon.MenuItems, mousePos, out var x, out var y, out var width, out var heigth);
+        CalcWindowSize(notifyIcon.MenuItems, out var width, out var heigth);
         return new PopupMenu(ownerHWnd, notifyIcon, notifyIcon.MenuItems, x, y, width, heigth, popupWindowClassName, instanceHandle);
     }
 
@@ -367,11 +353,20 @@ internal sealed class PopupMenu : IDisposable
         _ = PInvoke.GdipDeleteBrush(brush);
     }
 
-    private static void CalcWindowPos(MenuItemCollection menuItems, POINT anchor, out int x, out int y, out int width, out int height)
+    private static void CalcWindowPos(POINT anchor, int width, int height, out int x, out int y)
     {
-        var screenWidth = PInvoke.GetSystemMetrics(PInvoke.SM_CXSCREEN);
-        var screenHeight = PInvoke.GetSystemMetrics(PInvoke.SM_CYSCREEN);
+        var screenWidth = PInvoke.GetSystemMetrics(PInvoke.SM_CXSCREEN) - ScreenMargin;
+        var screenHeight = PInvoke.GetSystemMetrics(PInvoke.SM_CYSCREEN) - ScreenMargin;
 
+        x = anchor.x;
+        y = anchor.y;
+
+        if (x + width > screenWidth) x = Math.Max(ScreenMargin, Math.Abs(x - width));
+        if (y + height > screenHeight) y = Math.Max(ScreenMargin, Math.Abs(y - height));
+    }
+
+    private static void CalcWindowSize(MenuItemCollection menuItems, out int width, out int height)
+    {
         _ = PInvoke.GdipGetGenericFontFamilySansSerif(out var fontFamily);
         _ = PInvoke.GdipCreateFont(fontFamily, FontSize, 0, PInvoke.UnitPixel, out var font);
 
@@ -406,14 +401,5 @@ internal sealed class PopupMenu : IDisposable
         _ = PInvoke.DeleteDC(dcHandle);
 
         width = (int)Math.Ceiling(CheckBoxWidth + TextPadding * 3 + maxTextWidth + SubmenuArrowWidth);
-
-        x = anchor.x;
-        y = anchor.y;
-
-        if (x + width > screenWidth - ScreenMargin) x = Math.Max(ScreenMargin, x - width);
-        if (y + height > screenHeight - ScreenMargin) y = Math.Max(ScreenMargin, screenHeight - height - ScreenMargin);
-
-        if (x < ScreenMargin) x = ScreenMargin;
-        if (y < ScreenMargin) y = ScreenMargin;
     }
 }
