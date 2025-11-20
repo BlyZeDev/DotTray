@@ -145,6 +145,8 @@ internal sealed class PopupMenu : IDisposable
 
                 if (menuItem.HasSubMenu)
                 {
+                    CalcWindowSize(menuItem.SubMenu, out var width, out var height);
+
                     var topLeft = new POINT
                     {
                         x = (int)MathF.Ceiling(menuItem.HitBox.X + menuItem.HitBox.Width),
@@ -152,7 +154,7 @@ internal sealed class PopupMenu : IDisposable
                     };
                     PInvoke.ClientToScreen(_hWnd, ref topLeft);
 
-                    CalcWindowSize(menuItem.SubMenu, topLeft, out var x, out var y, out var width, out var height);
+                    if (topLeft.x + width < )
 
                     submenuPopup = new PopupMenu(_hWnd, _ownerIcon, menuItem.SubMenu, x, y, width, height, _popupWindowClassName, _instanceHandle);
                 }
@@ -256,8 +258,9 @@ internal sealed class PopupMenu : IDisposable
 
     public static PopupMenu Show(nint ownerHWnd, NotifyIcon notifyIcon, POINT mousePos, string popupWindowClassName, nint instanceHandle)
     {
-        CalcWindowSize(notifyIcon.MenuItems, out var width, out var heigth);
-        return new PopupMenu(ownerHWnd, notifyIcon, notifyIcon.MenuItems, x, y, width, heigth, popupWindowClassName, instanceHandle);
+        CalcWindowSize(notifyIcon.MenuItems, out var width, out var height);
+        CalcWindowPos(mousePos, width, height, out var x, out var y);
+        return new PopupMenu(ownerHWnd, notifyIcon, notifyIcon.MenuItems, x, y, width, height, popupWindowClassName, instanceHandle);
     }
 
     private static void DrawMenuBackground(nint graphicsHandle, RECT clientRect, uint color)
