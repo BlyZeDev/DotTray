@@ -100,11 +100,13 @@ internal sealed class PopupMenu : IDisposable
     private void MenuItemUpdated()
     {
         PInvoke.GetWindowRect(_hWnd, out var windowRect);
-        CalcWindowSize(_menuItems, new POINT
+
+        CalcWindowSize(_menuItems, out var width, out var height);
+        CalcWindowPos(new POINT
         {
             x = windowRect.Left,
             y = windowRect.Top
-        }, out var x, out var y, out var width, out var height);
+        }, width, height, out var x, out var y);
 
         PInvoke.SetWindowPos(_hWnd, nint.Zero, x, y, width, height, PInvoke.SWP_NOACTIVATE | PInvoke.SWP_ZORDER);
         PInvoke.InvalidateRect(_hWnd, nint.Zero, true);
@@ -152,9 +154,29 @@ internal sealed class PopupMenu : IDisposable
                         x = (int)MathF.Ceiling(menuItem.HitBox.X + menuItem.HitBox.Width),
                         y = (int)MathF.Ceiling(menuItem.HitBox.Y)
                     };
+                    Console.WriteLine("-----");
+                    Console.WriteLine(topLeft.x);
+                    Console.WriteLine(topLeft.y);
                     PInvoke.ClientToScreen(_hWnd, ref topLeft);
+                    Console.WriteLine("-----");
+                    Console.WriteLine(topLeft.x);
+                    Console.WriteLine(topLeft.y);
+                    Console.WriteLine();
+                    Console.WriteLine(width);
+                    Console.WriteLine(height);
 
-                    if (topLeft.x + width < )
+                    var x = topLeft.x;
+                    var y = topLeft.y;
+
+                    if (x + width > PInvoke.GetSystemMetrics(PInvoke.SM_CXSCREEN) - ScreenMargin)
+                        x = (int)MathF.Ceiling(menuItem.HitBox.X) - width;
+
+                    if (y + height > PInvoke.GetSystemMetrics(PInvoke.SM_CYSCREEN) - ScreenMargin)
+                        y = (int)MathF.Ceiling(menuItem.HitBox.Y) - height;
+
+                    Console.WriteLine("-----");
+                    Console.WriteLine(x);
+                    Console.WriteLine(y);
 
                     submenuPopup = new PopupMenu(_hWnd, _ownerIcon, menuItem.SubMenu, x, y, width, height, _popupWindowClassName, _instanceHandle);
                 }
