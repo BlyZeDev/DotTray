@@ -154,29 +154,16 @@ internal sealed class PopupMenu : IDisposable
                         x = (int)MathF.Ceiling(menuItem.HitBox.X + menuItem.HitBox.Width),
                         y = (int)MathF.Ceiling(menuItem.HitBox.Y)
                     };
-                    Console.WriteLine("-----");
-                    Console.WriteLine(topLeft.x);
-                    Console.WriteLine(topLeft.y);
                     PInvoke.ClientToScreen(_hWnd, ref topLeft);
-                    Console.WriteLine("-----");
-                    Console.WriteLine(topLeft.x);
-                    Console.WriteLine(topLeft.y);
-                    Console.WriteLine();
-                    Console.WriteLine(width);
-                    Console.WriteLine(height);
 
                     var x = topLeft.x;
                     var y = topLeft.y;
 
                     if (x + width > PInvoke.GetSystemMetrics(PInvoke.SM_CXSCREEN) - ScreenMargin)
-                        x = (int)MathF.Ceiling(menuItem.HitBox.X) - width;
+                        x = topLeft.x - (int)MathF.Ceiling(menuItem.HitBox.Width) - width;
 
                     if (y + height > PInvoke.GetSystemMetrics(PInvoke.SM_CYSCREEN) - ScreenMargin)
-                        y = (int)MathF.Ceiling(menuItem.HitBox.Y) - height;
-
-                    Console.WriteLine("-----");
-                    Console.WriteLine(x);
-                    Console.WriteLine(y);
+                        y = topLeft.y - (int)MathF.Ceiling(menuItem.HitBox.Height) - height;
 
                     submenuPopup = new PopupMenu(_hWnd, _ownerIcon, menuItem.SubMenu, x, y, width, height, _popupWindowClassName, _instanceHandle);
                 }
