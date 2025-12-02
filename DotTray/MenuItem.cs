@@ -3,6 +3,7 @@
 using DotTray.Internal;
 using DotTray.Internal.Win32;
 using System;
+using static System.Net.Mime.MediaTypeNames;
 
 /// <summary>
 /// Represents a <see cref="NotifyIcon"/> menu item

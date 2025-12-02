@@ -219,7 +219,7 @@ internal sealed class PopupMenu : IDisposable
                     Width = clientRect.Right - clientRect.Left,
                     Height = _menuItems[i].Height
                 };
-
+                
                 if (_menuItems[i] is MenuItem menuItem)
                 {
                     menuItem.HitBox = itemRect;
