@@ -34,6 +34,7 @@ internal sealed class PopupMenu : IDisposable
     private readonly PopupDismissHook _popupDismissHook;
 
     private bool isDisposed;
+    private bool isMouseTracking;
     private int hoverIndex;
     private PopupMenu? submenuPopup;
 
@@ -116,7 +117,9 @@ internal sealed class PopupMenu : IDisposable
     {
         switch (msg)
         {
-            case PInvoke.WM_MOUSEMOVE or PInvoke.WM_LBUTTONDOWN: HandleMouse(msg, lParam); return 0;
+            case PInvoke.WM_MOUSEMOVE: HandleMouseMove(CheckHit(lParam)); return 0;
+            case PInvoke.WM_MOUSELEAVE: HandleMouseLeave(); return 0;
+            case PInvoke.WM_LBUTTONDOWN: HandleMouseLeftDown(CheckHit(lParam)); return 0;
             case PInvoke.WM_PAINT: HandlePaint(); return 0;
 
             case PInvoke.WM_CLOSE: PInvoke.DestroyWindow(hWnd); return 0;
@@ -125,65 +128,82 @@ internal sealed class PopupMenu : IDisposable
 
         return PInvoke.DefWindowProc(hWnd, msg, wParam, lParam);
     }
-
-    private void HandleMouse(uint msg, nint lParam)
+    
+    private void HandleMouseMove(int hitIndex)
     {
-        var mouseX = (short)(lParam.ToInt32() & 0xFFFF);
-        var mouseY = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
-
-        var hitIndex = CheckHit(mouseX, mouseY);
-
-        if (msg == PInvoke.WM_MOUSEMOVE && hitIndex != hoverIndex)
+        if (!isMouseTracking)
         {
-            hoverIndex = hitIndex;
-            PInvoke.InvalidateRect(_hWnd, nint.Zero, false);
+            var tme = new TRACKMOUSEEVENT
+            {
+                cbSize = (uint)Marshal.SizeOf<TRACKMOUSEEVENT>(),
+                dwFlags = PInvoke.TME_LEAVE,
+                hwndTrack = _hWnd,
+                dwHoverTime = 0
+            };
 
+            isMouseTracking = PInvoke.TrackMouseEvent(ref tme);
+        }
+
+        if (hitIndex == hoverIndex) return;
+
+        hoverIndex = hitIndex;
+        PInvoke.InvalidateRect(_hWnd, nint.Zero, false);
+
+        if (hoverIndex != -1 && _menuItems[hoverIndex] is MenuItem menuItem && !menuItem.IsDisabled)
+        {
+            PInvoke.SetCursor(_handCursor);
             submenuPopup?.Dispose();
             submenuPopup = null;
 
-            if (hoverIndex != -1 && _menuItems[hoverIndex] is MenuItem menuItem && !menuItem.IsDisabled)
+            if (menuItem.HasSubMenu)
             {
-                PInvoke.SetCursor(_handCursor);
+                CalcWindowSize(menuItem.SubMenu, out var width, out var height);
 
-                if (menuItem.HasSubMenu)
+                var topLeft = new POINT
                 {
-                    CalcWindowSize(menuItem.SubMenu, out var width, out var height);
+                    x = (int)MathF.Ceiling(menuItem.HitBox.X + menuItem.HitBox.Width),
+                    y = (int)MathF.Ceiling(menuItem.HitBox.Y)
+                };
+                PInvoke.ClientToScreen(_hWnd, ref topLeft);
 
-                    var topLeft = new POINT
-                    {
-                        x = (int)MathF.Ceiling(menuItem.HitBox.X + menuItem.HitBox.Width),
-                        y = (int)MathF.Ceiling(menuItem.HitBox.Y)
-                    };
-                    PInvoke.ClientToScreen(_hWnd, ref topLeft);
+                var x = topLeft.x;
+                var y = topLeft.y;
 
-                    var x = topLeft.x;
-                    var y = topLeft.y;
+                if (x + width > PInvoke.GetSystemMetrics(PInvoke.SM_CXSCREEN) - ScreenMargin)
+                    x = x - (int)MathF.Ceiling(menuItem.HitBox.Width) - width;
 
-                    if (x + width > PInvoke.GetSystemMetrics(PInvoke.SM_CXSCREEN) - ScreenMargin)
-                        x = topLeft.x - (int)MathF.Ceiling(menuItem.HitBox.Width) - width;
+                if (y + height > PInvoke.GetSystemMetrics(PInvoke.SM_CYSCREEN) - ScreenMargin)
+                    y = y - (int)MathF.Ceiling(menuItem.HitBox.Height) - height;
 
-                    if (y + height > PInvoke.GetSystemMetrics(PInvoke.SM_CYSCREEN) - ScreenMargin)
-                        y = topLeft.y - (int)MathF.Ceiling(menuItem.HitBox.Height) - height;
-
-                    submenuPopup = new PopupMenu(_hWnd, _ownerIcon, menuItem.SubMenu, x, y, width, height, _popupWindowClassName, _instanceHandle);
-                }
+                submenuPopup = new PopupMenu(_hWnd, _ownerIcon, menuItem.SubMenu, x, y, width, height, _popupWindowClassName, _instanceHandle);
             }
-            else PInvoke.SetCursor(_arrowCursor);
         }
-        else if (msg == PInvoke.WM_LBUTTONDOWN && hitIndex != -1)
+        else PInvoke.SetCursor(_arrowCursor);
+    }
+
+    private void HandleMouseLeave()
+    {
+        isMouseTracking = false;
+        hoverIndex = -1;
+
+        PInvoke.InvalidateRect(_hWnd, nint.Zero, false);
+    }
+
+    private void HandleMouseLeftDown(int hitIndex)
+    {
+        if (hitIndex == -1) return;
+
+        if (_menuItems[hitIndex] is MenuItem menuItem && !menuItem.IsDisabled)
         {
-            if (_menuItems[hitIndex] is MenuItem menuItem && !menuItem.IsDisabled)
+            if (menuItem.IsChecked.HasValue) menuItem.IsChecked = !menuItem.IsChecked;
+
+            menuItem.Clicked?.Invoke(new MenuItemClickedArgs
             {
-                if (menuItem.IsChecked.HasValue) menuItem.IsChecked = !menuItem.IsChecked;
+                Icon = _ownerIcon,
+                MenuItem = menuItem
+            });
 
-                menuItem.Clicked?.Invoke(new MenuItemClickedArgs
-                {
-                    Icon = _ownerIcon,
-                    MenuItem = menuItem
-                });
-
-                Dispose();
-            }
+            Dispose();
         }
     }
 
@@ -250,8 +270,11 @@ internal sealed class PopupMenu : IDisposable
         }
     }
 
-    private int CheckHit(int mouseX, int mouseY)
+    private int CheckHit(nint lParam)
     {
+        var mouseX = (short)(lParam.ToInt32() & 0xFFFF);
+        var mouseY = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
+
         for (int i = 0; i < _menuItems.Count; i++)
         {
             if (_menuItems[i] is not MenuItem menuItem) continue;

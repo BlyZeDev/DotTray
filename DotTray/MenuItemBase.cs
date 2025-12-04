@@ -1,6 +1,5 @@
 ﻿namespace DotTray;
 
-using DotTray.Internal.Win32;
 using System;
 
 /// <summary>

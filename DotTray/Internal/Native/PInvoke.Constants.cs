@@ -69,11 +69,14 @@ internal static partial class PInvoke
     public const int WM_NCHITTEST = 0x0084;
     public const int WM_SETCURSOR = 0x0020;
     public const int WM_MOUSEMOVE = 0x0200;
+    public const int WM_MOUSELEAVE = 0x02A3;
     public const int WM_LBUTTONDOWN = 0x0201;
     public const int WM_KEYDOWN = 0x0100;
     public const int WM_LBUTTONUP = 0x202;
     public const int WM_RBUTTONUP = 0x205;
     public const int WM_MBUTTONUP = 0x208;
+
+    public const int TME_LEAVE = 0x00000002;
 
     public const uint MF_STRING = 0x0000;
     public const uint MF_POPUP = 0x0010;
