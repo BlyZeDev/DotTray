@@ -1,7 +1,6 @@
 ﻿namespace DotTray.Internal.Native;
 
 using DotTray.Internal.Win32;
-using System;
 using System.Runtime.InteropServices;
 
 internal static partial class PInvoke
@@ -118,4 +117,14 @@ internal static partial class PInvoke
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetWindowRect(nint hWnd, out RECT lpRect);
+
+    [DllImport(User32, SetLastError = true)]
+    public static extern nint GetParent(nint hWnd);
+
+    [DllImport(User32, SetLastError = true)]
+    public static extern nint SetCapture(nint hWnd);
+
+    [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ReleaseCapture();
 }

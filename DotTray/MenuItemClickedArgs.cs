@@ -14,4 +14,9 @@ public sealed record MenuItemClickedArgs
     /// The menu item that is interacted with
     /// </summary>
     public required MenuItem MenuItem { get; init; }
+
+    /// <summary>
+    /// The mouse button that was used to interact with the menu item
+    /// </summary>
+    public required MouseButton MouseButton { get; init; }
 }

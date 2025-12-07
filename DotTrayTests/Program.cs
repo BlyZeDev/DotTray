@@ -23,7 +23,7 @@ sealed class Program
         defaultTray.MenuItems.AddItem("Item No. 3").IsChecked = false;
         defaultTray.MenuItems.AddSeparator();
         var testItem = defaultTray.MenuItems.AddItem("SubMenu here").SubMenu.AddItem("Submenu Test").SubMenu.AddItem("Submenu 2 Test").SubMenu.AddItem("Submenu 3 Test");
-        testItem.SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---");
+        testItem.SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").Clicked += (args) => Console.WriteLine("tf you're doing here mate");
         defaultTray.MenuItems.AddSeparator();
         defaultTray.MenuItems.AddItem("Last Item");
 
@@ -35,6 +35,7 @@ sealed class Program
         menuItem.Clicked = (args) =>
         {
             Console.WriteLine(args.MenuItem.IsChecked.HasValue ? args.MenuItem.IsChecked.Value : "NULL");
+            Console.WriteLine(args.MouseButton);
             args.MenuItem.Text = "Neuer Text";
         };
 

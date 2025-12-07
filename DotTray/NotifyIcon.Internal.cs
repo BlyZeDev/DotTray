@@ -17,97 +17,101 @@ public sealed partial class NotifyIcon
     {
         switch (msg)
         {
-            case PInvoke.WM_APP_TRAYICON:
-                {
-                    var clickedButton = (int)lParam switch
-                    {
-                        PInvoke.WM_LBUTTONUP => MouseButton.Left,
-                        PInvoke.WM_RBUTTONUP => MouseButton.Right,
-                        PInvoke.WM_MBUTTONUP => MouseButton.Middle,
-                        _ => MouseButton.None
-                    };
+            case PInvoke.WM_APP_TRAYICON: HandleClick(hWnd, lParam); break;
 
-                    if (clickedButton is not MouseButton.None && MouseButtons.HasFlag(clickedButton))
-                    {
-                        if (popupMenu is not null)
-                        {
-                            popupMenu.Closed -= MenuHiding;
-                            popupMenu.Dispose();
-                            popupMenu = null;
+            case PInvoke.WM_APP_TRAYICON_ICON: HandleIcon(hWnd, wParam, lParam); break;
 
-                            MenuHiding?.Invoke();
-                        }
+            case PInvoke.WM_APP_TRAYICON_TOOLTIP: HandleToolTip(hWnd); break;
 
-                        MenuShowing?.Invoke(clickedButton);
-
-                        PInvoke.GetCursorPos(out var pos);
-
-                        popupMenu = PopupMenu.Show(hWnd, this, pos, _popupWindowClassName, instanceHandle);
-                        popupMenu.Closed += MenuHiding;
-                    }
-                }
-                break;
-
-            case PInvoke.WM_APP_TRAYICON_ICON:
-                {
-                    var iconData = new NOTIFYICONDATA
-                    {
-                        cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
-                        hWnd = hWnd,
-                        guidItem = _trayId,
-                        uFlags = PInvoke.NIF_ICON | PInvoke.NIF_GUID,
-                        uCallbackMessage = PInvoke.WM_APP_TRAYICON,
-                        hIcon = wParam
-                    };
-                    PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
-
-                    if (needsIcoDestroy) PInvoke.DestroyIcon(icoHandle);
-
-                    icoHandle = wParam;
-                    needsIcoDestroy = lParam != 0;
-                }
-                break;
-
-            case PInvoke.WM_APP_TRAYICON_TOOLTIP:
-                {
-                    var iconData = new NOTIFYICONDATA
-                    {
-                        cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
-                        hWnd = hWnd,
-                        guidItem = _trayId,
-                        uFlags = PInvoke.NIF_TIP | PInvoke.NIF_GUID,
-                        szTip = ToolTip
-                    };
-
-                    PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
-                }
-                break;
-
-            case PInvoke.WM_APP_TRAYICON_BALLOON:
-                if (nextBalloon is not null)
-                {
-                    var iconData = new NOTIFYICONDATA
-                    {
-                        cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
-                        hWnd = hWnd,
-                        guidItem = _trayId,
-                        hIcon = (nextBalloon.Icon is BalloonNotificationIcon.User) ? icoHandle : nint.Zero,
-                        uFlags = PInvoke.NIF_INFO | PInvoke.NIF_GUID,
-                        dwInfoFlags = (uint)nextBalloon.Icon | (nextBalloon.NoSound ? PInvoke.NIIF_NOSOUND : 0),
-                        szInfoTitle = nextBalloon.Title,
-                        szInfo = nextBalloon.Message
-                    };
-
-                    nextBalloon = null;
-
-                    PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
-                }
-                break;
+            case PInvoke.WM_APP_TRAYICON_BALLOON: HandleBalloon(hWnd); break;
 
             case PInvoke.WM_DESTROY: PInvoke.PostQuitMessage(0); return 0;
         }
 
         return PInvoke.DefWindowProc(hWnd, msg, wParam, lParam);
+    }
+
+    private void HandleClick(nint hWnd, nint lParam)
+    {
+        var clickedButton = lParam.ToInt32() switch
+        {
+            PInvoke.WM_LBUTTONUP => MouseButton.Left,
+            PInvoke.WM_RBUTTONUP => MouseButton.Right,
+            PInvoke.WM_MBUTTONUP => MouseButton.Middle,
+            _ => MouseButton.None
+        };
+
+        if (clickedButton is not MouseButton.None && MouseButtons.HasFlag(clickedButton))
+        {
+            if (popupMenu is not null)
+            {
+                popupMenu.Closed -= MenuHiding;
+                popupMenu.Close();
+                popupMenu = null;
+
+                MenuHiding?.Invoke();
+            }
+
+            PInvoke.GetCursorPos(out var pos);
+
+            MenuShowing?.Invoke(clickedButton);
+            popupMenu = PopupMenu.Show(hWnd, this, pos, _popupWindowClassName, instanceHandle);
+            popupMenu.Closed += MenuHiding;
+        }
+    }
+
+    private void HandleIcon(nint hWnd, nint wParam, nint lParam)
+    {
+        var iconData = new NOTIFYICONDATA
+        {
+            cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
+            hWnd = hWnd,
+            guidItem = _trayId,
+            uFlags = PInvoke.NIF_ICON | PInvoke.NIF_GUID,
+            uCallbackMessage = PInvoke.WM_APP_TRAYICON,
+            hIcon = wParam
+        };
+        PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
+
+        if (needsIcoDestroy) PInvoke.DestroyIcon(icoHandle);
+
+        icoHandle = wParam;
+        needsIcoDestroy = lParam != 0;
+    }
+
+    private void HandleToolTip(nint hWnd)
+    {
+        var iconData = new NOTIFYICONDATA
+        {
+            cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
+            hWnd = hWnd,
+            guidItem = _trayId,
+            uFlags = PInvoke.NIF_TIP | PInvoke.NIF_GUID,
+            szTip = ToolTip
+        };
+
+        PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
+    }
+
+    private void HandleBalloon(nint hWnd)
+    {
+        if (nextBalloon is null) return;
+
+        var iconData = new NOTIFYICONDATA
+        {
+            cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
+            hWnd = hWnd,
+            guidItem = _trayId,
+            hIcon = (nextBalloon.Icon is BalloonNotificationIcon.User) ? icoHandle : nint.Zero,
+            uFlags = PInvoke.NIF_INFO | PInvoke.NIF_GUID,
+            dwInfoFlags = (uint)nextBalloon.Icon | (nextBalloon.NoSound ? PInvoke.NIIF_NOSOUND : 0),
+            szInfoTitle = nextBalloon.Title,
+            szInfo = nextBalloon.Message
+        };
+
+        nextBalloon = null;
+
+        PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
     }
 
     private static NotifyIcon Run(nint iconHandle, bool needIconDestroy, CancellationToken cancellationToken)

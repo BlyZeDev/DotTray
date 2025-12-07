@@ -16,15 +16,15 @@ public enum MouseButton
     /// </summary>
     None = 0,
     /// <summary>
-    /// Left-click mouse button
+    /// Left mouse button
     /// </summary>
     Left = 1 << 0,
     /// <summary>
-    /// Right-click mouse button
+    /// Right mouse button
     /// </summary>
     Right = 1 << 1,
     /// <summary>
-    /// Middle-click mouse button
+    /// Middle mouse button
     /// </summary>
     Middle = 1 << 2
 }
