@@ -23,8 +23,7 @@ internal sealed partial class PopupMenu : IDisposable
     private static readonly nint _arrowCursor;
     private static readonly nint _handCursor;
 
-    private readonly PopupMenu _parentPopup;
-    private readonly nint _ownerHWnd;
+    private readonly nint _parentHWnd;
     private readonly NotifyIcon _ownerIcon;
     private readonly MenuItemCollection _menuItems;
     private readonly string _popupWindowClassName;
@@ -36,7 +35,6 @@ internal sealed partial class PopupMenu : IDisposable
     private bool isClosed;
     private bool isMouseTracking;
     private int hoverIndex;
-    private PopupMenu? childPopup;
 
     public event Action? Closed;
 
@@ -46,9 +44,9 @@ internal sealed partial class PopupMenu : IDisposable
         _handCursor = PInvoke.LoadCursor(nint.Zero, PInvoke.IDC_HAND);
     }
 
-    private PopupMenu(PopupMenu? parentPopup, nint ownerHWnd, NotifyIcon ownerIcon, MenuItemCollection menuItems, int x, int y, int width, int height, string popupWindowClassName, nint instanceHandle)
+    private PopupMenu(nint parentHWnd, NotifyIcon ownerIcon, MenuItemCollection menuItems, int x, int y, int width, int height, string popupWindowClassName, nint instanceHandle)
     {
-        _ownerHWnd = ownerHWnd;
+        _parentHWnd = parentHWnd;
         _ownerIcon = ownerIcon;
         _menuItems = menuItems;
         _popupWindowClassName = popupWindowClassName;
@@ -63,12 +61,10 @@ internal sealed partial class PopupMenu : IDisposable
             _popupWindowClassName, "",
             PInvoke.WS_CLIPCHILDREN | PInvoke.WS_CLIPSIBLINGS | PInvoke.WS_POPUP | PInvoke.WS_VISIBLE,
             x, y, width, height,
-            _ownerHWnd,
+            _parentHWnd,
             nint.Zero,
             _instanceHandle,
             nint.Zero);
-
-        _parentPopup = parentPopup ?? this;
 
         _wndProc = new PInvoke.WndProc(WndProcFunc);
         PInvoke.SetWindowLongPtr(_hWnd, PInvoke.GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProc));
