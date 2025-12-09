@@ -52,10 +52,10 @@ public sealed partial class NotifyIcon
                 MenuHiding?.Invoke();
             }
 
-            PInvoke.GetCursorPos(out var pos);
+            PInvoke.GetCursorPos(out var mousePos);
 
             MenuShowing?.Invoke(clickedButton);
-            popupMenu = PopupMenu.Show(hWnd, this, pos, _popupWindowClassName, instanceHandle);
+            popupMenu = PopupMenu.ShowRoot(this, mousePos, _popupWindowClassName, instanceHandle);
             popupMenu.Closed += MenuHiding;
         }
     }

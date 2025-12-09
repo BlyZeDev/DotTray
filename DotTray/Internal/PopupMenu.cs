@@ -23,18 +23,21 @@ internal sealed partial class PopupMenu : IDisposable
     private static readonly nint _arrowCursor;
     private static readonly nint _handCursor;
 
-    private readonly nint _parentHWnd;
     private readonly NotifyIcon _ownerIcon;
-    private readonly MenuItemCollection _menuItems;
     private readonly string _popupWindowClassName;
     private readonly nint _instanceHandle;
 
+    private readonly nint _parentHWnd;
+    private readonly MenuItemCollection _menuItems;
     private readonly nint _hWnd;
     private readonly PInvoke.WndProc _wndProc;
 
-    private bool isClosed;
+    private nint childHWnd;
     private bool isMouseTracking;
     private int hoverIndex;
+
+    public bool IsRoot => _parentHWnd == nint.Zero;
+    public bool IsLeaf => childHWnd == nint.Zero;
 
     public event Action? Closed;
 
@@ -77,21 +80,6 @@ internal sealed partial class PopupMenu : IDisposable
 
         PInvoke.ShowWindow(_hWnd, PInvoke.SW_SHOWNOACTIVATE);
         PInvoke.UpdateWindow(_hWnd);
-    }
-
-    public void Close()
-    {
-        if (isClosed) return;
-        isClosed = true;
-
-        childPopup?.Close();
-
-        PInvoke.PostMessage(_hWnd, PInvoke.WM_CLOSE, 0, 0);
-    }
-
-    public void CloseAll()
-    {
-
     }
 
     public void Dispose() => _menuItems.Updated -= MenuItemUpdated;
@@ -173,7 +161,7 @@ internal sealed partial class PopupMenu : IDisposable
                 if (y + height > PInvoke.GetSystemMetrics(PInvoke.SM_CYSCREEN) - ScreenMargin)
                     y = y - (int)MathF.Ceiling(menuItem.HitBox.Height) - height;
                 
-                childPopup = new PopupMenu(_rootPopup, _hWnd, _ownerIcon, menuItem.SubMenu, x, y, width, height, _popupWindowClassName, _instanceHandle);
+                childHWnd = ShowSubmenu(menuItem.SubMenu, x, y, width, height);
             }
         }
         else PInvoke.SetCursor(_arrowCursor);
@@ -230,12 +218,18 @@ internal sealed partial class PopupMenu : IDisposable
         return -1;
     }
 
-    public static PopupMenu Show(nint ownerHWnd, NotifyIcon notifyIcon, POINT mousePos, string popupWindowClassName, nint instanceHandle)
+    private nint ShowSubmenu(MenuItemCollection menuItems, int x, int y, int width, int height)
+    {
+        var popupMenu = new PopupMenu(_hWnd, _ownerIcon, menuItems, x, y, width, height, _popupWindowClassName, _instanceHandle);
+        return popupMenu._hWnd;
+    }
+
+    public static PopupMenu ShowRoot(NotifyIcon notifyIcon, POINT mousePos, string popupWindowClassName, nint instanceHandle)
     {
         CalcWindowSize(notifyIcon.MenuItems, out var width, out var height);
         CalcWindowPos(mousePos, width, height, out var x, out var y);
 
-        return new PopupMenu(null, ownerHWnd, notifyIcon, notifyIcon.MenuItems, x, y, width, height, popupWindowClassName, instanceHandle);
+        return new PopupMenu(nint.Zero, notifyIcon, notifyIcon.MenuItems, x, y, width, height, popupWindowClassName, instanceHandle);
     }
 
     private static void CalcWindowPos(POINT anchor, int width, int height, out int x, out int y)
