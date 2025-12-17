@@ -38,8 +38,10 @@ public sealed partial class NotifyIcon : IDisposable
     private nint instanceHandle;
     private nint hWnd;
 
-    private PopupMenu? popupMenu;
+    private PopupMenuSession? popupMenu;
     private BalloonNotification? nextBalloon;
+
+    internal nint HWnd => hWnd;
 
     /// <summary>
     /// The <see cref="MenuItemCollection"/> of this <see cref="NotifyIcon"/> instance

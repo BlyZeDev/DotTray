@@ -127,4 +127,7 @@ internal static partial class PInvoke
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool ReleaseCapture();
+
+    [DllImport(User32, SetLastError = true)]
+    public static extern nint GetWindow(nint hWnd, uint uCmd);
 }

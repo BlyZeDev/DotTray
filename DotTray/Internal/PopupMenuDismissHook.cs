@@ -2,42 +2,55 @@
 
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
+using System;
 using System.Runtime.InteropServices;
 
-internal static class PopupMenuDismissHook
+internal sealed class PopupMenuDismissHook : IDisposable
 {
-    private static nint leafWindow;
-    private static nint hookHandle;
-    private static PInvoke.LowLevelMouseProc? hookProc;
+    private readonly nint _rootHWnd;
+    private readonly PInvoke.LowLevelMouseProc _hookProc;
+    private readonly nint _hookHandle;
 
-    public static void Register(nint hWnd)
+    public PopupMenuDismissHook(nint rootHWnd)
     {
-        if (hookHandle != nint.Zero) PInvoke.UnhookWindowsHookEx(hookHandle);
+        _rootHWnd = rootHWnd;
+        _hookProc = new PInvoke.LowLevelMouseProc(LowLevelMouseProcFunc);
 
-        leafWindow = hWnd;
-
-        hookProc = new PInvoke.LowLevelMouseProc(LowLevelMouseProcFunc);
-        hookHandle = PInvoke.SetWindowsHookEx(PInvoke.WH_MOUSE_LL, Marshal.GetFunctionPointerForDelegate(hookProc), nint.Zero, 0);
+        _hookHandle = PInvoke.SetWindowsHookEx(PInvoke.WH_MOUSE_LL, Marshal.GetFunctionPointerForDelegate(_hookProc), nint.Zero, 0);
     }
 
-    private static nint LowLevelMouseProcFunc(int nCode, nint wParam, nint lParam)
+    public void Dispose()
+    {
+        if (_hookHandle != nint.Zero) PInvoke.UnhookWindowsHookEx(_hookHandle);
+    }
+
+    private nint LowLevelMouseProcFunc(int nCode, nint wParam, nint lParam)
     {
         if (nCode == 0)
         {
-            if (wParam is PInvoke.WM_LBUTTONDOWN or PInvoke.WM_RBUTTONDOWN or PInvoke.WM_MBUTTONDOWN)
+            if (wParam is PInvoke.WM_LBUTTONUP or PInvoke.WM_RBUTTONUP or PInvoke.WM_MBUTTONUP)
             {
                 var mousePos = Marshal.PtrToStructure<POINT>(lParam);
                 var targetHWnd = PInvoke.WindowFromPoint(mousePos);
 
-                if (!IsInHierarchy()) PInvoke.PostMessage(leafWindow, PInvoke.WM_APP_TRAYICON_DISMISS_POPUPMENU, nint.Zero, nint.Zero);
+                if (!IsInHierarchy(targetHWnd)) PInvoke.PostMessage(_rootHWnd, PInvoke.WM_CLOSE, nint.Zero, nint.Zero);
             }
         }
 
-        return PInvoke.CallNextHookEx(hookHandle, nCode, wParam, lParam);
+        return PInvoke.CallNextHookEx(_hookHandle, nCode, wParam, lParam);
     }
 
-    private static bool IsInHierarchy()
+    private bool IsInHierarchy(nint targetHWnd)
     {
+        var current = _rootHWnd;
 
+        while (current != nint.Zero)
+        {
+            if (current == targetHWnd) return true;
+
+            current = PInvoke.GetWindow(current, PInvoke.GW_CHILD);
+        }
+
+        return false;
     }
 }

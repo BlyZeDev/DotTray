@@ -17,7 +17,7 @@ public sealed partial class NotifyIcon
     {
         switch (msg)
         {
-            case PInvoke.WM_APP_TRAYICON: HandleClick(hWnd, lParam); break;
+            case PInvoke.WM_APP_TRAYICON: HandleClick(lParam); break;
 
             case PInvoke.WM_APP_TRAYICON_ICON: HandleIcon(hWnd, wParam, lParam); break;
 
@@ -31,7 +31,7 @@ public sealed partial class NotifyIcon
         return PInvoke.DefWindowProc(hWnd, msg, wParam, lParam);
     }
 
-    private void HandleClick(nint hWnd, nint lParam)
+    private void HandleClick(nint lParam)
     {
         var clickedButton = lParam.ToInt32() switch
         {
@@ -45,8 +45,9 @@ public sealed partial class NotifyIcon
         {
             if (popupMenu is not null)
             {
-                popupMenu.Closed -= MenuHiding;
-                popupMenu.Close();
+                //popupMenu.Closed -= MenuHiding;
+                //popupMenu.Close();
+                popupMenu.Dispose();
                 popupMenu = null;
 
                 MenuHiding?.Invoke();
@@ -55,8 +56,8 @@ public sealed partial class NotifyIcon
             PInvoke.GetCursorPos(out var mousePos);
 
             MenuShowing?.Invoke(clickedButton);
-            popupMenu = PopupMenu.ShowRoot(this, mousePos, _popupWindowClassName, instanceHandle);
-            popupMenu.Closed += MenuHiding;
+            popupMenu = PopupMenuSession.Show(this, _popupWindowClassName, instanceHandle, mousePos);
+            //popupMenu.Closed += MenuHiding;
         }
     }
 

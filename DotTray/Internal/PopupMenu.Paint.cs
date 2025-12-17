@@ -5,13 +5,13 @@ using DotTray.Internal.Win32;
 
 internal sealed partial class PopupMenu
 {
-    private unsafe void HandlePaint()
+    private unsafe nint HandlePaint(nint hWnd)
     {
-        var paintHandle = PInvoke.BeginPaint(_hWnd, out var paint);
+        var paintHandle = PInvoke.BeginPaint(hWnd, out var paint);
 
         try
         {
-            PInvoke.GetClientRect(_hWnd, out var clientRect);
+            PInvoke.GetClientRect(hWnd, out var clientRect);
 
             var memoryDC = PInvoke.CreateCompatibleDC(paintHandle);
             var bitmapHandle = PInvoke.CreateCompatibleBitmap(paintHandle, clientRect.Right - clientRect.Left, clientRect.Bottom - clientRect.Top);
@@ -20,7 +20,7 @@ internal sealed partial class PopupMenu
             _ = PInvoke.GdipCreateFromHDC(memoryDC, out var graphicsHandle);
             _ = PInvoke.GdipSetSmoothingMode(graphicsHandle, PInvoke.SmoothingModeAntiAlias8x8);
 
-            DrawMenuBackground(graphicsHandle, clientRect, _ownerIcon.PopupMenuColor.ToGdiPlus());
+            DrawMenuBackground(graphicsHandle, clientRect, _session.OwnerIcon.PopupMenuColor.ToGdiPlus());
 
             _ = PInvoke.GdipGetGenericFontFamilySansSerif(out var fontFamily);
             _ = PInvoke.GdipCreateFont(fontFamily, FontSize, 0, PInvoke.UnitPixel, out var font);
@@ -64,8 +64,10 @@ internal sealed partial class PopupMenu
         }
         finally
         {
-            PInvoke.EndPaint(_hWnd, ref paint);
+            PInvoke.EndPaint(hWnd, ref paint);
         }
+
+        return 0;
     }
 
     private static void DrawMenuBackground(nint graphicsHandle, RECT clientRect, uint color)

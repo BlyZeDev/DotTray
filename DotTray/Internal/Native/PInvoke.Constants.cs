@@ -81,6 +81,8 @@ internal static partial class PInvoke
     public const int WM_RBUTTONDBLCLK = 0x206;
     public const int WM_MBUTTONDBLCLK = 0x209;
 
+    public const uint GW_CHILD = 5;
+
     public const int TME_LEAVE = 0x00000002;
 
     public const uint MF_STRING = 0x0000;
