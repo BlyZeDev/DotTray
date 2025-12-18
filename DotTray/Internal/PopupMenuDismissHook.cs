@@ -11,6 +11,8 @@ internal sealed class PopupMenuDismissHook : IDisposable
     private readonly PInvoke.LowLevelMouseProc _hookProc;
     private readonly nint _hookHandle;
 
+    public nint LeafHWnd { get; set; }
+
     public PopupMenuDismissHook(nint rootHWnd)
     {
         _rootHWnd = rootHWnd;
@@ -26,30 +28,40 @@ internal sealed class PopupMenuDismissHook : IDisposable
 
     private nint LowLevelMouseProcFunc(int nCode, nint wParam, nint lParam)
     {
-        if (nCode == 0)
+        if (nCode >= 0)
         {
             if (wParam is PInvoke.WM_LBUTTONUP or PInvoke.WM_RBUTTONUP or PInvoke.WM_MBUTTONUP)
             {
-                var mousePos = Marshal.PtrToStructure<POINT>(lParam);
-                var targetHWnd = PInvoke.WindowFromPoint(mousePos);
+                var mousePos = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam).pt;
 
-                if (!IsInHierarchy(targetHWnd)) PInvoke.PostMessage(_rootHWnd, PInvoke.WM_CLOSE, nint.Zero, nint.Zero);
+                if (!IsInHierarchy(mousePos)) PInvoke.PostMessage(_rootHWnd, PInvoke.WM_CLOSE, nint.Zero, nint.Zero);
             }
         }
 
         return PInvoke.CallNextHookEx(_hookHandle, nCode, wParam, lParam);
     }
 
-    private bool IsInHierarchy(nint targetHWnd)
+    private bool IsInHierarchy(POINT mousePos)
     {
-        var current = _rootHWnd;
+        var current = LeafHWnd;
+        Console.WriteLine(current);
 
         while (current != nint.Zero)
         {
-            if (current == targetHWnd) return true;
+            if (PInvoke.GetWindowRect(current, out var rect))
+            {
+                //Debug
+                Console.WriteLine($"Rect: {rect.Left},{rect.Top},{rect.Right},{rect.Bottom}");
+                Console.WriteLine($"Mouse: {mousePos.x},{mousePos.y}");
 
-            current = PInvoke.GetWindow(current, PInvoke.GW_CHILD);
+                if (PInvoke.PtInRect(ref rect, mousePos)) return true;
+            }
+
+            current = PInvoke.GetWindow(current, PInvoke.GW_OWNER);
         }
+
+        //Debug
+        Console.WriteLine("FALSE");
 
         return false;
     }

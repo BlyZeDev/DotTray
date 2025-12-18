@@ -10,7 +10,6 @@ using System.Runtime.Versioning;
 internal sealed partial class PopupMenu
 {
     private readonly PopupMenuSession _session;
-    private readonly nint _parentHWnd;
     private readonly MenuItemCollection _menuItems;
     private readonly nint _hWnd;
     private readonly PInvoke.WndProc _wndProc;
@@ -24,7 +23,6 @@ internal sealed partial class PopupMenu
     private PopupMenu(PopupMenuSession session, nint parentHWnd, MenuItemCollection menuItems, int x, int y, int width, int height)
     {
         _session = session;
-        _parentHWnd = parentHWnd;
         _menuItems = menuItems;
 
         _menuItems.Updated += MenuItemUpdated;
@@ -36,7 +34,7 @@ internal sealed partial class PopupMenu
             session.PopupWindowClassName, "",
             PInvoke.WS_CLIPCHILDREN | PInvoke.WS_CLIPSIBLINGS | PInvoke.WS_POPUP | PInvoke.WS_VISIBLE,
             x, y, width, height,
-            _parentHWnd,
+            parentHWnd,
             nint.Zero,
             session.InstanceHandle,
             nint.Zero);
@@ -98,8 +96,6 @@ internal sealed partial class PopupMenu
             };
 
             isMouseTracking = PInvoke.TrackMouseEvent(ref tme);
-
-            _session.StartTracking();
         }
 
         if (hitIndex == hoverIndex) return 0;
@@ -142,8 +138,6 @@ internal sealed partial class PopupMenu
 
     private nint HandleMouseLeave(nint hWnd)
     {
-        _session.StopTracking();
-
         isMouseTracking = false;
         hoverIndex = -1;
 
@@ -209,12 +203,15 @@ internal sealed partial class PopupMenu
     private nint ShowSubmenu(MenuItemCollection menuItems, int x, int y, int width, int height)
     {
         var popupMenu = new PopupMenu(_session, _hWnd, menuItems, x, y, width, height);
+        _session.SetLeafHWnd(popupMenu._hWnd);
         return popupMenu._hWnd;
     }
 
     private void CloseSubmenu()
     {
         if (childHWnd == nint.Zero) return;
+
+        _session.SetLeafHWnd(_hWnd);
 
         PInvoke.PostMessage(childHWnd, PInvoke.WM_CLOSE, nint.Zero, nint.Zero);
         childHWnd = nint.Zero;
@@ -225,7 +222,7 @@ internal sealed partial class PopupMenu
         CalcWindowSize(session.OwnerIcon.MenuItems, out var width, out var height);
         CalcWindowPos(mousePos, width, height, out var x, out var y);
 
-        var menu = new PopupMenu(session, session.OwnerIcon.HWnd, session.OwnerIcon.MenuItems, x, y, width, height);
+        var menu = new PopupMenu(session, nint.Zero, session.OwnerIcon.MenuItems, x, y, width, height);
         return menu._hWnd;
     }
 

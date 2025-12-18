@@ -130,4 +130,12 @@ internal static partial class PInvoke
 
     [DllImport(User32, SetLastError = true)]
     public static extern nint GetWindow(nint hWnd, uint uCmd);
+
+    [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool PtInRect(ref RECT lprc, POINT pt);
+
+    [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool PhysicalToLogicalPointForPerMonitorDPI(nint hWnd, ref POINT lpPoint);
 }

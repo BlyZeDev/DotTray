@@ -26,7 +26,10 @@ internal sealed class PopupMenuSession : IDisposable
         RootHWnd = PopupMenu.Show(this, mousePos);
 
         _mouseHook = new PopupMenuDismissHook(RootHWnd);
+        SetLeafHWnd(RootHWnd);
     }
+
+    public void SetLeafHWnd(nint leafHWnd) => _mouseHook.LeafHWnd = leafHWnd;
 
     public void Dispose()
     {
