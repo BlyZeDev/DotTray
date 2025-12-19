@@ -60,6 +60,7 @@ sealed class Program
         menuItem.Clicked = _ => cts.Cancel();
 
         tray.SetToolTip("🔔 This is a long string with emoji 😊 and more");
+        defaultTray.SetToolTip("What's up ma drilla");
 
         tray.MouseButtons = MouseButton.Left;
         tray.MenuShowing += args => Console.WriteLine("Showing: " + args);

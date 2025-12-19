@@ -1,21 +1,22 @@
 ﻿namespace DotTray.Internal;
 
 using DotTray.Internal.Native;
-using DotTray.Internal.Win32;
 using System;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
+[SupportedOSPlatform("windows")]
 internal sealed class PopupMenuDismissHook : IDisposable
 {
-    private readonly nint _rootHWnd;
+    private readonly PopupMenuSession _session;
     private readonly PInvoke.LowLevelMouseProc _hookProc;
     private readonly nint _hookHandle;
 
     public nint LeafHWnd { get; set; }
 
-    public PopupMenuDismissHook(nint rootHWnd)
+    public PopupMenuDismissHook(PopupMenuSession session)
     {
-        _rootHWnd = rootHWnd;
+        _session = session;
         _hookProc = new PInvoke.LowLevelMouseProc(LowLevelMouseProcFunc);
 
         _hookHandle = PInvoke.SetWindowsHookEx(PInvoke.WH_MOUSE_LL, Marshal.GetFunctionPointerForDelegate(_hookProc), nint.Zero, 0);
@@ -28,40 +29,26 @@ internal sealed class PopupMenuDismissHook : IDisposable
 
     private nint LowLevelMouseProcFunc(int nCode, nint wParam, nint lParam)
     {
-        if (nCode >= 0)
+        if (nCode >= 0 && wParam is PInvoke.WM_LBUTTONUP or PInvoke.WM_RBUTTONUP or PInvoke.WM_MBUTTONUP)
         {
-            if (wParam is PInvoke.WM_LBUTTONUP or PInvoke.WM_RBUTTONUP or PInvoke.WM_MBUTTONUP)
-            {
-                var mousePos = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam).pt;
-
-                if (!IsInHierarchy(mousePos)) PInvoke.PostMessage(_rootHWnd, PInvoke.WM_CLOSE, nint.Zero, nint.Zero);
-            }
+            if (!IsInHierarchy()) _session.Dispose();
         }
 
         return PInvoke.CallNextHookEx(_hookHandle, nCode, wParam, lParam);
     }
 
-    private bool IsInHierarchy(POINT mousePos)
+    private bool IsInHierarchy()
     {
+        PInvoke.GetCursorPos(out var mousePos);
+
         var current = LeafHWnd;
-        Console.WriteLine(current);
 
         while (current != nint.Zero)
         {
-            if (PInvoke.GetWindowRect(current, out var rect))
-            {
-                //Debug
-                Console.WriteLine($"Rect: {rect.Left},{rect.Top},{rect.Right},{rect.Bottom}");
-                Console.WriteLine($"Mouse: {mousePos.x},{mousePos.y}");
-
-                if (PInvoke.PtInRect(ref rect, mousePos)) return true;
-            }
+            if (PInvoke.GetWindowRect(current, out var rect) && PInvoke.PtInRect(ref rect, mousePos)) return true;
 
             current = PInvoke.GetWindow(current, PInvoke.GW_OWNER);
         }
-
-        //Debug
-        Console.WriteLine("FALSE");
 
         return false;
     }

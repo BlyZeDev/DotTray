@@ -1,7 +1,5 @@
 ﻿namespace DotTray;
 
-using DotTray.Internal;
-
 /// <summary>
 /// Represents a <see cref="NotifyIcon"/> separator item
 /// </summary>
@@ -62,8 +60,8 @@ public sealed class SeparatorItem : MenuItemBase
 
     internal SeparatorItem()
     {
-        backgroundColor = DefaultColors.SeparatorBackgroundColor;
-        lineColor = DefaultColors.SeparatorLineColor;
+        backgroundColor = DefaultSeparatorBackgroundColor;
+        lineColor = DefaultSeparatorLineColor;
         lineThickness = DefaultLineThickness;
     }
 }

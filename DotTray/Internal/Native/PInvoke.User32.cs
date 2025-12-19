@@ -102,9 +102,6 @@ internal static partial class PInvoke
     public static extern bool EndPaint(nint hWnd, ref PAINTSTRUCT lpPaint);
 
     [DllImport(User32, SetLastError = true)]
-    public static extern nint WindowFromPoint(POINT Point);
-
-    [DllImport(User32, SetLastError = true)]
     public static extern nint SetWindowsHookEx(int idHook, nint lpfn, nint hmod, uint dwThreadId);
 
     [DllImport(User32, SetLastError = true)]
@@ -119,23 +116,9 @@ internal static partial class PInvoke
     public static extern bool GetWindowRect(nint hWnd, out RECT lpRect);
 
     [DllImport(User32, SetLastError = true)]
-    public static extern nint GetParent(nint hWnd);
-
-    [DllImport(User32, SetLastError = true)]
-    public static extern nint SetCapture(nint hWnd);
-
-    [DllImport(User32, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool ReleaseCapture();
-
-    [DllImport(User32, SetLastError = true)]
     public static extern nint GetWindow(nint hWnd, uint uCmd);
 
     [DllImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool PtInRect(ref RECT lprc, POINT pt);
-
-    [DllImport(User32, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool PhysicalToLogicalPointForPerMonitorDPI(nint hWnd, ref POINT lpPoint);
 }

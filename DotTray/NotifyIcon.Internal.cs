@@ -43,22 +43,19 @@ public sealed partial class NotifyIcon
 
         if (clickedButton is not MouseButton.None && MouseButtons.HasFlag(clickedButton))
         {
-            if (popupMenu is not null)
-            {
-                //popupMenu.Closed -= MenuHiding;
-                //popupMenu.Close();
-                popupMenu.Dispose();
-                popupMenu = null;
-
-                MenuHiding?.Invoke();
-            }
-
             PInvoke.GetCursorPos(out var mousePos);
 
             MenuShowing?.Invoke(clickedButton);
             popupMenu = PopupMenuSession.Show(this, _popupWindowClassName, instanceHandle, mousePos);
-            //popupMenu.Closed += MenuHiding;
+            popupMenu.Disposed += PopupDismissedCallback;
         }
+    }
+
+    private void PopupDismissedCallback()
+    {
+        popupMenu!.Disposed -= PopupDismissedCallback;
+        popupMenu = null;
+        MenuHiding?.Invoke();
     }
 
     private void HandleIcon(nint hWnd, nint wParam, nint lParam)

@@ -19,11 +19,12 @@ using System.Threading.Tasks;
 /// If no 16x16 variant is available,
 /// the quality can suffer greatly as it then has to be scaled from another existing size.
 /// </remarks>
-[SupportedOSPlatform("Windows")]
+[SupportedOSPlatform("windows")]
 public sealed partial class NotifyIcon : IDisposable
 {
     private static readonly string DefaultToolTip = "";
     private static readonly MouseButton DefaultMouseButtons = MouseButton.Left | MouseButton.Right;
+    private static readonly TrayColor DefaultPopupMenuColor = new TrayColor(40, 40, 40);
 
     private static uint totalIcons;
     private static nint gdipToken;
@@ -40,8 +41,6 @@ public sealed partial class NotifyIcon : IDisposable
 
     private PopupMenuSession? popupMenu;
     private BalloonNotification? nextBalloon;
-
-    internal nint HWnd => hWnd;
 
     /// <summary>
     /// The <see cref="MenuItemCollection"/> of this <see cref="NotifyIcon"/> instance
@@ -92,7 +91,7 @@ public sealed partial class NotifyIcon : IDisposable
         MenuItems = [];
         ToolTip = DefaultToolTip;
         MouseButtons = DefaultMouseButtons;
-        PopupMenuColor = DefaultColors.PopupMenuColor;
+        PopupMenuColor = DefaultPopupMenuColor;
 
         _trayLoopThread = new Thread(() =>
         {

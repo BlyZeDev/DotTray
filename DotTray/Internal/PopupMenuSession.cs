@@ -17,6 +17,8 @@ internal sealed class PopupMenuSession : IDisposable
     public nint InstanceHandle { get; }
     public nint RootHWnd { get; }
 
+    public event Action? Disposed;
+
     private PopupMenuSession(NotifyIcon ownerIcon, string popupWindowClassName, nint instanceHandle, POINT mousePos)
     {
         OwnerIcon = ownerIcon;
@@ -25,7 +27,7 @@ internal sealed class PopupMenuSession : IDisposable
 
         RootHWnd = PopupMenu.Show(this, mousePos);
 
-        _mouseHook = new PopupMenuDismissHook(RootHWnd);
+        _mouseHook = new PopupMenuDismissHook(this);
         SetLeafHWnd(RootHWnd);
     }
 
@@ -37,7 +39,8 @@ internal sealed class PopupMenuSession : IDisposable
 
         _mouseHook.Dispose();
         PInvoke.PostMessage(RootHWnd, PInvoke.WM_CLOSE, nint.Zero, nint.Zero);
-        
+        Disposed?.Invoke();
+
         activeSession = null;
     }
 

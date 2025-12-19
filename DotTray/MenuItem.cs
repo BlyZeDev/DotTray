@@ -1,6 +1,5 @@
 ﻿namespace DotTray;
 
-using DotTray.Internal;
 using DotTray.Internal.Win32;
 using System;
 
@@ -161,7 +160,7 @@ public sealed class MenuItem : MenuItemBase
     }
 
     /// <summary>
-    /// The <see cref="Action{MenuItemInteractionArgs}"/> to invoke if this <see cref="MenuItem"/> is interacted with
+    /// The <see cref="Action{MenuItemInteractionArgs}"/> to invoke if this <see cref="MenuItem"/> is clicked
     /// </summary>
     public Action<MenuItemClickedArgs>? Clicked { get; set; }
 
@@ -175,12 +174,12 @@ public sealed class MenuItem : MenuItemBase
         this.text = text;
         isChecked = null;
         isDisabled = false;
-        backgroundColor = DefaultColors.MenuItemBackgroundColor;
-        backgroundHoverColor = DefaultColors.MenuItemBackgroundHoverColor;
-        backgroundDisabledColor = DefaultColors.MenuItemBackgroundDisabledColor;
-        textColor = DefaultColors.MenuItemTextColor;
-        textHoverColor = DefaultColors.MenuItemTextHoverColor;
-        textDisabledColor = DefaultColors.MenuItemTextDisabledColor;
+        backgroundColor = DefaultMenuItemBackgroundColor;
+        backgroundHoverColor = DefaultMenuItemBackgroundHoverColor;
+        backgroundDisabledColor = DefaultMenuItemBackgroundDisabledColor;
+        textColor = DefaultMenuItemTextColor;
+        textHoverColor = DefaultMenuItemTextHoverColor;
+        textDisabledColor = DefaultMenuItemTextDisabledColor;
         SubMenu = [];
     }
 }
