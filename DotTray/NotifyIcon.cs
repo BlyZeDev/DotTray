@@ -48,7 +48,7 @@ public sealed partial class NotifyIcon : IDisposable
     public MenuItemCollection MenuItems { get; }
 
     /// <summary>
-    /// The <see cref="ToolTip"/> of this <see cref="NotifyIcon"/> instance
+    /// The tooltip text of this <see cref="NotifyIcon"/> instance
     /// </summary>
     /// <remarks>
     /// The default value is <see cref="string.Empty"/>
@@ -56,7 +56,16 @@ public sealed partial class NotifyIcon : IDisposable
     public string ToolTip { get; private set; }
 
     /// <summary>
-    /// The mouse buttons that are allowed to interact with the icon
+    /// The current visibility of this <see cref="NotifyIcon"/>.<br/>
+    /// <see langword="true"/> if it is visible, otherwise <see langword="false"/>
+    /// </summary>
+    /// <remarks>
+    /// The default value is <see langword="true"/>
+    /// </remarks>
+    public bool IsVisible { get; private set; }
+
+    /// <summary>
+    /// The mouse buttons that are allowed to interact with this <see cref="NotifyIcon"/>
     /// </summary>
     /// <remarks>
     /// The default value is <see cref="MouseButton.Left"/> | <see cref="MouseButton.Right"/>
@@ -69,14 +78,14 @@ public sealed partial class NotifyIcon : IDisposable
     public TrayColor PopupMenuColor { get; set; }
 
     /// <summary>
-    /// Fired if the icon menu is showing by clicking <see cref="MouseButtons"/>
+    /// Fired if the icon popup menu is showing by clicking <see cref="MouseButtons"/>
     /// </summary>
-    public event Action<MouseButton>? MenuShowing;
+    public event Action<MouseButton>? PopupShowing;
 
     /// <summary>
-    /// Fired if the icon menu is hiding
+    /// Fired if the icon popup menu is hiding
     /// </summary>
-    public event Action? MenuHiding;
+    public event Action? PopupHiding;
 
     private NotifyIcon(nint icoHandle, bool needsIcoDestroy, Action onInitializationFinished, CancellationToken cancellationToken)
     {
@@ -90,6 +99,7 @@ public sealed partial class NotifyIcon : IDisposable
 
         MenuItems = [];
         ToolTip = DefaultToolTip;
+        IsVisible = true;
         MouseButtons = DefaultMouseButtons;
         PopupMenuColor = DefaultPopupMenuColor;
 
@@ -212,6 +222,28 @@ public sealed partial class NotifyIcon : IDisposable
 
         ToolTip = toolTip;
         PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_TOOLTIP, 0, 0);
+    }
+
+    /// <summary>
+    /// Hides this <see cref="NotifyIcon"/> instance
+    /// </summary>
+    public void Hide()
+    {
+        if (!IsVisible) return;
+
+        IsVisible = false;
+        PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_VISIBILITY, 0, 0);
+    }
+
+    /// <summary>
+    /// Shows this <see cref="NotifyIcon"/> instance
+    /// </summary>
+    public void Show()
+    {
+        if (IsVisible) return;
+
+        IsVisible = true;
+        PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_VISIBILITY, 0, 0);
     }
 
     /// <summary>

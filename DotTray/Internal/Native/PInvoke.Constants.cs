@@ -38,7 +38,8 @@ internal static partial class PInvoke
     public const uint WM_APP_TRAYICON = WM_APP + 1;
     public const uint WM_APP_TRAYICON_ICON = WM_APP + 2;
     public const uint WM_APP_TRAYICON_TOOLTIP = WM_APP + 3;
-    public const uint WM_APP_TRAYICON_BALLOON = WM_APP + 4;
+    public const uint WM_APP_TRAYICON_VISIBILITY = WM_APP + 4;
+    public const uint WM_APP_TRAYICON_BALLOON = WM_APP + 5;
 
     public const int WM_MOUSEMOVE = 0x0200;
     public const int WM_MOUSELEAVE = 0x02A3;
@@ -53,8 +54,11 @@ internal static partial class PInvoke
     public const uint NIF_MESSAGE = 0x00000001;
     public const uint NIF_ICON = 0x00000002;
     public const uint NIF_TIP = 0x00000004;
+    public const uint NIF_STATE = 0x00000008;
     public const uint NIF_INFO = 0x00000010;
     public const uint NIF_GUID = 0x00000020;
+
+    public const uint NIS_HIDDEN = 0x00000001;
 
     public const uint NIIF_NONE = 0x00000000;
     public const uint NIIF_INFO = 0x00000001;

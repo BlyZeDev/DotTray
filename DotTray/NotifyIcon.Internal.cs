@@ -23,6 +23,8 @@ public sealed partial class NotifyIcon
 
             case PInvoke.WM_APP_TRAYICON_TOOLTIP: HandleToolTip(hWnd); break;
 
+            case PInvoke.WM_APP_TRAYICON_VISIBILITY: HandleVisibility(hWnd); break;
+
             case PInvoke.WM_APP_TRAYICON_BALLOON: HandleBalloon(hWnd); break;
 
             case PInvoke.WM_DESTROY: PInvoke.PostQuitMessage(0); return 0;
@@ -45,7 +47,7 @@ public sealed partial class NotifyIcon
         {
             PInvoke.GetCursorPos(out var mousePos);
 
-            MenuShowing?.Invoke(clickedButton);
+            PopupShowing?.Invoke(clickedButton);
             popupMenu = PopupMenuSession.Show(this, _popupWindowClassName, instanceHandle, mousePos);
             popupMenu.Disposed += PopupDismissedCallback;
         }
@@ -55,7 +57,7 @@ public sealed partial class NotifyIcon
     {
         popupMenu!.Disposed -= PopupDismissedCallback;
         popupMenu = null;
-        MenuHiding?.Invoke();
+        PopupHiding?.Invoke();
     }
 
     private void HandleIcon(nint hWnd, nint wParam, nint lParam)
@@ -86,6 +88,21 @@ public sealed partial class NotifyIcon
             guidItem = _trayId,
             uFlags = PInvoke.NIF_TIP | PInvoke.NIF_GUID,
             szTip = ToolTip
+        };
+
+        PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
+    }
+
+    private void HandleVisibility(nint hWnd)
+    {
+        var iconData = new NOTIFYICONDATA
+        {
+            cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
+            hWnd = hWnd,
+            guidItem = _trayId,
+            uFlags = PInvoke.NIF_STATE | PInvoke.NIF_GUID,
+            dwState = IsVisible ? 0 : PInvoke.NIS_HIDDEN,
+            dwStateMask = PInvoke.NIS_HIDDEN
         };
 
         PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);

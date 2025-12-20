@@ -43,6 +43,13 @@ sealed class Program
 
         menuItem = tray.MenuItems.AddItem("Test 2");
         menuItem.BackgroundColor = new TrayColor(255, 255, 255, 50);
+        menuItem.Clicked = (args) =>
+        {
+            if (args.Icon.IsVisible) args.Icon.Hide();
+            else args.Icon.Show();
+
+            Console.WriteLine("Now visible: " + args.Icon.IsVisible);
+        };
 
         menuItem = menuItem.SubMenu.AddItem("Test Sub 1");
 
@@ -63,8 +70,13 @@ sealed class Program
         defaultTray.SetToolTip("What's up ma drilla");
 
         tray.MouseButtons = MouseButton.Left;
-        tray.MenuShowing += args => Console.WriteLine("Showing: " + args);
-        tray.MenuHiding += () => Console.WriteLine("Hiding");
+        tray.PopupShowing += args => Console.WriteLine("Showing: " + args);
+        tray.PopupHiding += () => Console.WriteLine("Hiding");
+
+        Console.ReadLine();
+
+        tray.Show();
+        Console.WriteLine("The icon is back");
 
         Console.ReadLine();
 
