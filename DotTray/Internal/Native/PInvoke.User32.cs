@@ -5,120 +5,120 @@ using System.Runtime.InteropServices;
 
 internal static partial class PInvoke
 {
-    [DllImport(User32, SetLastError = true)]
-    public static extern int GetSystemMetrics(int nIndex);
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial int GetSystemMetrics(int nIndex);
 
-    [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern nint LoadImage(nint hInst, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
+    [LibraryImport(User32, EntryPoint = "LoadImageW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    public static partial nint LoadImage(nint hInst, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
 
-    [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern nint LoadCursor(nint hInst, int lpCursorName);
+    [LibraryImport(User32, EntryPoint = "LoadCursorW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    public static partial nint LoadCursor(nint hInst, int lpCursorName);
 
-    [DllImport(User32, SetLastError = true)]
-    public static extern nint SetCursor(nint hCursor);
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial nint SetCursor(nint hCursor);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool DestroyIcon(nint hIcon);
+    public static partial bool DestroyIcon(nint hIcon);
 
-    [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern ushort RegisterClass([In] ref WNDCLASS lpwc);
+    [LibraryImport(User32, EntryPoint = "RegisterClassW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    public static partial ushort RegisterClass(ref WNDCLASS lpwc);
 
-    [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
+    [LibraryImport(User32, EntryPoint = "UnregisterClassW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool UnregisterClass(string lpClassName, nint hInstance);
+    public static partial bool UnregisterClass(nint lpClassName, nint hInstance);
 
-    [DllImport(User32, CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern nint CreateWindowEx(
-        uint dwExStyle, string lpClassName, string lpWindowName,
+    [LibraryImport(User32, EntryPoint = "CreateWindowExW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    public static partial nint CreateWindowEx(
+        uint dwExStyle, nint lpClassName, nint lpWindowName,
         uint dwStyle, int x, int y, int nWidth, int nHeight,
         nint hWndParent, nint hMenu, nint hInstance, nint lpParam);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool ShowWindow(nint hWnd, int nCmdShow);
+    public static partial bool ShowWindow(nint hWnd, int nCmdShow);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
+    public static partial bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool UpdateWindow(nint hWnd);
+    public static partial bool UpdateWindow(nint hWnd);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool DestroyWindow(nint hWnd);
+    public static partial bool DestroyWindow(nint hWnd);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool InvalidateRect(nint hWnd, nint lpRect, bool bErase);
+    public static partial bool InvalidateRect(nint hWnd, nint lpRect, [MarshalAs(UnmanagedType.Bool)] bool bErase);
 
-    [DllImport(User32, SetLastError = true)]
-    public static extern nint DefWindowProc(nint hWnd, uint msg, nint wParam, nint lParam);
+    [LibraryImport(User32, EntryPoint = "DefWindowProcW", SetLastError = true)]
+    public static partial nint DefWindowProc(nint hWnd, uint msg, nint wParam, nint lParam);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, EntryPoint = "GetMessageW", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool GetMessage(out MSG lpMsg, nint hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
+    public static partial bool GetMessage(out MSG lpMsg, nint hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, EntryPoint = "PostMessageW", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool PostMessage(nint hWnd, uint Msg, nint wParam, nint lParam);
+    public static partial bool PostMessage(nint hWnd, uint Msg, nint wParam, nint lParam);
 
-    [DllImport(User32, SetLastError = true)]
-    public static extern void PostQuitMessage(int nExitCode);
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial void PostQuitMessage(int nExitCode);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool TranslateMessage([In] ref MSG lpMsg);
+    public static partial bool TranslateMessage(ref MSG lpMsg);
 
-    [DllImport(User32, SetLastError = true)]
-    public static extern nint DispatchMessage([In] ref MSG lpmsg);
+    [LibraryImport(User32, EntryPoint = "DispatchMessageW", SetLastError = true)]
+    public static partial nint DispatchMessage(ref MSG lpmsg);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool GetCursorPos(out POINT pt);
+    public static partial bool GetCursorPos(out POINT pt);
 
-    [DllImport(User32, SetLastError = true)]
-    public static extern nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
+    [LibraryImport(User32, EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+    public static partial nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool GetClientRect(nint hWnd, out RECT lpRect);
+    public static partial bool GetClientRect(nint hWnd, out RECT lpRect);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool ClientToScreen(nint hWnd, ref POINT lpPoint);
+    public static partial bool ClientToScreen(nint hWnd, ref POINT lpPoint);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool TrackMouseEvent(ref TRACKMOUSEEVENT tme);
+    public static partial bool TrackMouseEvent(ref TRACKMOUSEEVENT tme);
 
-    [DllImport(User32, SetLastError = true)]
-    public static extern nint BeginPaint(nint hWnd, out PAINTSTRUCT lpPaint);
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial nint BeginPaint(nint hWnd, out PAINTSTRUCT lpPaint);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool EndPaint(nint hWnd, ref PAINTSTRUCT lpPaint);
+    public static partial bool EndPaint(nint hWnd, ref PAINTSTRUCT lpPaint);
 
-    [DllImport(User32, SetLastError = true)]
-    public static extern nint SetWindowsHookEx(int idHook, nint lpfn, nint hmod, uint dwThreadId);
+    [LibraryImport(User32, EntryPoint = "SetWindowsHookExW", SetLastError = true)]
+    public static partial nint SetWindowsHookEx(int idHook, nint lpfn, nint hmod, uint dwThreadId);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool UnhookWindowsHookEx(nint hhk);
+    public static partial bool UnhookWindowsHookEx(nint hhk);
 
-    [DllImport(User32, SetLastError = true)]
-    public static extern nint CallNextHookEx(nint hhk, int nCode, nint wParam, nint lParam);
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial nint CallNextHookEx(nint hhk, int nCode, nint wParam, nint lParam);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool GetWindowRect(nint hWnd, out RECT lpRect);
+    public static partial bool GetWindowRect(nint hWnd, out RECT lpRect);
 
-    [DllImport(User32, SetLastError = true)]
-    public static extern nint GetWindow(nint hWnd, uint uCmd);
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial nint GetWindow(nint hWnd, uint uCmd);
 
-    [DllImport(User32, SetLastError = true)]
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool PtInRect(ref RECT lprc, POINT pt);
+    public static partial bool PtInRect(ref RECT lprc, POINT pt);
 }

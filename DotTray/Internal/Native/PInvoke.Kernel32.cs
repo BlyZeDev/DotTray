@@ -4,6 +4,6 @@ using System.Runtime.InteropServices;
 
 internal static partial class PInvoke
 {
-    [DllImport(Kernel32, CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern nint GetModuleHandle(string? moduleName);
+    [LibraryImport(Kernel32, EntryPoint = "GetModuleHandleW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    public static partial nint GetModuleHandle(string? moduleName);
 }

@@ -31,7 +31,7 @@ internal sealed partial class PopupMenu
 
         _hWnd = PInvoke.CreateWindowEx(
             PInvoke.WS_EX_NOACTIVATE | PInvoke.WS_EX_TOOLWINDOW | PInvoke.WS_EX_TOPMOST,
-            session.PopupWindowClassName, "",
+            session.PopupWindowClassName, nint.Zero,
             PInvoke.WS_CLIPCHILDREN | PInvoke.WS_CLIPSIBLINGS | PInvoke.WS_POPUP | PInvoke.WS_VISIBLE,
             x, y, width, height,
             parentHWnd,

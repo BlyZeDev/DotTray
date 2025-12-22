@@ -84,5 +84,5 @@ public readonly record struct TrayColor
         A = a;
     }
 
-    internal uint ToGdiPlus() => (uint)(A << 24 | R << 16 | G << 8 | B);
+    internal readonly uint ToGdiPlus() => (uint)(A << 24 | R << 16 | G << 8 | B);
 }

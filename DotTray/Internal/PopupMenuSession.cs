@@ -13,13 +13,13 @@ internal sealed class PopupMenuSession : IDisposable
     private readonly PopupMenuDismissHook _mouseHook;
 
     public NotifyIcon OwnerIcon { get; }
-    public string PopupWindowClassName { get; }
+    public nint PopupWindowClassName { get; }
     public nint InstanceHandle { get; }
     public nint RootHWnd { get; }
 
     public event Action? Disposed;
 
-    private PopupMenuSession(NotifyIcon ownerIcon, string popupWindowClassName, nint instanceHandle, POINT mousePos)
+    private PopupMenuSession(NotifyIcon ownerIcon, nint popupWindowClassName, nint instanceHandle, POINT mousePos)
     {
         OwnerIcon = ownerIcon;
         PopupWindowClassName = popupWindowClassName;
@@ -44,7 +44,7 @@ internal sealed class PopupMenuSession : IDisposable
         activeSession = null;
     }
 
-    public static PopupMenuSession Show(NotifyIcon ownerIcon, string popupWindowClassName, nint instanceHandle, POINT mousePos)
+    public static PopupMenuSession Show(NotifyIcon ownerIcon, nint popupWindowClassName, nint instanceHandle, POINT mousePos)
     {
         activeSession?.Dispose();
 

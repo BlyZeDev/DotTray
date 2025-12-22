@@ -5,69 +5,69 @@ using System.Runtime.InteropServices;
 
 internal static partial class PInvoke
 {
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdiplusStartup(out nint token, ref GDIPLUSSTARTUPINPUT input, out nint output);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdiplusStartup(out nint token, ref GDIPLUSSTARTUPINPUT input, out nint output);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern void GdiplusShutdown(nint token);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial void GdiplusShutdown(nint token);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipCreateFromHDC(nint hdc, out nint graphics);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipCreateFromHDC(nint hdc, out nint graphics);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipDeleteGraphics(nint graphics);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipDeleteGraphics(nint graphics);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipSetSmoothingMode(nint graphics, int smoothingMode);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipSetSmoothingMode(nint graphics, int smoothingMode);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipCreatePen1(uint color, float width, int unit, out nint pen);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipCreatePen1(uint color, float width, int unit, out nint pen);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipDeletePen(nint pen);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipDeletePen(nint pen);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipDrawLine(nint graphics, nint pen, float x1, float y1, float x2, float y2);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipDrawLine(nint graphics, nint pen, float x1, float y1, float x2, float y2);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static unsafe extern int GdipDrawLines(nint graphics, nint pen, POINTF* points, int count);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static unsafe partial int GdipDrawLines(nint graphics, nint pen, POINTF* points, int count);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipCreateSolidFill(uint color, out nint brush);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipCreateSolidFill(uint color, out nint brush);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipDeleteBrush(nint brush);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipDeleteBrush(nint brush);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipFillRectangle(nint graphics, nint brush, float x, float y, float width, float height);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipFillRectangle(nint graphics, nint brush, float x, float y, float width, float height);
 
-    [DllImport(GdiPlus, CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern int GdipMeasureString(nint graphics, string text, int length, nint font, ref RECTF layoutRect, nint stringFormat, out RECTF boundingBox, out int codepointsFitted, out int linesFilled);
+    [LibraryImport(GdiPlus, SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int GdipMeasureString(nint graphics, string text, int length, nint font, ref RECTF layoutRect, nint stringFormat, out RECTF boundingBox, out int codepointsFitted, out int linesFilled);
 
-    [DllImport(GdiPlus, CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern int GdipDrawString(nint graphics, string text, int length, nint font, ref RECTF layoutRect, nint stringFormat, nint brush);
+    [LibraryImport(GdiPlus, SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int GdipDrawString(nint graphics, string text, int length, nint font, ref RECTF layoutRect, nint stringFormat, nint brush);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipGetGenericFontFamilySansSerif(out nint fontFamily);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipGetGenericFontFamilySansSerif(out nint fontFamily);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipCreateFont(nint fontFamily, float emSize, int style, int unit, out nint font);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipCreateFont(nint fontFamily, float emSize, int style, int unit, out nint font);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipDeleteFont(nint font);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipDeleteFont(nint font);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipDeleteFontFamily(nint fontFamily);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipDeleteFontFamily(nint fontFamily);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipCreateStringFormat(int formatAttributes, int language, out nint format);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipCreateStringFormat(int formatAttributes, int language, out nint format);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipSetStringFormatFlags(nint format, int flags);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipSetStringFormatFlags(nint format, int flags);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern int GdipDeleteStringFormat(nint format);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipDeleteStringFormat(nint format);
 
-    [DllImport(GdiPlus, SetLastError = true)]
-    public static extern unsafe int GdipFillPolygon(nint graphics, nint brush, POINTF* points, int count, int fillMode);
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static unsafe partial int GdipFillPolygon(nint graphics, nint brush, POINTF* points, int count, int fillMode);
 }

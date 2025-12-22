@@ -3,8 +3,8 @@
 using System;
 using System.Runtime.InteropServices;
 
-[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-internal struct NOTIFYICONDATA
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NOTIFYICONDATA
 {
     public const int SZTIP_LENGTH = 128;
     public const int SZINFO_LENGTH = 256;
@@ -16,15 +16,12 @@ internal struct NOTIFYICONDATA
     public uint uFlags;
     public uint uCallbackMessage;
     public nint hIcon;
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = SZTIP_LENGTH)]
-    public string szTip;
+    public fixed char szTip[SZTIP_LENGTH];
     public uint dwState;
     public uint dwStateMask;
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = SZINFO_LENGTH)]
-    public string szInfo;
+    public fixed char szInfo[SZINFO_LENGTH];
     public uint uTimeoutOrVersion;
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = SZINFOTITLE_LENGTH)]
-    public string szInfoTitle;
+    public fixed char szInfoTitle[SZINFOTITLE_LENGTH];
     public uint dwInfoFlags;
     public Guid guidItem;
     public nint hBalloonIcon;

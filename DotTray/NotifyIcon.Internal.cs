@@ -79,16 +79,17 @@ public sealed partial class NotifyIcon
         needsIcoDestroy = lParam != 0;
     }
 
-    private void HandleToolTip(nint hWnd)
+    private unsafe void HandleToolTip(nint hWnd)
     {
         var iconData = new NOTIFYICONDATA
         {
             cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
             hWnd = hWnd,
             guidItem = _trayId,
-            uFlags = PInvoke.NIF_TIP | PInvoke.NIF_GUID,
-            szTip = ToolTip
+            uFlags = PInvoke.NIF_TIP | PInvoke.NIF_GUID
         };
+
+        NativeString.WriteFixed(iconData.szTip, NOTIFYICONDATA.SZTIP_LENGTH, ToolTip);
 
         PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
     }
@@ -108,7 +109,7 @@ public sealed partial class NotifyIcon
         PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
     }
 
-    private void HandleBalloon(nint hWnd)
+    private unsafe void HandleBalloon(nint hWnd)
     {
         if (nextBalloon is null) return;
 
@@ -119,10 +120,11 @@ public sealed partial class NotifyIcon
             guidItem = _trayId,
             hIcon = (nextBalloon.Icon is BalloonNotificationIcon.User) ? icoHandle : nint.Zero,
             uFlags = PInvoke.NIF_INFO | PInvoke.NIF_GUID,
-            dwInfoFlags = (uint)nextBalloon.Icon | (nextBalloon.NoSound ? PInvoke.NIIF_NOSOUND : 0),
-            szInfoTitle = nextBalloon.Title,
-            szInfo = nextBalloon.Message
+            dwInfoFlags = (uint)nextBalloon.Icon | (nextBalloon.NoSound ? PInvoke.NIIF_NOSOUND : 0)
         };
+
+        NativeString.WriteFixed(iconData.szInfoTitle, NOTIFYICONDATA.SZINFOTITLE_LENGTH, nextBalloon.Title);
+        NativeString.WriteFixed(iconData.szInfo, NOTIFYICONDATA.SZINFO_LENGTH, nextBalloon.Message);
 
         nextBalloon = null;
 

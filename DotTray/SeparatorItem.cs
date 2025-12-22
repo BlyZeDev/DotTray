@@ -5,11 +5,9 @@
 /// </summary>
 public sealed class SeparatorItem : MenuItemBase
 {
+    private static readonly TrayColor DefaultSeparatorBackgroundColor = DefaultMenuItemBackgroundColor;
+    private static readonly TrayColor DefaultSeparatorLineColor = DefaultMenuItemTextColor;
     private static readonly float DefaultLineThickness = 1f;
-
-    private TrayColor backgroundColor;
-    private TrayColor lineColor;
-    private float lineThickness;
 
     internal override float Height => LineThickness * 2f;
 
@@ -18,12 +16,12 @@ public sealed class SeparatorItem : MenuItemBase
     /// </summary>
     public TrayColor BackgroundColor
     {
-        get => backgroundColor;
+        get => field;
         set
         {
-            if (backgroundColor == value) return;
+            if (field == value) return;
 
-            backgroundColor = value;
+            field = value;
             Update();
         }
     }
@@ -33,12 +31,12 @@ public sealed class SeparatorItem : MenuItemBase
     /// </summary>
     public TrayColor LineColor
     {
-        get => lineColor;
+        get => field;
         set
         {
-            if (lineColor == value) return;
+            if (field == value) return;
 
-            lineColor = value;
+            field = value;
             Update();
         }
     }
@@ -48,20 +46,20 @@ public sealed class SeparatorItem : MenuItemBase
     /// </summary>
     public float LineThickness
     {
-        get => lineThickness;
+        get => field;
         set
         {
-            if (lineThickness == value) return;
+            if (field == value) return;
 
-            lineThickness = value;
+            field = value;
             Update();
         }
     }
 
     internal SeparatorItem()
     {
-        backgroundColor = DefaultSeparatorBackgroundColor;
-        lineColor = DefaultSeparatorLineColor;
-        lineThickness = DefaultLineThickness;
+        BackgroundColor = DefaultSeparatorBackgroundColor;
+        LineColor = DefaultSeparatorLineColor;
+        LineThickness = DefaultLineThickness;
     }
 }

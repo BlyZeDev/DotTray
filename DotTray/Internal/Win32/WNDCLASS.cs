@@ -2,7 +2,7 @@
 
 using System.Runtime.InteropServices;
 
-[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct WNDCLASS
 {
     public uint style;
@@ -13,6 +13,6 @@ internal unsafe struct WNDCLASS
     public nint hIcon;
     public nint hCursor;
     public nint hbrBackground;
-    public string? lpszMenuName;
-    public string? lpszClassName;
+    public nint lpszMenuName;
+    public nint lpszClassName;
 }

@@ -29,7 +29,7 @@ public sealed partial class NotifyIcon : IDisposable
     private static uint totalIcons;
     private static nint gdipToken;
 
-    private readonly string _popupWindowClassName;
+    private readonly nint _popupWindowClassName;
     private readonly Thread _trayLoopThread;
     private readonly Guid _trayId;
 
@@ -87,15 +87,17 @@ public sealed partial class NotifyIcon : IDisposable
     /// </summary>
     public event Action? PopupHiding;
 
-    private NotifyIcon(nint icoHandle, bool needsIcoDestroy, Action onInitializationFinished, CancellationToken cancellationToken)
+    private unsafe NotifyIcon(nint icoHandle, bool needsIcoDestroy, Action onInitializationFinished, CancellationToken cancellationToken)
     {
         this.icoHandle = icoHandle;
         this.needsIcoDestroy = needsIcoDestroy;
 
         totalIcons++;
         _trayId = Guid.CreateVersion7();
-        var windowClassName = $"{nameof(DotTray)}NotifyIconWindow{_trayId}";
-        _popupWindowClassName = $"{windowClassName}_Popup";
+
+        var windowClassNameString = $"{nameof(DotTray)}NotifyIconWindow{_trayId}";
+        var windowClassName = Marshal.StringToHGlobalUni(windowClassNameString);
+        _popupWindowClassName = Marshal.StringToHGlobalUni($"{windowClassNameString}_Popup");
 
         MenuItems = [];
         ToolTip = DefaultToolTip;
@@ -134,7 +136,7 @@ public sealed partial class NotifyIcon : IDisposable
             };
             PInvoke.RegisterClass(ref popupWndClass);
 
-            hWnd = PInvoke.CreateWindowEx(0, windowClassName, "", 0, 0, 0, 0, 0, nint.Zero, nint.Zero, instanceHandle, nint.Zero);
+            hWnd = PInvoke.CreateWindowEx(0, windowClassName, nint.Zero, 0, 0, 0, 0, 0, nint.Zero, nint.Zero, instanceHandle, nint.Zero);
 
             var iconData = new NOTIFYICONDATA
             {
@@ -177,6 +179,10 @@ public sealed partial class NotifyIcon : IDisposable
 
                     PInvoke.UnregisterClass(_popupWindowClassName, instanceHandle);
                     PInvoke.UnregisterClass(windowClassName, instanceHandle);
+
+                    Marshal.FreeHGlobal(windowClassName);
+                    Marshal.FreeHGlobal(_popupWindowClassName);
+
                     instanceHandle = nint.Zero;
                 }
             }
@@ -184,6 +190,7 @@ public sealed partial class NotifyIcon : IDisposable
             GC.KeepAlive(wndProc);
             GC.KeepAlive(popupWndProc);
         });
+        _trayLoopThread.Name = $"DotTray NotifyIcon Thread {_trayId}";
         _trayLoopThread.SetApartmentState(ApartmentState.STA);
         _trayLoopThread.Start();
     }

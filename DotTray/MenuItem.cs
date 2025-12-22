@@ -8,15 +8,10 @@ using System;
 /// </summary>
 public sealed class MenuItem : MenuItemBase
 {
-    private string text;
-    private bool? isChecked;
-    private bool isDisabled;
-    private TrayColor backgroundColor;
-    private TrayColor backgroundHoverColor;
-    private TrayColor backgroundDisabledColor;
-    private TrayColor textColor;
-    private TrayColor textHoverColor;
-    private TrayColor textDisabledColor;
+    private static readonly TrayColor DefaultMenuItemBackgroundHoverColor = new TrayColor(0, 120, 215);
+    private static readonly TrayColor DefaultMenuItemBackgroundDisabledColor = TrayColor.Gray;
+    private static readonly TrayColor DefaultMenuItemTextHoverColor = DefaultMenuItemTextColor;
+    private static readonly TrayColor DefaultMenuItemTextDisabledColor = new TrayColor(109, 109, 109);
 
     internal override float Height => 30f;
 
@@ -28,12 +23,12 @@ public sealed class MenuItem : MenuItemBase
     /// </summary>
     public string Text
     {
-        get => text;
+        get => field;
         set
         {
-            if (text == value) return;
+            if (field == value) return;
 
-            text = value;
+            field = value;
             Update();
         }
     }
@@ -44,12 +39,12 @@ public sealed class MenuItem : MenuItemBase
     /// </summary>
     public bool? IsChecked
     {
-        get => isChecked;
+        get => field;
         set
         {
-            if (isChecked == value) return;
+            if (field == value) return;
 
-            isChecked = value;
+            field = value;
             Update();
         }
     }
@@ -59,12 +54,12 @@ public sealed class MenuItem : MenuItemBase
     /// </summary>
     public bool IsDisabled
     {
-        get => isDisabled;
+        get => field;
         set
         {
-            if (isDisabled == value) return;
+            if (field == value) return;
 
-            isDisabled = value;
+            field = value;
             Update();
         }
     }
@@ -74,12 +69,12 @@ public sealed class MenuItem : MenuItemBase
     /// </summary>
     public TrayColor BackgroundColor
     {
-        get => backgroundColor;
+        get => field;
         set
         {
-            if (backgroundColor == value) return;
+            if (field == value) return;
 
-            backgroundColor = value;
+            field = value;
             Update();
         }
     }
@@ -89,12 +84,12 @@ public sealed class MenuItem : MenuItemBase
     /// </summary>
     public TrayColor BackgroundHoverColor
     {
-        get => backgroundHoverColor;
+        get => field;
         set
         {
-            if (backgroundHoverColor == value) return;
+            if (field == value) return;
 
-            backgroundHoverColor = value;
+            field = value;
             Update();
         }
     }
@@ -104,12 +99,12 @@ public sealed class MenuItem : MenuItemBase
     /// </summary>
     public TrayColor BackgroundDisabledColor
     {
-        get => backgroundDisabledColor;
+        get => field;
         set
         {
-            if (backgroundDisabledColor == value) return;
+            if (field == value) return;
 
-            backgroundDisabledColor = value;
+            field = value;
             Update();
         }
     }
@@ -119,12 +114,12 @@ public sealed class MenuItem : MenuItemBase
     /// </summary>
     public TrayColor TextColor
     {
-        get => textColor;
+        get => field;
         set
         {
-            if (textColor == value) return;
+            if (field == value) return;
 
-            textColor = value;
+            field = value;
             Update();
         }
     }
@@ -134,12 +129,12 @@ public sealed class MenuItem : MenuItemBase
     /// </summary>
     public TrayColor TextHoverColor
     {
-        get => textHoverColor;
+        get => field;
         set
         {
-            if (textHoverColor == value) return;
+            if (field == value) return;
 
-            textHoverColor = value;
+            field = value;
             Update();
         }
     }
@@ -149,12 +144,12 @@ public sealed class MenuItem : MenuItemBase
     /// </summary>
     public TrayColor TextDisabledColor
     {
-        get => textDisabledColor;
+        get => field;
         set
         {
-            if (textDisabledColor == value) return;
+            if (field == value) return;
 
-            textDisabledColor = value;
+            field = value;
             Update();
         }
     }
@@ -171,15 +166,15 @@ public sealed class MenuItem : MenuItemBase
 
     internal MenuItem(string text)
     {
-        this.text = text;
-        isChecked = null;
-        isDisabled = false;
-        backgroundColor = DefaultMenuItemBackgroundColor;
-        backgroundHoverColor = DefaultMenuItemBackgroundHoverColor;
-        backgroundDisabledColor = DefaultMenuItemBackgroundDisabledColor;
-        textColor = DefaultMenuItemTextColor;
-        textHoverColor = DefaultMenuItemTextHoverColor;
-        textDisabledColor = DefaultMenuItemTextDisabledColor;
+        Text = text;
+        IsChecked = null;
+        IsDisabled = false;
+        BackgroundColor = DefaultMenuItemBackgroundColor;
+        BackgroundHoverColor = DefaultMenuItemBackgroundHoverColor;
+        BackgroundDisabledColor = DefaultMenuItemBackgroundDisabledColor;
+        TextColor = DefaultMenuItemTextColor;
+        TextHoverColor = DefaultMenuItemTextHoverColor;
+        TextDisabledColor = DefaultMenuItemTextDisabledColor;
         SubMenu = [];
     }
 }

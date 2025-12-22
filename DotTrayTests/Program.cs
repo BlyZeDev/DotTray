@@ -66,7 +66,7 @@ sealed class Program
         menuItem.TextColor = new TrayColor(255, 0, 0);
         menuItem.Clicked = _ => cts.Cancel();
 
-        tray.SetToolTip("🔔 This is a long string with emoji 😊 and more");
+        tray.SetToolTip("🔔 This is a long string with emoji 😊 and more. Super duper insanely giga mega ultra long :o\nHow about getting a job Mr. Squidward 🤣😇😎🥰💩👹, This will not be seen :D");
         defaultTray.SetToolTip("What's up ma drilla");
 
         tray.MouseButtons = MouseButton.Left;
