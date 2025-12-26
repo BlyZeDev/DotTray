@@ -12,7 +12,6 @@ sealed class Program
         var cts = new CancellationTokenSource();
         using (var icon = await NotifyIcon.RunAsync(@"C:\Users\leons\OneDrive\Desktop\!Programmierung\NuGetPackages\DotTray\icon.ico", cts.Token))
         {
-            /*
             var menuItems = icon.MenuItems;
 
             var current = menuItems.AddItem("Item Number 1");
@@ -27,7 +26,7 @@ sealed class Program
 
             current = menuItems.AddItem("Item Number 3");
             current.SubMenu.AddItem("Submenu Item 1");
-            */
+
             icon.SetToolTip("This is a NotifyIcon");
             icon.MouseButtons = MouseButton.Left | MouseButton.Right;
             icon.PopupShowing += args => Console.WriteLine($"Showing: {args}");
