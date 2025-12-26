@@ -14,10 +14,8 @@ using System.Threading.Tasks;
 /// Represents a Notification Icon that is displayed in the Taskbar
 /// </summary>
 /// <remarks>
-/// Due to the fact that the Windows notification icon size is 16x16,
-/// it is recommended that the icon contains a 16x16 variant.<br/>
-/// If no 16x16 variant is available,
-/// the quality can suffer greatly as it then has to be scaled from another existing size.
+/// To get the best possible result it's recommend to use a 16x16 or 32x32 icon with a 32-bit color depth including alpha channel.<br/>
+/// Using other sizes or color depths may lead to unexpected results or poor quality rendering.
 /// </remarks>
 [SupportedOSPlatform("windows")]
 public sealed partial class NotifyIcon : IDisposable
@@ -31,7 +29,6 @@ public sealed partial class NotifyIcon : IDisposable
 
     private readonly nint _popupWindowClassName;
     private readonly Thread _trayLoopThread;
-    private readonly Guid _trayId;
 
     private nint icoHandle;
     private bool needsIcoDestroy;
@@ -41,6 +38,11 @@ public sealed partial class NotifyIcon : IDisposable
 
     private PopupMenuSession? popupMenu;
     private BalloonNotification? nextBalloon;
+
+    /// <summary>
+    /// The unique identifier of this <see cref="NotifyIcon"/> instance
+    /// </summary>
+    public Guid Id { get; }
 
     /// <summary>
     /// The <see cref="MenuItemCollection"/> of this <see cref="NotifyIcon"/> instance
@@ -93,9 +95,9 @@ public sealed partial class NotifyIcon : IDisposable
         this.needsIcoDestroy = needsIcoDestroy;
 
         totalIcons++;
-        _trayId = Guid.CreateVersion7();
+        Id = Guid.CreateVersion7();
 
-        var windowClassNameString = $"{nameof(DotTray)}NotifyIconWindow{_trayId}";
+        var windowClassNameString = $"{nameof(DotTray)}NotifyIconWindow{Id}";
         var windowClassName = Marshal.StringToHGlobalUni(windowClassNameString);
         _popupWindowClassName = Marshal.StringToHGlobalUni($"{windowClassNameString}_Popup");
 
@@ -142,7 +144,7 @@ public sealed partial class NotifyIcon : IDisposable
             {
                 cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                 hWnd = hWnd,
-                guidItem = _trayId,
+                guidItem = Id,
                 uFlags = PInvoke.NIF_MESSAGE | PInvoke.NIF_ICON | PInvoke.NIF_GUID,
                 uCallbackMessage = PInvoke.WM_APP_TRAYICON,
                 hIcon = icoHandle
@@ -165,7 +167,7 @@ public sealed partial class NotifyIcon : IDisposable
                 {
                     cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
                     hWnd = hWnd,
-                    guidItem = _trayId,
+                    guidItem = Id,
                     uFlags = PInvoke.NIF_GUID
                 };
                 PInvoke.Shell_NotifyIcon(PInvoke.NIM_DELETE, ref iconData);
@@ -190,7 +192,7 @@ public sealed partial class NotifyIcon : IDisposable
             GC.KeepAlive(wndProc);
             GC.KeepAlive(popupWndProc);
         });
-        _trayLoopThread.Name = $"DotTray NotifyIcon Thread {_trayId}";
+        _trayLoopThread.Name = $"{nameof(NotifyIcon)}::{Id}";
         _trayLoopThread.SetApartmentState(ApartmentState.STA);
         _trayLoopThread.Start();
     }

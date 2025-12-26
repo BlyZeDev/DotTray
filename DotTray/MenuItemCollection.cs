@@ -16,6 +16,11 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// <inheritdoc/>
     public int Count => _items.Count;
 
+    /// <summary>
+    /// Returns <see langword="true"/> if the collection is empty, otherwise <see langword="false"/>
+    /// </summary>
+    public bool IsEmpty => _items.Count == 0;
+
     internal MenuItemCollection() => _items = [];
 
     /// <inheritdoc/>

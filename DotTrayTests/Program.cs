@@ -10,6 +10,42 @@ sealed class Program
     static async Task Main()
     {
         var cts = new CancellationTokenSource();
+        using (var icon = await NotifyIcon.RunAsync(@"C:\Users\leons\OneDrive\Desktop\!Programmierung\NuGetPackages\DotTray\icon.ico", cts.Token))
+        {
+            /*
+            var menuItems = icon.MenuItems;
+
+            var current = menuItems.AddItem("Item Number 1");
+            current.Clicked = (args) => Console.WriteLine($"Clicked: Icon={args.Icon}, Item={args.MenuItem}, Mouse={args.MouseButton}");
+
+            menuItems.AddItem("Item Number 2").IsDisabled = true;
+
+            var separator = menuItems.AddSeparator();
+            separator.LineColor = new TrayColor(0, 255, 255);
+            separator.LineThickness = 5f;
+            separator.BackgroundColor = new TrayColor(255, 0, 0);
+
+            current = menuItems.AddItem("Item Number 3");
+            current.SubMenu.AddItem("Submenu Item 1");
+            */
+            icon.SetToolTip("This is a NotifyIcon");
+            icon.MouseButtons = MouseButton.Left | MouseButton.Right;
+            icon.PopupShowing += args => Console.WriteLine($"Showing: {args}");
+            icon.PopupHiding += () => Console.WriteLine("Hiding");
+
+            icon.ShowBalloon(new BalloonNotification
+            {
+                Icon = BalloonNotificationIcon.User,
+                Title = "Bold Title here",
+                Message = "Message text here",
+                NoSound = false
+            });
+            
+            await Task.Delay(Timeout.Infinite, cts.Token);
+        }
+
+        /*
+        var cts = new CancellationTokenSource();
 
         var tempPath = CreateTestIcon(StockIconId.Error) ?? throw new InvalidOperationException("Icon could not be created");
         var tempPath2 = CreateTestIcon(StockIconId.AudioFiles) ?? throw new InvalidOperationException("Icon could not be created");
@@ -112,6 +148,8 @@ sealed class Program
             File.Delete(tempPath ?? "");
         }
         catch (Exception) { }
+
+        */
     }
 
     [SupportedOSPlatform("windows")]

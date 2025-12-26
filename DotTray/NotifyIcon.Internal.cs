@@ -35,6 +35,8 @@ public sealed partial class NotifyIcon
 
     private void HandleClick(nint lParam)
     {
+        if (MenuItems.IsEmpty) return;
+
         var clickedButton = lParam.ToInt32() switch
         {
             PInvoke.WM_LBUTTONUP => MouseButton.Left,
@@ -66,7 +68,7 @@ public sealed partial class NotifyIcon
         {
             cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
             hWnd = hWnd,
-            guidItem = _trayId,
+            guidItem = Id,
             uFlags = PInvoke.NIF_ICON | PInvoke.NIF_GUID,
             uCallbackMessage = PInvoke.WM_APP_TRAYICON,
             hIcon = wParam
@@ -85,7 +87,7 @@ public sealed partial class NotifyIcon
         {
             cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
             hWnd = hWnd,
-            guidItem = _trayId,
+            guidItem = Id,
             uFlags = PInvoke.NIF_TIP | PInvoke.NIF_GUID
         };
 
@@ -100,7 +102,7 @@ public sealed partial class NotifyIcon
         {
             cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
             hWnd = hWnd,
-            guidItem = _trayId,
+            guidItem = Id,
             uFlags = PInvoke.NIF_STATE | PInvoke.NIF_GUID,
             dwState = IsVisible ? 0 : PInvoke.NIS_HIDDEN,
             dwStateMask = PInvoke.NIS_HIDDEN
@@ -117,7 +119,7 @@ public sealed partial class NotifyIcon
         {
             cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
             hWnd = hWnd,
-            guidItem = _trayId,
+            guidItem = Id,
             hIcon = (nextBalloon.Icon is BalloonNotificationIcon.User) ? icoHandle : nint.Zero,
             uFlags = PInvoke.NIF_INFO | PInvoke.NIF_GUID,
             dwInfoFlags = (uint)nextBalloon.Icon | (nextBalloon.NoSound ? PInvoke.NIIF_NOSOUND : 0)
@@ -159,7 +161,7 @@ public sealed partial class NotifyIcon
         if (!Path.GetExtension(icoPath).Equals(".ico", StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("The path needs to point to an .ico file", nameof(icoPath));
         if (!File.Exists(icoPath)) throw new FileNotFoundException("The .ico file could not be found", icoPath);
 
-        var handle = PInvoke.LoadImage(nint.Zero, icoPath, PInvoke.IMAGE_ICON, 16, 16, PInvoke.LR_LOADFROMFILE);
+        var handle = PInvoke.LoadImage(nint.Zero, icoPath, PInvoke.IMAGE_ICON, 0, 0, PInvoke.LR_LOADFROMFILE | PInvoke.LR_DEFAULTSIZE);
         return handle == nint.Zero ? throw new FileLoadException("The .ico file could not be loaded", icoPath) : handle;
     }
 }

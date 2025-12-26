@@ -81,8 +81,9 @@ internal static partial class PInvoke
 
     public const int DWMSBT_TRANSIENTWINDOW = 2;
 
-    public const uint IMAGE_ICON = 1;
-    public const uint LR_LOADFROMFILE = 0x00000010;
+    public const int IMAGE_ICON = 1;
+    public const int LR_LOADFROMFILE = 0x00000010;
+    public const int LR_DEFAULTSIZE = 0x00000040;
 
     public const uint SWP_NOACTIVATE = 0x0010;
     public const uint SWP_ZORDER = 0x0004;
