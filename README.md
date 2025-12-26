@@ -58,7 +58,7 @@ using (var notifyIcon = NotifyIcon.Run(@"path\to\my\icon.ico", menuItems, Cancel
 ```
 This example will look something like this. *The exact look depends on your Windows Version*
 
-<img width="364" height="116" alt="example" src="https://github.com/user-attachments/assets/91b3baa6-d32d-430f-9c25-f3dbbfeda2cc"/>
+<img width="245" height="152" alt="grafik" src="https://github.com/user-attachments/assets/b91ba790-1273-4c3d-9a5c-08163e2bf3a7" />
 
 ### Show a Balloon Message
 ```cs
