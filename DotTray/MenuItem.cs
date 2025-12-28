@@ -34,7 +34,7 @@ public sealed class MenuItem : MenuItemBase
     }
 
     /// <summary>
-    /// <see langword="true"/> if this <see cref="MenuItem"/> is checked, otherwise <see langword="false"/>
+    /// <see langword="true"/> if this <see cref="MenuItem"/> is checked, otherwise <see langword="false"/>.<br/>
     /// <see langword="null"/> if this <see cref="MenuItem"/> is not checkable
     /// </summary>
     public bool? IsChecked

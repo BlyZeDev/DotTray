@@ -67,7 +67,7 @@ public sealed partial class NotifyIcon : IDisposable
     public bool IsVisible { get; private set; }
 
     /// <summary>
-    /// The mouse buttons that are allowed to interact with this <see cref="NotifyIcon"/>
+    /// The mouse buttons that are allowed to interact with this <see cref="NotifyIcon"/> instance
     /// </summary>
     /// <remarks>
     /// The default value is <see cref="MouseButton.Left"/> | <see cref="MouseButton.Right"/>
@@ -75,7 +75,7 @@ public sealed partial class NotifyIcon : IDisposable
     public MouseButton MouseButtons { get; set; }
 
     /// <summary>
-    /// The background color of the popup menu
+    /// The background color of the popup menu for this <see cref="NotifyIcon"/> instance
     /// </summary>
     public TrayColor PopupMenuColor { get; set; }
 
