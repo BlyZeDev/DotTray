@@ -121,4 +121,7 @@ internal static partial class PInvoke
     [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool PtInRect(ref RECT lprc, POINT pt);
+
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial nint SetThreadDpiAwarenessContext(nint dpiContext);
 }

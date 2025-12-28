@@ -109,6 +109,8 @@ public sealed partial class NotifyIcon : IDisposable
 
         _trayLoopThread = new Thread(() =>
         {
+            PInvoke.SetThreadDpiAwarenessContext(PInvoke.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
             if (gdipToken == nint.Zero)
             {
                 var input = new GDIPLUSSTARTUPINPUT

@@ -152,11 +152,11 @@ internal sealed partial class PopupMenu
 
     private static unsafe void DrawSubmenuArrow(nint graphicsHandle, uint color, RECTF itemRect, float centerY, POINTF* points)
     {
-        var arrowX = itemRect.X + itemRect.Width - TextPadding - SubmenuArrowWidth;
+        var arrowX = itemRect.X + itemRect.Width - TextPadding - SubmenuArrowWidth * 1.5f;
 
-        points[0] = new POINTF { X = arrowX, Y = centerY - 5f };
+        points[0] = new POINTF { X = arrowX, Y = centerY - SubmenuArrowHeight };
         points[1] = new POINTF { X = arrowX + SubmenuArrowWidth, Y = centerY };
-        points[2] = new POINTF { X = arrowX, Y = centerY + 5f };
+        points[2] = new POINTF { X = arrowX, Y = centerY + SubmenuArrowHeight };
 
         _ = PInvoke.GdipCreateSolidFill(color, out var brush);
         _ = PInvoke.GdipFillPolygon(graphicsHandle, brush, points, ArrowPoints, 0);

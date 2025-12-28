@@ -88,6 +88,8 @@ internal static partial class PInvoke
     public const uint SWP_NOACTIVATE = 0x0010;
     public const uint SWP_ZORDER = 0x0004;
 
+    public const nint DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4;
+
     public const int SmoothingModeAntiAlias8x8 = 5;
 
     public const int UnitPixel = 2;

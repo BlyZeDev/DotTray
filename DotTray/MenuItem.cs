@@ -13,7 +13,7 @@ public sealed class MenuItem : MenuItemBase
     private static readonly TrayColor DefaultMenuItemTextHoverColor = DefaultMenuItemTextColor;
     private static readonly TrayColor DefaultMenuItemTextDisabledColor = new TrayColor(109, 109, 109);
 
-    internal override float Height => 30f;
+    internal override float Height => 40f;
 
     internal RECTF HitBox { get; set; }
     internal bool HasSubMenu => SubMenu.Count > 0;
