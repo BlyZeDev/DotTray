@@ -133,11 +133,11 @@ public sealed partial class NotifyIcon
         PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
     }
 
-    private static NotifyIcon Run(nint iconHandle, bool needIconDestroy, CancellationToken cancellationToken)
+    private static NotifyIcon Run(nint iconHandle, bool needIconDestroy, Action<MenuItem>? defaultMenuItemConfig, Action<SeparatorItem>? defaultSeparatorItemConfig, CancellationToken cancellationToken)
     {
         using (var manualLock = new ManualResetEventSlim(false))
         {
-            var icon = new NotifyIcon(iconHandle, needIconDestroy, manualLock.Set, cancellationToken);
+            var icon = new NotifyIcon(iconHandle, needIconDestroy, manualLock.Set, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
 
             manualLock.Wait(cancellationToken);
 
@@ -145,11 +145,11 @@ public sealed partial class NotifyIcon
         }
     }
 
-    private static async Task<NotifyIcon> RunAsync(nint iconHandle, bool needIconDestroy, CancellationToken cancellationToken)
+    private static async Task<NotifyIcon> RunAsync(nint iconHandle, bool needIconDestroy, Action<MenuItem>? defaultMenuItemConfig, Action<SeparatorItem>? defaultSeparatorItemConfig, CancellationToken cancellationToken)
     {
         var manualLock = new AsyncManualResetEvent(false);
 
-        var icon = new NotifyIcon(iconHandle, needIconDestroy, manualLock.Set, cancellationToken);
+        var icon = new NotifyIcon(iconHandle, needIconDestroy, manualLock.Set, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
 
         await manualLock.WaitAsync(cancellationToken);
 

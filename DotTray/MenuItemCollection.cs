@@ -10,6 +10,8 @@ using System.Collections.Generic;
 public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
 {
     private readonly List<MenuItemBase> _items;
+    private readonly Action<MenuItem> _defaultMenuItemConfig;
+    private readonly Action<SeparatorItem> _defaultSeparatorItemConfig;
 
     internal event Action? Updated;
 
@@ -21,10 +23,24 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// </summary>
     public bool IsEmpty => _items.Count == 0;
 
-    internal MenuItemCollection() => _items = [];
+    internal MenuItemCollection(Action<MenuItem> defaultMenuItemConfig, Action<SeparatorItem> defaultSeparatorItemConfig)
+    {
+        _items = [];
+
+        _defaultMenuItemConfig = defaultMenuItemConfig;
+        _defaultSeparatorItemConfig = defaultSeparatorItemConfig;
+    }
 
     /// <inheritdoc/>
     public MenuItemBase this[int index] => _items[index];
+
+    /// <summary>
+    /// Gets the item at the specified index cast to the specified type
+    /// </summary>
+    /// <typeparam name="TItem">The type at the specific index</typeparam>
+    /// <param name="index">The zero-based index of the element to get</param>
+    /// <returns>Anything that derives from <see cref="MenuItemBase"/></returns>
+    public TItem GetAt<TItem>(int index) where TItem : MenuItemBase => (TItem)_items[index];
 
     /// <summary>
     /// Adds a <see cref="MenuItem"/> to the collection
@@ -33,7 +49,28 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// <returns><see cref="MenuItem"/></returns>
     public MenuItem AddItem(string text)
     {
-        var item = new MenuItem(text);
+        var item = new MenuItem(text, _defaultMenuItemConfig, _defaultSeparatorItemConfig);
+        _defaultMenuItemConfig(item);
+
+        item.Updated += Update;
+
+        _items.Add(item);
+        Update();
+
+        return item;
+    }
+
+    /// <summary>
+    /// Adds a <see cref="MenuItem"/> to the collection
+    /// </summary>
+    /// <param name="menuItemConfig">The configuration to use</param>
+    /// <returns><see cref="MenuItem"/></returns>
+    public MenuItem AddItem(Action<MenuItem> menuItemConfig)
+    {
+        var item = new MenuItem("", _defaultMenuItemConfig, _defaultSeparatorItemConfig);
+        _defaultMenuItemConfig(item);
+        menuItemConfig(item);
+
         item.Updated += Update;
 
         _items.Add(item);
@@ -49,6 +86,8 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     public SeparatorItem AddSeparator()
     {
         var item = new SeparatorItem();
+        _defaultSeparatorItemConfig(item);
+
         item.Updated += Update;
 
         _items.Add(item);
@@ -58,9 +97,28 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     }
 
     /// <summary>
-    /// Removes a <see cref="MenuItem"/> at a specified index
+    /// Adds a <see cref="SeparatorItem"/> to the collection
     /// </summary>
-    /// <param name="index">The index to remove the item at</param>
+    /// <param name="separatorItemConfig">The configuration to use</param>
+    /// <returns></returns>
+    public SeparatorItem AddSeparator(Action<SeparatorItem> separatorItemConfig)
+    {
+        var item = new SeparatorItem();
+        _defaultSeparatorItemConfig(item);
+        separatorItemConfig(item);
+
+        item.Updated += Update;
+
+        _items.Add(item);
+        Update();
+
+        return item;
+    }
+
+    /// <summary>
+    /// Removes a <see cref="MenuItemBase"/> at a specified index
+    /// </summary>
+    /// <param name="index">The zero-based index to remove the item at</param>
     public void RemoveAt(int index)
     {
         _items[index].Updated -= Update;

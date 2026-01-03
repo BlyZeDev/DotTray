@@ -24,6 +24,25 @@ public sealed partial class NotifyIcon : IDisposable
     private static readonly MouseButton DefaultMouseButtons = MouseButton.Left | MouseButton.Right;
     private static readonly TrayColor DefaultPopupMenuColor = new TrayColor(40, 40, 40);
 
+    private static readonly Action<MenuItem> DefaultMenuItemConfig = x =>
+    {
+        x.IsChecked = null;
+        x.IsDisabled = false;
+        x.BackgroundColor = TrayColor.Transparent;
+        x.BackgroundHoverColor = new TrayColor(0, 120, 215);
+        x.BackgroundDisabledColor = TrayColor.Gray;
+        x.TextColor = TrayColor.White;
+        x.TextHoverColor = TrayColor.White;
+        x.TextDisabledColor = new TrayColor(109, 109, 109);
+    };
+
+    private static readonly Action<SeparatorItem> DefaultSeparatorItemConfig = x =>
+    {
+        x.BackgroundColor = TrayColor.Transparent;
+        x.LineColor = TrayColor.White;
+        x.LineThickness = 1f;
+    };
+
     private static uint totalIcons;
     private static nint gdipToken;
 
@@ -89,7 +108,7 @@ public sealed partial class NotifyIcon : IDisposable
     /// </summary>
     public event Action? PopupHiding;
 
-    private unsafe NotifyIcon(nint icoHandle, bool needsIcoDestroy, Action onInitializationFinished, CancellationToken cancellationToken)
+    private unsafe NotifyIcon(nint icoHandle, bool needsIcoDestroy, Action onInitializationFinished, Action<MenuItem>? defaultMenuItemConfig, Action<SeparatorItem>? defaultSeparatorItemConfig, CancellationToken cancellationToken)
     {
         this.icoHandle = icoHandle;
         this.needsIcoDestroy = needsIcoDestroy;
@@ -101,7 +120,7 @@ public sealed partial class NotifyIcon : IDisposable
         var windowClassName = Marshal.StringToHGlobalUni(windowClassNameString);
         _popupWindowClassName = Marshal.StringToHGlobalUni($"{windowClassNameString}_Popup");
 
-        MenuItems = [];
+        MenuItems = new MenuItemCollection(DefaultMenuItemConfig + defaultMenuItemConfig, DefaultSeparatorItemConfig + defaultSeparatorItemConfig);
         ToolTip = DefaultToolTip;
         IsVisible = true;
         MouseButtons = DefaultMouseButtons;
@@ -295,12 +314,14 @@ public sealed partial class NotifyIcon : IDisposable
     /// </remarks>
     /// <param name="icoPath">The path to a .ico file</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon"/> instance</param>
+    /// <param name="defaultMenuItemConfig">The default configuration for <see cref="MenuItem"/> instances</param>
+    /// <param name="defaultSeparatorItemConfig">The default configuration for <see cref="SeparatorItem"/> instances</param>
     /// <returns><see cref="NotifyIcon"/></returns>
     /// <exception cref="ArgumentException"></exception>
     /// <exception cref="FileNotFoundException"></exception>
     /// <exception cref="FileLoadException"></exception>
-    public static NotifyIcon Run(string icoPath, CancellationToken cancellationToken)
-        => Run(PrepareIconHandle(icoPath), true, cancellationToken);
+    public static NotifyIcon Run(string icoPath, CancellationToken cancellationToken, Action<MenuItem>? defaultMenuItemConfig = null, Action<SeparatorItem>? defaultSeparatorItemConfig = null)
+        => Run(PrepareIconHandle(icoPath), true, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
 
     /// <summary>
     /// Creates and runs a <see cref="NotifyIcon"/> instance synchronously
@@ -311,13 +332,15 @@ public sealed partial class NotifyIcon : IDisposable
     /// </remarks>
     /// <param name="icoHandle">The handle of a .ico file</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon"/> instance</param>
+    /// <param name="defaultMenuItemConfig">The default configuration for <see cref="MenuItem"/> instances</param>
+    /// <param name="defaultSeparatorItemConfig">The default configuration for <see cref="SeparatorItem"/> instances</param>
     /// <returns><see cref="NotifyIcon"/></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public static NotifyIcon Run(nint icoHandle, CancellationToken cancellationToken)
+    public static NotifyIcon Run(nint icoHandle, CancellationToken cancellationToken, Action<MenuItem>? defaultMenuItemConfig = null, Action<SeparatorItem>? defaultSeparatorItemConfig = null)
     {
         return icoHandle == nint.Zero
             ? throw new ArgumentNullException(nameof(icoHandle), "The handle cannot be null")
-            : Run(icoHandle, false, cancellationToken);
+            : Run(icoHandle, false, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
     }
 
     /// <summary>
@@ -325,12 +348,14 @@ public sealed partial class NotifyIcon : IDisposable
     /// </summary>
     /// <param name="icoPath">The path to a .ico file</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon"/> instance</param>
+    /// <param name="defaultMenuItemConfig">The default configuration for <see cref="MenuItem"/> instances</param>
+    /// <param name="defaultSeparatorItemConfig">The default configuration for <see cref="SeparatorItem"/> instances</param>
     /// <returns><see cref="NotifyIcon"/></returns>
     /// <exception cref="ArgumentException"></exception>
     /// <exception cref="FileNotFoundException"></exception>
     /// <exception cref="FileLoadException"></exception>
-    public static Task<NotifyIcon> RunAsync(string icoPath, CancellationToken cancellationToken)
-        => RunAsync(PrepareIconHandle(icoPath), true, cancellationToken);
+    public static Task<NotifyIcon> RunAsync(string icoPath, CancellationToken cancellationToken, Action<MenuItem>? defaultMenuItemConfig = null, Action<SeparatorItem>? defaultSeparatorItemConfig = null)
+        => RunAsync(PrepareIconHandle(icoPath), true, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
 
     /// <summary>
     /// Creates and runs a <see cref="NotifyIcon"/> instance asynchronously
@@ -340,12 +365,14 @@ public sealed partial class NotifyIcon : IDisposable
     /// </remarks>
     /// <param name="icoHandle">The handle of a .ico file</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon"/> instance</param>
+    /// <param name="defaultMenuItemConfig">The default configuration for <see cref="MenuItem"/> instances</param>
+    /// <param name="defaultSeparatorItemConfig">The default configuration for <see cref="SeparatorItem"/> instances</param>
     /// <returns><see cref="NotifyIcon"/></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public static Task<NotifyIcon> RunAsync(nint icoHandle, CancellationToken cancellationToken)
+    public static Task<NotifyIcon> RunAsync(nint icoHandle, CancellationToken cancellationToken, Action<MenuItem>? defaultMenuItemConfig = null, Action<SeparatorItem>? defaultSeparatorItemConfig = null)
     {
         return icoHandle == nint.Zero
             ? throw new ArgumentNullException(nameof(icoHandle), "The handle cannot be null")
-            : RunAsync(icoHandle, false, cancellationToken);
+            : RunAsync(icoHandle, false, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
     }
 }

@@ -8,11 +8,6 @@ using System;
 /// </summary>
 public sealed class MenuItem : MenuItemBase
 {
-    private static readonly TrayColor DefaultMenuItemBackgroundHoverColor = new TrayColor(0, 120, 215);
-    private static readonly TrayColor DefaultMenuItemBackgroundDisabledColor = TrayColor.Gray;
-    private static readonly TrayColor DefaultMenuItemTextHoverColor = DefaultMenuItemTextColor;
-    private static readonly TrayColor DefaultMenuItemTextDisabledColor = new TrayColor(109, 109, 109);
-
     internal override float Height => 40f;
 
     internal RECTF HitBox { get; set; }
@@ -164,17 +159,9 @@ public sealed class MenuItem : MenuItemBase
     /// </summary>
     public MenuItemCollection SubMenu { get; }
 
-    internal MenuItem(string text)
+    internal MenuItem(string text, Action<MenuItem> defaultMenuItemConfig, Action<SeparatorItem> defaultSeparatorItemConfig)
     {
         Text = text;
-        IsChecked = null;
-        IsDisabled = false;
-        BackgroundColor = DefaultMenuItemBackgroundColor;
-        BackgroundHoverColor = DefaultMenuItemBackgroundHoverColor;
-        BackgroundDisabledColor = DefaultMenuItemBackgroundDisabledColor;
-        TextColor = DefaultMenuItemTextColor;
-        TextHoverColor = DefaultMenuItemTextHoverColor;
-        TextDisabledColor = DefaultMenuItemTextDisabledColor;
-        SubMenu = [];
+        SubMenu = new MenuItemCollection(defaultMenuItemConfig, defaultSeparatorItemConfig);
     }
 }

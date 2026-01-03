@@ -16,6 +16,24 @@ sealed class Program
 
         var tray = await NotifyIcon.RunAsync(tempPath, cts.Token);
         var defaultTray = await NotifyIcon.RunAsync(tempPath2, cts.Token);
+        var tray3 = await NotifyIcon.RunAsync(tempPath, cts.Token, x => x.TextColor = new TrayColor(255, 0, 0), x => x.LineColor = new TrayColor(255, 0, 0));
+
+        tray3.PopupMenuColor = new TrayColor(20, 100, 20);
+
+        var item = tray3.MenuItems.AddItem("Hallo");
+        tray3.MenuItems.AddSeparator();
+        tray3.MenuItems.AddItem("Hallo 2");
+        Console.WriteLine(item.TextHoverColor);
+
+        Action<MenuItem> action = x =>
+        {
+            x.Text = "TEST";
+            x.IsChecked = true;
+        };
+        var item1 = tray.MenuItems.AddItem(action);
+        var item2 = tray.MenuItems.AddItem(action);
+
+        Console.WriteLine("Ref Equals? " + ReferenceEquals(item1, item2));
 
         defaultTray.MenuItems.AddItem("Item No. 1");
         defaultTray.MenuItems.AddItem("Item No. 2");

@@ -7,9 +7,6 @@ using System;
 /// </summary>
 public abstract class MenuItemBase
 {
-    internal static readonly TrayColor DefaultMenuItemBackgroundColor = TrayColor.Transparent;
-    internal static readonly TrayColor DefaultMenuItemTextColor = TrayColor.White;
-
     internal abstract float Height { get; }
 
     internal event Action? Updated;

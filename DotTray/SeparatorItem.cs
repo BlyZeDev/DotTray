@@ -5,10 +5,6 @@
 /// </summary>
 public sealed class SeparatorItem : MenuItemBase
 {
-    private static readonly TrayColor DefaultSeparatorBackgroundColor = DefaultMenuItemBackgroundColor;
-    private static readonly TrayColor DefaultSeparatorLineColor = DefaultMenuItemTextColor;
-    private static readonly float DefaultLineThickness = 1f;
-
     internal override float Height => LineThickness * 2f;
 
     /// <summary>
@@ -58,8 +54,6 @@ public sealed class SeparatorItem : MenuItemBase
 
     internal SeparatorItem()
     {
-        BackgroundColor = DefaultSeparatorBackgroundColor;
-        LineColor = DefaultSeparatorLineColor;
-        LineThickness = DefaultLineThickness;
+
     }
 }
