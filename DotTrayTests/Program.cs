@@ -18,11 +18,11 @@ sealed class Program
         var defaultTray = await NotifyIcon.RunAsync(tempPath2, cts.Token);
         var tray3 = await NotifyIcon.RunAsync(tempPath, cts.Token, x => x.TextColor = new TrayColor(255, 0, 0), x => x.LineColor = new TrayColor(255, 0, 0));
 
-        tray3.PopupMenuColor = new TrayColor(20, 100, 20);
-
-        var item = tray3.MenuItems.AddItem("Hallo");
+        tray3.PopupMenuColor = new TrayColor(20, 20, 20);
+        
+        var item = tray3.MenuItems.AddItem("🖼️ Hallo \u1F5BC");
         tray3.MenuItems.AddSeparator();
-        tray3.MenuItems.AddItem("Hallo 2");
+        tray3.MenuItems.AddItem("✏️ Hallo 2");
         Console.WriteLine(item.TextHoverColor);
 
         Action<MenuItem> action = x =>
