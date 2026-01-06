@@ -19,9 +19,8 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <Version>2.1.0</Version>
-    <PackageReleaseNotes>- Added option to set the default MenuItem and SeparatorItem in NotifyIcon ctor
-- Added more convenient way to add items to the MenuItemCollection</PackageReleaseNotes>
+    <Version>2.1.1</Version>
+    <PackageReleaseNotes>- Fixed emojis not rendering correctly</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
