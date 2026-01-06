@@ -240,7 +240,7 @@ internal sealed partial class PopupMenu
 
     private static void CalcWindowSize(MenuItemCollection menuItems, out int width, out int height)
     {
-        _ = PInvoke.GdipGetGenericFontFamilySansSerif(out var fontFamily);
+        _ = PInvoke.GdipCreateFontFamilyFromName(FontFamilyName, nint.Zero, out var fontFamily);
         _ = PInvoke.GdipCreateFont(fontFamily, FontSize, 0, PInvoke.UnitPixel, out var font);
 
         var dcHandle = PInvoke.CreateCompatibleDC(nint.Zero);
@@ -254,6 +254,7 @@ internal sealed partial class PopupMenu
             Width = float.MaxValue
         };
 
+        string text;
         height = 0;
         for (int i = 0; i < menuItems.Count; i++)
         {
@@ -263,7 +264,8 @@ internal sealed partial class PopupMenu
 
                 height += (int)MathF.Ceiling(menuItem.Height);
 
-                _ = PInvoke.GdipMeasureString(graphicsHandle, menuItem.Text, menuItem.Text.Length, font, ref layout, nint.Zero, out var boundingBox, out _, out _);
+                text = NormalizeText(menuItem.Text);
+                _ = PInvoke.GdipMeasureString(graphicsHandle, text, text.Length, font, ref layout, nint.Zero, out var boundingBox, out _, out _);
                 if (boundingBox.Width > maxTextWidth) maxTextWidth = boundingBox.Width;
             }
             else height += (int)MathF.Ceiling(menuItems[i].Height);
@@ -275,4 +277,6 @@ internal sealed partial class PopupMenu
 
         width = (int)Math.Ceiling(CheckBoxWidth + TextPadding * 3 + maxTextWidth + SubmenuArrowWidth);
     }
+
+    private static string NormalizeText(string text) => text.Replace("\uFE0F", "");
 }

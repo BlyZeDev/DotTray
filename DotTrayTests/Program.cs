@@ -20,9 +20,9 @@ sealed class Program
 
         tray3.PopupMenuColor = new TrayColor(20, 20, 20);
         
-        var item = tray3.MenuItems.AddItem("🖼️ Hallo \u1F5BC");
+        var item = tray3.MenuItems.AddItem("🐣 Hallo 💝 💞");
         tray3.MenuItems.AddSeparator();
-        tray3.MenuItems.AddItem("✏️ Hallo 2");
+        tray3.MenuItems.AddItem("✏️ Hallo 2 🧔🏿 👨‍👩‍👧 ");
         Console.WriteLine(item.TextHoverColor);
 
         Action<MenuItem> action = x =>
@@ -35,10 +35,10 @@ sealed class Program
 
         Console.WriteLine("Ref Equals? " + ReferenceEquals(item1, item2));
 
-        defaultTray.MenuItems.AddItem("Item No. 1");
-        defaultTray.MenuItems.AddItem("Item No. 2");
+        defaultTray.MenuItems.AddItem("🖼️ 🖼️ Item No. 1 🖼️ 🖼️");
+        defaultTray.MenuItems.AddItem("✏️ Item No. 2 ✏️");
         defaultTray.MenuItems.AddSeparator();
-        defaultTray.MenuItems.AddItem("Item No. 3").IsChecked = false;
+        defaultTray.MenuItems.AddItem("✏️ Item No. 3").IsChecked = false;
         defaultTray.MenuItems.AddSeparator();
         var testItem = defaultTray.MenuItems.AddItem("SubMenu here").SubMenu.AddItem("Submenu Test").SubMenu.AddItem("Submenu 2 Test").SubMenu.AddItem("Submenu 3 Test");
         testItem.SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").Clicked += (args) => Console.WriteLine("tf you're doing here mate");

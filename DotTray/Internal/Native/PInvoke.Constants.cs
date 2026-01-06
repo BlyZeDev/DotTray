@@ -95,4 +95,7 @@ internal static partial class PInvoke
     public const int UnitPixel = 2;
 
     public const int StringFormatFlagsNoWrap = 0x00001000;
+
+    public const int StringAlignmentNear = 0;
+    public const int StringAlignmentCenter = 1;
 }

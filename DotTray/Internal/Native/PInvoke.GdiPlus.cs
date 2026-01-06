@@ -47,8 +47,8 @@ internal static partial class PInvoke
     [LibraryImport(GdiPlus, SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
     public static partial int GdipDrawString(nint graphics, string text, int length, nint font, ref RECTF layoutRect, nint stringFormat, nint brush);
 
-    [LibraryImport(GdiPlus, SetLastError = true)]
-    public static partial int GdipGetGenericFontFamilySansSerif(out nint fontFamily);
+    [LibraryImport(GdiPlus, SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int GdipCreateFontFamilyFromName(string name, nint fontCollection, out nint fontFamily);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipCreateFont(nint fontFamily, float emSize, int style, int unit, out nint font);
@@ -64,6 +64,12 @@ internal static partial class PInvoke
 
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipSetStringFormatFlags(nint format, int flags);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipSetStringFormatAlign(nint format, int alignment);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipSetStringFormatLineAlign(nint format, int alignment);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipDeleteStringFormat(nint format);

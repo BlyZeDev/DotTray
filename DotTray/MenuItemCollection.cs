@@ -123,6 +123,7 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     {
         _items[index].Updated -= Update;
         _items.RemoveAt(index);
+        Update();
     }
 
     /// <summary>
