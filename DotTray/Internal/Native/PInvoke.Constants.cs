@@ -8,6 +8,7 @@ internal static partial class PInvoke
     private const string Gdi32 = "gdi32.dll";
     private const string GdiPlus = "gdiplus.dll";
     private const string DwmApi = "dwmapi.dll";
+    private const string Shcore = "shcore.dll";
 
     public const int GWLP_WNDPROC = -4;
 
@@ -71,8 +72,9 @@ internal static partial class PInvoke
     public const uint NIM_MODIFY = 0x00000001;
     public const uint NIM_DELETE = 0x00000002;
 
-    public const int SM_CXSCREEN = 0;
-    public const int SM_CYSCREEN = 1;
+    public const uint MONITOR_DEFAULTTONEAREST = 2;
+
+    public const uint MDT_EFFECTIVE_DPI = 0;
 
     public const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
     public const int DWMWA_SYSTEMBACKDROP_TYPE = 38;

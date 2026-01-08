@@ -5,9 +5,6 @@ using System.Runtime.InteropServices;
 
 internal static partial class PInvoke
 {
-    [LibraryImport(User32, SetLastError = true)]
-    public static partial int GetSystemMetrics(int nIndex);
-
     [LibraryImport(User32, EntryPoint = "LoadImageW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
     public static partial nint LoadImage(nint hInst, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
 
@@ -124,4 +121,14 @@ internal static partial class PInvoke
 
     [LibraryImport(User32, SetLastError = true)]
     public static partial nint SetThreadDpiAwarenessContext(nint dpiContext);
+
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial uint GetDpiForWindow(nint hWnd);
+
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial nint MonitorFromPoint(POINT pt, uint dwFlags);
+
+    [LibraryImport(User32, EntryPoint = "GetMonitorInfoW", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetMonitorInfo(nint hMonitor, ref MONITORINFO lpmi);
 }

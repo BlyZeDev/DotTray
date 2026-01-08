@@ -23,7 +23,7 @@ internal sealed partial class PopupMenu
             DrawMenuBackground(graphicsHandle, clientRect, _session.OwnerIcon.PopupMenuColor.ToGdiPlus());
 
             _ = PInvoke.GdipCreateFontFamilyFromName(FontFamilyName, nint.Zero, out var fontFamily);
-            _ = PInvoke.GdipCreateFont(fontFamily, FontSize, 0, PInvoke.UnitPixel, out var font);
+            _ = PInvoke.GdipCreateFont(fontFamily, _layout.FontSizePx, 0, PInvoke.UnitPixel, out var font);
 
             POINTF* checkBoxPoints = stackalloc POINTF[CheckBoxPoints];
             POINTF* submenuArrowPoints = stackalloc POINTF[ArrowPoints];
@@ -35,7 +35,7 @@ internal sealed partial class PopupMenu
                     X = clientRect.Left,
                     Y = itemTop,
                     Width = clientRect.Right - clientRect.Left,
-                    Height = _menuItems[i].Height
+                    Height = _menuItems[i].Height * _layout.Scale
                 };
 
                 if (_menuItems[i] is MenuItem menuItem)
@@ -45,9 +45,9 @@ internal sealed partial class PopupMenu
                     var backgroundColor = (menuItem.IsDisabled ? menuItem.BackgroundDisabledColor : (i == hoverIndex ? menuItem.BackgroundHoverColor : menuItem.BackgroundColor)).ToGdiPlus();
                     var textColor = (menuItem.IsDisabled ? menuItem.TextDisabledColor : (i == hoverIndex ? menuItem.TextHoverColor : menuItem.TextColor)).ToGdiPlus();
 
-                    DrawMenuItem(graphicsHandle, menuItem, font, backgroundColor, textColor, checkBoxPoints, submenuArrowPoints);
+                    DrawMenuItem(graphicsHandle, _layout, menuItem, font, backgroundColor, textColor, checkBoxPoints, submenuArrowPoints);
                 }
-                else if (_menuItems[i] is SeparatorItem separatorItem) DrawSeparatorItem(graphicsHandle, separatorItem, itemRect);
+                else if (_menuItems[i] is SeparatorItem separatorItem) DrawSeparatorItem(graphicsHandle, _layout, separatorItem, itemRect);
 
                 itemTop += itemRect.Height;
             }
@@ -85,7 +85,7 @@ internal sealed partial class PopupMenu
         _ = PInvoke.GdipDeleteBrush(bgBrush);
     }
 
-    private static unsafe void DrawMenuItem(nint graphicsHandle, MenuItem menuItem, nint font, uint backgroundColor, uint textColor, POINTF* checkBoxPoints, POINTF* submenuArrowPoints)
+    private static unsafe void DrawMenuItem(nint graphicsHandle, PopupMenuLayout layout, MenuItem menuItem, nint font, uint backgroundColor, uint textColor, POINTF* checkBoxPoints, POINTF* submenuArrowPoints)
     {
         var itemRect = menuItem.HitBox;
 
@@ -95,10 +95,10 @@ internal sealed partial class PopupMenu
 
         var centerY = itemRect.Y + itemRect.Height * 0.5f;
 
-        if (menuItem.IsChecked.GetValueOrDefault()) DrawCheckBox(graphicsHandle, textColor, itemRect, centerY, checkBoxPoints);
+        if (menuItem.IsChecked.GetValueOrDefault()) DrawCheckBox(graphicsHandle, layout, textColor, itemRect, centerY, checkBoxPoints);
 
-        var textLeft = itemRect.X + CheckBoxWidth + TextPadding;
-        var textRight = itemRect.X + itemRect.Width - SubmenuArrowWidth - TextPadding;
+        var textLeft = itemRect.X + layout.CheckBoxWidthPx + layout.TextPaddingPx;
+        var textRight = itemRect.X + itemRect.Width - layout.SubmenuArrowWidthPx - layout.TextPaddingPx;
         var textRect = new RECTF
         {
             X = textLeft,
@@ -108,31 +108,31 @@ internal sealed partial class PopupMenu
         };
         DrawText(graphicsHandle, menuItem.Text, font, textColor, textRect);
 
-        if (menuItem.HasSubMenu) DrawSubmenuArrow(graphicsHandle, textColor, itemRect, centerY, submenuArrowPoints);
+        if (menuItem.HasSubMenu) DrawSubmenuArrow(graphicsHandle, layout, textColor, itemRect, centerY, submenuArrowPoints);
     }
 
-    private static void DrawSeparatorItem(nint graphicsHandle, SeparatorItem separatorItem, RECTF itemRect)
+    private static void DrawSeparatorItem(nint graphicsHandle, PopupMenuLayout layout, SeparatorItem separatorItem, RECTF itemRect)
     {
         _ = PInvoke.GdipCreateSolidFill(separatorItem.BackgroundColor.ToGdiPlus(), out var backgroundBrush);
         _ = PInvoke.GdipFillRectangle(graphicsHandle, backgroundBrush, itemRect.X, itemRect.Y, itemRect.Width, itemRect.Height);
         _ = PInvoke.GdipDeleteBrush(backgroundBrush);
 
         var y = itemRect.Y + itemRect.Height / 2;
-        _ = PInvoke.GdipCreatePen1(separatorItem.LineColor.ToGdiPlus(), separatorItem.LineThickness, PInvoke.UnitPixel, out var pen);
-        _ = PInvoke.GdipDrawLine(graphicsHandle, pen, itemRect.X + SeparatorPadding, y, itemRect.X + itemRect.Width - SeparatorPadding - 1f, y);
+        _ = PInvoke.GdipCreatePen1(separatorItem.LineColor.ToGdiPlus(), separatorItem.LineThickness * layout.Scale, PInvoke.UnitPixel, out var pen);
+        _ = PInvoke.GdipDrawLine(graphicsHandle, pen, itemRect.X + layout.SeparatorPaddingPx, y, itemRect.X + itemRect.Width - layout.SeparatorPaddingPx - 1f, y);
         _ = PInvoke.GdipDeletePen(pen);
     }
 
-    private static unsafe void DrawCheckBox(nint graphicsHandle, uint color, RECTF itemRect, float centerY, POINTF* points)
+    private static unsafe void DrawCheckBox(nint graphicsHandle, PopupMenuLayout layout, uint color, RECTF itemRect, float centerY, POINTF* points)
     {
-        var checkX = itemRect.X + TextPadding * 0.65f;
-        var checkY = centerY - CheckBoxWidth * 0.5f;
+        var checkX = itemRect.X + layout.TextPaddingPx * 0.65f;
+        var checkY = centerY - layout.CheckBoxWidthPx * 0.5f;
 
-        points[0] = new POINTF { X = checkX + CheckBoxWidth * 0.10f, Y = checkY + CheckBoxWidth * 0.55f };
-        points[1] = new POINTF { X = checkX + CheckBoxWidth * 0.40f, Y = checkY + CheckBoxWidth * 0.85f };
-        points[2] = new POINTF { X = checkX + CheckBoxWidth * 0.90f, Y = checkY + CheckBoxWidth * 0.15f };
+        points[0] = new POINTF { X = checkX + layout.CheckBoxWidthPx * 0.10f, Y = checkY + layout.CheckBoxWidthPx * 0.55f };
+        points[1] = new POINTF { X = checkX + layout.CheckBoxWidthPx * 0.40f, Y = checkY + layout.CheckBoxWidthPx * 0.85f };
+        points[2] = new POINTF { X = checkX + layout.CheckBoxWidthPx * 0.90f, Y = checkY + layout.CheckBoxWidthPx * 0.15f };
 
-        _ = PInvoke.GdipCreatePen1(color, 3f, PInvoke.UnitPixel, out var pen);
+        _ = PInvoke.GdipCreatePen1(color, 3f * layout.Scale, PInvoke.UnitPixel, out var pen);
         _ = PInvoke.GdipDrawLines(graphicsHandle, pen, points, CheckBoxPoints);
         _ = PInvoke.GdipDeletePen(pen);
     }
@@ -152,13 +152,13 @@ internal sealed partial class PopupMenu
         _ = PInvoke.GdipDeleteStringFormat(format);
     }
 
-    private static unsafe void DrawSubmenuArrow(nint graphicsHandle, uint color, RECTF itemRect, float centerY, POINTF* points)
+    private static unsafe void DrawSubmenuArrow(nint graphicsHandle, PopupMenuLayout layout, uint color, RECTF itemRect, float centerY, POINTF* points)
     {
-        var arrowX = itemRect.X + itemRect.Width - TextPadding - SubmenuArrowWidth * 1.5f;
+        var arrowX = itemRect.X + itemRect.Width - layout.TextPaddingPx - layout.SubmenuArrowWidthPx * 1.5f;
 
-        points[0] = new POINTF { X = arrowX, Y = centerY - SubmenuArrowHeight };
-        points[1] = new POINTF { X = arrowX + SubmenuArrowWidth, Y = centerY };
-        points[2] = new POINTF { X = arrowX, Y = centerY + SubmenuArrowHeight };
+        points[0] = new POINTF { X = arrowX, Y = centerY - layout.SubmenuArrowHeightPx };
+        points[1] = new POINTF { X = arrowX + layout.SubmenuArrowWidthPx, Y = centerY };
+        points[2] = new POINTF { X = arrowX, Y = centerY + layout.SubmenuArrowHeightPx };
 
         _ = PInvoke.GdipCreateSolidFill(color, out var brush);
         _ = PInvoke.GdipFillPolygon(graphicsHandle, brush, points, ArrowPoints, 0);

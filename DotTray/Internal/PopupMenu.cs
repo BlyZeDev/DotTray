@@ -9,6 +9,7 @@ using System.Runtime.Versioning;
 [SupportedOSPlatform("Windows")]
 internal sealed partial class PopupMenu
 {
+    private readonly PopupMenuLayout _layout;
     private readonly PopupMenuSession _session;
     private readonly MenuItemCollection _menuItems;
     private readonly nint _hWnd;
@@ -39,6 +40,9 @@ internal sealed partial class PopupMenu
             session.InstanceHandle,
             nint.Zero);
 
+        var dpi = PInvoke.GetDpiForWindow(_hWnd);
+        _layout = new PopupMenuLayout(dpi);
+
         _wndProc = new PInvoke.WndProc(WndProcFunc);
         PInvoke.SetWindowLongPtr(_hWnd, PInvoke.GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProc));
 
@@ -56,7 +60,7 @@ internal sealed partial class PopupMenu
     {
         PInvoke.GetWindowRect(_hWnd, out var windowRect);
 
-        CalcWindowSize(_menuItems, out var width, out var height);
+        CalcWindowSize(_layout, _menuItems, out var width, out var height);
         CalcWindowPos(new POINT
         {
             x = windowRect.Left,
@@ -110,7 +114,7 @@ internal sealed partial class PopupMenu
 
             if (menuItem.HasSubMenu)
             {
-                CalcWindowSize(menuItem.SubMenu, out var width, out var height);
+                CalcWindowSize(_layout, menuItem.SubMenu, out var width, out var height);
 
                 var topLeft = new POINT
                 {
@@ -121,12 +125,10 @@ internal sealed partial class PopupMenu
 
                 var x = topLeft.x;
                 var y = topLeft.y;
-                
-                if (x + width > PInvoke.GetSystemMetrics(PInvoke.SM_CXSCREEN) - ScreenMargin)
-                    x = x - (int)MathF.Ceiling(menuItem.HitBox.Width) - width;
 
-                if (y + height > PInvoke.GetSystemMetrics(PInvoke.SM_CYSCREEN) - ScreenMargin)
-                    y = y - (int)MathF.Ceiling(menuItem.HitBox.Height) - height;
+                GetMonitorWorkArea(topLeft, out var screenWidth, out _);
+                
+                if (x + width > screenWidth) x = x - (int)MathF.Ceiling(menuItem.HitBox.Width) - width;
                 
                 childHWnd = ShowSubmenu(menuItem.SubMenu, x, y, width, height);
             }
@@ -219,7 +221,12 @@ internal sealed partial class PopupMenu
 
     public static nint Show(PopupMenuSession session, POINT mousePos)
     {
-        CalcWindowSize(session.OwnerIcon.MenuItems, out var width, out var height);
+        var monitorHandle = PInvoke.MonitorFromPoint(mousePos, PInvoke.MONITOR_DEFAULTTONEAREST);
+        PInvoke.GetDpiForMonitor(monitorHandle, PInvoke.MDT_EFFECTIVE_DPI, out var dpi, out _);
+
+        var layout = new PopupMenuLayout(dpi);
+
+        CalcWindowSize(layout, session.OwnerIcon.MenuItems, out var width, out var height);
         CalcWindowPos(mousePos, width, height, out var x, out var y);
 
         var menu = new PopupMenu(session, nint.Zero, session.OwnerIcon.MenuItems, x, y, width, height);
@@ -228,26 +235,25 @@ internal sealed partial class PopupMenu
 
     private static void CalcWindowPos(POINT anchor, int width, int height, out int x, out int y)
     {
-        var screenWidth = PInvoke.GetSystemMetrics(PInvoke.SM_CXSCREEN) - ScreenMargin;
-        var screenHeight = PInvoke.GetSystemMetrics(PInvoke.SM_CYSCREEN) - ScreenMargin;
+        GetMonitorWorkArea(anchor, out var screenWidth, out var screenHeight);
 
         x = anchor.x;
         y = anchor.y;
 
-        if (x + width > screenWidth) x = Math.Max(ScreenMargin, Math.Abs(x - width));
-        if (y + height > screenHeight) y = Math.Max(ScreenMargin, Math.Abs(y - height));
+        if (x + width > screenWidth) x = Math.Abs(x - width);
+        if (y + height > screenHeight) y = Math.Abs(y - height);
     }
 
-    private static void CalcWindowSize(MenuItemCollection menuItems, out int width, out int height)
+    private static void CalcWindowSize(PopupMenuLayout layout, MenuItemCollection menuItems, out int width, out int height)
     {
         _ = PInvoke.GdipCreateFontFamilyFromName(FontFamilyName, nint.Zero, out var fontFamily);
-        _ = PInvoke.GdipCreateFont(fontFamily, FontSize, 0, PInvoke.UnitPixel, out var font);
+        _ = PInvoke.GdipCreateFont(fontFamily, layout.FontSizePx, 0, PInvoke.UnitPixel, out var font);
 
         var dcHandle = PInvoke.CreateCompatibleDC(nint.Zero);
         _ = PInvoke.GdipCreateFromHDC(dcHandle, out var graphicsHandle);
 
         var maxTextWidth = 0f;
-        var layout = new RECTF
+        var layoutRect = new RECTF
         {
             X = 0,
             Y = 0,
@@ -256,27 +262,41 @@ internal sealed partial class PopupMenu
 
         string text;
         height = 0;
-        for (int i = 0; i < menuItems.Count; i++)
+        foreach (var item in menuItems)
         {
-            if (menuItems[i] is MenuItem menuItem)
-            {
-                layout.Height = menuItem.Height;
+            height += (int)MathF.Ceiling(item.Height * layout.Scale);
 
-                height += (int)MathF.Ceiling(menuItem.Height);
+            if (item is MenuItem menuItem)
+            {
+                layoutRect.Height = menuItem.Height * layout.Scale;
 
                 text = NormalizeText(menuItem.Text);
-                _ = PInvoke.GdipMeasureString(graphicsHandle, text, text.Length, font, ref layout, nint.Zero, out var boundingBox, out _, out _);
-                if (boundingBox.Width > maxTextWidth) maxTextWidth = boundingBox.Width;
+                _ = PInvoke.GdipMeasureString(graphicsHandle, text, text.Length, font, ref layoutRect, nint.Zero, out var boundingBox, out _, out _);
+                maxTextWidth = MathF.Max(maxTextWidth, boundingBox.Width);
             }
-            else height += (int)MathF.Ceiling(menuItems[i].Height);
         }
 
         _ = PInvoke.GdipDeleteFont(font);
+        _ = PInvoke.GdipDeleteFontFamily(fontFamily);
         _ = PInvoke.GdipDeleteGraphics(graphicsHandle);
         _ = PInvoke.DeleteDC(dcHandle);
 
-        width = (int)Math.Ceiling(CheckBoxWidth + TextPadding * 3 + maxTextWidth + SubmenuArrowWidth);
+        width = (int)Math.Ceiling(layout.CheckBoxWidthPx + layout.TextPaddingPx * 3 + maxTextWidth + layout.SubmenuArrowWidthPx);
     }
 
     private static string NormalizeText(string text) => text.Replace("\uFE0F", "");
+
+    private static void GetMonitorWorkArea(POINT point, out int width, out int height)
+    {
+        var monitorHandle = PInvoke.MonitorFromPoint(point, PInvoke.MONITOR_DEFAULTTONEAREST);
+
+        var monitorInfo = new MONITORINFO
+        {
+            cbSize = (uint)Marshal.SizeOf<MONITORINFO>()
+        };
+        PInvoke.GetMonitorInfo(monitorHandle, ref monitorInfo);
+
+        width = monitorInfo.rcWork.Right - monitorInfo.rcWork.Left;
+        height = monitorInfo.rcWork.Bottom - monitorInfo.rcWork.Top;
+    }
 }
