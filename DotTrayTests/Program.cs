@@ -19,6 +19,7 @@ sealed class Program
         var tray3 = await NotifyIcon.RunAsync(tempPath, cts.Token, x => x.TextColor = new TrayColor(255, 0, 0), x => x.LineColor = new TrayColor(255, 0, 0));
 
         tray3.PopupMenuColor = new TrayColor(20, 20, 20);
+        tray3.FontSize = 0;
         
         var item = tray3.MenuItems.AddItem("🐣 Hallo 💝 💞");
         tray3.MenuItems.AddSeparator();
@@ -35,7 +36,7 @@ sealed class Program
 
         Console.WriteLine("Ref Equals? " + ReferenceEquals(item1, item2));
 
-        defaultTray.MenuItems.AddItem("🖼️ 🖼️ Item No. 1 🖼️ 🖼️");
+        defaultTray.MenuItems.AddItem("🖼️ 🖼️ Item No. 1 🖼️ 🖼️").SubMenu.AddItem("Hi");
         defaultTray.MenuItems.AddItem("✏️ Item No. 2 ✏️");
         defaultTray.MenuItems.AddSeparator();
         defaultTray.MenuItems.AddItem("✏️ Item No. 3").IsChecked = false;
@@ -93,8 +94,12 @@ sealed class Program
 
         Console.ReadLine();
 
+        Thread.Sleep(5000);
+
         tray.Show();
         Console.WriteLine("The icon is back");
+        tray.PopupMenuColor = TrayColor.White;
+        tray.FontSize = 25f;
 
         Console.ReadLine();
 

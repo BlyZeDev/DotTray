@@ -8,7 +8,7 @@ using System;
 /// </summary>
 public sealed class MenuItem : MenuItemBase
 {
-    internal override float Height => 40f;
+    internal override float HeightMultiplier => 1.6f;
 
     internal RECTF HitBox { get; set; }
     internal bool HasSubMenu => SubMenu.Count > 0;

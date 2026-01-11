@@ -5,7 +5,7 @@
 /// </summary>
 public sealed class SeparatorItem : MenuItemBase
 {
-    internal override float Height => LineThickness * 2f;
+    internal override float HeightMultiplier => LineThickness * 0.1f;
 
     /// <summary>
     /// The background color of this separator
@@ -52,8 +52,5 @@ public sealed class SeparatorItem : MenuItemBase
         }
     }
 
-    internal SeparatorItem()
-    {
-
-    }
+    internal SeparatorItem() { }
 }

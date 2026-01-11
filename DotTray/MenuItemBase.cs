@@ -7,7 +7,7 @@ using System;
 /// </summary>
 public abstract class MenuItemBase
 {
-    internal abstract float Height { get; }
+    internal abstract float HeightMultiplier { get; }
 
     internal event Action? Updated;
 

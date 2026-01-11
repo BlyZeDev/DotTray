@@ -22,6 +22,7 @@ public sealed partial class NotifyIcon : IDisposable
 {
     private static readonly string DefaultToolTip = "";
     private static readonly MouseButton DefaultMouseButtons = MouseButton.Left | MouseButton.Right;
+    private const float DefaultFontSize = 20f;
     private static readonly TrayColor DefaultPopupMenuColor = new TrayColor(40, 40, 40);
 
     private static readonly Action<MenuItem> DefaultMenuItemConfig = x =>
@@ -57,6 +58,8 @@ public sealed partial class NotifyIcon : IDisposable
 
     private PopupMenuSession? popupMenu;
     private BalloonNotification? nextBalloon;
+
+    internal event Action? Updated;
 
     /// <summary>
     /// The unique identifier of this <see cref="NotifyIcon"/> instance
@@ -94,9 +97,34 @@ public sealed partial class NotifyIcon : IDisposable
     public MouseButton MouseButtons { get; set; }
 
     /// <summary>
+    /// The font size in device-independent pixels (DIP) of the popup menu for this <see cref="NotifyIcon"/> instance
+    /// </summary>
+    public float FontSize
+    {
+        get => field;
+        set
+        {
+            if (field == value) return;
+
+            field = value;
+            Updated?.Invoke();
+        }
+    }
+
+    /// <summary>
     /// The background color of the popup menu for this <see cref="NotifyIcon"/> instance
     /// </summary>
-    public TrayColor PopupMenuColor { get; set; }
+    public TrayColor PopupMenuColor
+    {
+        get => field;
+        set
+        {
+            if (field == value) return;
+
+            field = value;
+            Updated?.Invoke();
+        }
+    }
 
     /// <summary>
     /// Fired if the icon popup menu is showing by clicking <see cref="MouseButtons"/>
@@ -124,6 +152,7 @@ public sealed partial class NotifyIcon : IDisposable
         ToolTip = DefaultToolTip;
         IsVisible = true;
         MouseButtons = DefaultMouseButtons;
+        FontSize = DefaultFontSize;
         PopupMenuColor = DefaultPopupMenuColor;
 
         _trayLoopThread = new Thread(() =>

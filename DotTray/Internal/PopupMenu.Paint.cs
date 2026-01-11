@@ -23,7 +23,8 @@ internal sealed partial class PopupMenu
             DrawMenuBackground(graphicsHandle, clientRect, _session.OwnerIcon.PopupMenuColor.ToGdiPlus());
 
             _ = PInvoke.GdipCreateFontFamilyFromName(FontFamilyName, nint.Zero, out var fontFamily);
-            _ = PInvoke.GdipCreateFont(fontFamily, _layout.FontSizePx, 0, PInvoke.UnitPixel, out var font);
+            _ = PInvoke.GdipCreateFont(fontFamily, layout.FontSizePx, 0, PInvoke.UnitPixel, out var font);
+            _ = PInvoke.GdipGetFontHeight(font, graphicsHandle, out var fontHeight);
 
             POINTF* checkBoxPoints = stackalloc POINTF[CheckBoxPoints];
             POINTF* submenuArrowPoints = stackalloc POINTF[ArrowPoints];
@@ -35,7 +36,7 @@ internal sealed partial class PopupMenu
                     X = clientRect.Left,
                     Y = itemTop,
                     Width = clientRect.Right - clientRect.Left,
-                    Height = _menuItems[i].Height * _layout.Scale
+                    Height = _menuItems[i].HeightMultiplier * layout.FontSizePx
                 };
 
                 if (_menuItems[i] is MenuItem menuItem)
@@ -45,9 +46,9 @@ internal sealed partial class PopupMenu
                     var backgroundColor = (menuItem.IsDisabled ? menuItem.BackgroundDisabledColor : (i == hoverIndex ? menuItem.BackgroundHoverColor : menuItem.BackgroundColor)).ToGdiPlus();
                     var textColor = (menuItem.IsDisabled ? menuItem.TextDisabledColor : (i == hoverIndex ? menuItem.TextHoverColor : menuItem.TextColor)).ToGdiPlus();
 
-                    DrawMenuItem(graphicsHandle, _layout, menuItem, font, backgroundColor, textColor, checkBoxPoints, submenuArrowPoints);
+                    DrawMenuItem(graphicsHandle, layout, menuItem, font, backgroundColor, textColor, checkBoxPoints, submenuArrowPoints);
                 }
-                else if (_menuItems[i] is SeparatorItem separatorItem) DrawSeparatorItem(graphicsHandle, _layout, separatorItem, itemRect);
+                else if (_menuItems[i] is SeparatorItem separatorItem) DrawSeparatorItem(graphicsHandle, layout, separatorItem, itemRect);
 
                 itemTop += itemRect.Height;
             }
@@ -117,9 +118,9 @@ internal sealed partial class PopupMenu
         _ = PInvoke.GdipFillRectangle(graphicsHandle, backgroundBrush, itemRect.X, itemRect.Y, itemRect.Width, itemRect.Height);
         _ = PInvoke.GdipDeleteBrush(backgroundBrush);
 
-        var y = itemRect.Y + itemRect.Height / 2;
+        var y = itemRect.Y + itemRect.Height * 0.5f;
         _ = PInvoke.GdipCreatePen1(separatorItem.LineColor.ToGdiPlus(), separatorItem.LineThickness * layout.Scale, PInvoke.UnitPixel, out var pen);
-        _ = PInvoke.GdipDrawLine(graphicsHandle, pen, itemRect.X + layout.SeparatorPaddingPx, y, itemRect.X + itemRect.Width - layout.SeparatorPaddingPx - 1f, y);
+        _ = PInvoke.GdipDrawLine(graphicsHandle, pen, itemRect.X + layout.SeparatorPaddingPx, y, itemRect.X + itemRect.Width - layout.SeparatorPaddingPx, y);
         _ = PInvoke.GdipDeletePen(pen);
     }
 

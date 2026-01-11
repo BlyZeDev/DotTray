@@ -54,6 +54,9 @@ internal static partial class PInvoke
     public static partial int GdipCreateFont(nint fontFamily, float emSize, int style, int unit, out nint font);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipGetFontHeight(nint font, nint graphics, out float height);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipDeleteFont(nint font);
 
     [LibraryImport(GdiPlus, SetLastError = true)]

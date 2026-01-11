@@ -9,12 +9,12 @@ using System.Runtime.Versioning;
 [SupportedOSPlatform("Windows")]
 internal sealed partial class PopupMenu
 {
-    private readonly PopupMenuLayout _layout;
     private readonly PopupMenuSession _session;
     private readonly MenuItemCollection _menuItems;
     private readonly nint _hWnd;
     private readonly PInvoke.WndProc _wndProc;
 
+    private PopupMenuLayout layout;
     private nint childHWnd;
     private bool isMouseTracking;
     private int hoverIndex;
@@ -26,7 +26,8 @@ internal sealed partial class PopupMenu
         _session = session;
         _menuItems = menuItems;
 
-        _menuItems.Updated += MenuItemUpdated;
+        _session.OwnerIcon.Updated += OnRedrawRequired;
+        _menuItems.Updated += OnRedrawRequired;
 
         hoverIndex = -1;
 
@@ -41,7 +42,7 @@ internal sealed partial class PopupMenu
             nint.Zero);
 
         var dpi = PInvoke.GetDpiForWindow(_hWnd);
-        _layout = new PopupMenuLayout(dpi);
+        layout = new PopupMenuLayout(_session.OwnerIcon.FontSize, dpi);
 
         _wndProc = new PInvoke.WndProc(WndProcFunc);
         PInvoke.SetWindowLongPtr(_hWnd, PInvoke.GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProc));
@@ -56,11 +57,14 @@ internal sealed partial class PopupMenu
         PInvoke.UpdateWindow(_hWnd);
     }
 
-    private void MenuItemUpdated()
+    private void OnRedrawRequired()
     {
+        var dpi = PInvoke.GetDpiForWindow(_hWnd);
+        layout = new PopupMenuLayout(_session.OwnerIcon.FontSize, dpi);
+
         PInvoke.GetWindowRect(_hWnd, out var windowRect);
 
-        CalcWindowSize(_layout, _menuItems, out var width, out var height);
+        CalcWindowSize(layout, _menuItems, out var width, out var height);
         CalcWindowPos(new POINT
         {
             x = windowRect.Left,
@@ -114,7 +118,7 @@ internal sealed partial class PopupMenu
 
             if (menuItem.HasSubMenu)
             {
-                CalcWindowSize(_layout, menuItem.SubMenu, out var width, out var height);
+                CalcWindowSize(layout, menuItem.SubMenu, out var width, out var height);
 
                 var topLeft = new POINT
                 {
@@ -177,7 +181,8 @@ internal sealed partial class PopupMenu
 
     private nint HandleDestroy()
     {
-        _menuItems.Updated -= MenuItemUpdated;
+        _session.OwnerIcon.Updated -= OnRedrawRequired;
+        _menuItems.Updated -= OnRedrawRequired;
 
         if (IsRoot) _session.Dispose();
 
@@ -224,7 +229,7 @@ internal sealed partial class PopupMenu
         var monitorHandle = PInvoke.MonitorFromPoint(mousePos, PInvoke.MONITOR_DEFAULTTONEAREST);
         PInvoke.GetDpiForMonitor(monitorHandle, PInvoke.MDT_EFFECTIVE_DPI, out var dpi, out _);
 
-        var layout = new PopupMenuLayout(dpi);
+        var layout = new PopupMenuLayout(session.OwnerIcon.FontSize, dpi);
 
         CalcWindowSize(layout, session.OwnerIcon.MenuItems, out var width, out var height);
         CalcWindowPos(mousePos, width, height, out var x, out var y);
@@ -248,6 +253,10 @@ internal sealed partial class PopupMenu
     {
         _ = PInvoke.GdipCreateFontFamilyFromName(FontFamilyName, nint.Zero, out var fontFamily);
         _ = PInvoke.GdipCreateFont(fontFamily, layout.FontSizePx, 0, PInvoke.UnitPixel, out var font);
+        _ = PInvoke.GdipCreateStringFormat(0, 0, out var format);
+        _ = PInvoke.GdipSetStringFormatFlags(format, PInvoke.StringFormatFlagsNoWrap);
+        _ = PInvoke.GdipSetStringFormatAlign(format, PInvoke.StringAlignmentNear);
+        _ = PInvoke.GdipSetStringFormatLineAlign(format, PInvoke.StringAlignmentCenter);
 
         var dcHandle = PInvoke.CreateCompatibleDC(nint.Zero);
         _ = PInvoke.GdipCreateFromHDC(dcHandle, out var graphicsHandle);
@@ -261,17 +270,17 @@ internal sealed partial class PopupMenu
         };
 
         string text;
-        height = 0;
+        float currentHeight = 0f;
         foreach (var item in menuItems)
         {
-            height += (int)MathF.Ceiling(item.Height * layout.Scale);
+            currentHeight += item.HeightMultiplier * layout.FontSizePx;
 
             if (item is MenuItem menuItem)
             {
-                layoutRect.Height = menuItem.Height * layout.Scale;
+                layoutRect.Height = item.HeightMultiplier * layout.FontSizePx;
 
                 text = NormalizeText(menuItem.Text);
-                _ = PInvoke.GdipMeasureString(graphicsHandle, text, text.Length, font, ref layoutRect, nint.Zero, out var boundingBox, out _, out _);
+                _ = PInvoke.GdipMeasureString(graphicsHandle, text, text.Length, font, ref layoutRect, format, out var boundingBox, out _, out _);
                 maxTextWidth = MathF.Max(maxTextWidth, boundingBox.Width);
             }
         }
@@ -281,7 +290,8 @@ internal sealed partial class PopupMenu
         _ = PInvoke.GdipDeleteGraphics(graphicsHandle);
         _ = PInvoke.DeleteDC(dcHandle);
 
-        width = (int)Math.Ceiling(layout.CheckBoxWidthPx + layout.TextPaddingPx * 3 + maxTextWidth + layout.SubmenuArrowWidthPx);
+        width = (int)MathF.Ceiling(layout.CheckBoxWidthPx + layout.TextPaddingPx + maxTextWidth + layout.TextPaddingPx + layout.SubmenuArrowWidthPx + layout.TextPaddingPx);
+        height = (int)MathF.Ceiling(currentHeight);
     }
 
     private static string NormalizeText(string text) => text.Replace("\uFE0F", "");

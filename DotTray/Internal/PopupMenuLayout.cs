@@ -3,27 +3,21 @@
 internal readonly record struct PopupMenuLayout
 {
     private const float BaseDpi = 96f;
-    private const float BaseFontSizeDip = 24f;
+
+    private readonly float _fontSizeDip;
 
     public readonly float Scale { get; }
 
-    public readonly float FontSizePx { get; }
-    public readonly float TextPaddingPx { get; }
-    public readonly float CheckBoxWidthPx { get; }
-    public readonly float SubmenuArrowWidthPx { get; }
-    public readonly float SubmenuArrowHeightPx { get; }
-    public readonly float SeparatorPaddingPx { get; }
+    public readonly float FontSizePx => _fontSizeDip * Scale;
+    public readonly float TextPaddingPx => FontSizePx * 0.5f;
+    public readonly float CheckBoxWidthPx => FontSizePx;
+    public readonly float SubmenuArrowWidthPx => FontSizePx * 0.5f;
+    public readonly float SubmenuArrowHeightPx => SubmenuArrowWidthPx * 0.5f;
+    public readonly float SeparatorPaddingPx => (CheckBoxWidthPx + TextPaddingPx + SubmenuArrowWidthPx) / 4f;
 
-    public PopupMenuLayout(uint dpi)
+    public PopupMenuLayout(float fontSizeDip, uint dpi)
     {
+        _fontSizeDip = fontSizeDip;
         Scale = dpi / BaseDpi;
-
-        FontSizePx = BaseFontSizeDip * Scale;
-        TextPaddingPx = FontSizePx * 0.5f;
-        CheckBoxWidthPx = FontSizePx;
-        SubmenuArrowWidthPx = FontSizePx * 0.5f;
-        SubmenuArrowHeightPx = SubmenuArrowWidthPx * 0.5f;
-
-        SeparatorPaddingPx = (CheckBoxWidthPx + TextPaddingPx + SubmenuArrowWidthPx) / 4f;
     }
 }
