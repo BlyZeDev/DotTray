@@ -1,6 +1,9 @@
 ﻿namespace DotTray;
 
+using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Security.Cryptography;
 
 /// <summary>
 /// Represents a RGBA color value
@@ -85,4 +88,56 @@ public readonly record struct TrayColor
     }
 
     internal readonly uint ToGdiPlus() => (uint)(A << 24 | R << 16 | G << 8 | B);
+
+    /// <summary>
+    /// Creates a <see cref="TrayColor"/> from a HEX color string in the format #RRGGBB or #RRGGBBAA
+    /// </summary>
+    /// <param name="hexString">The HEX color string in format #RRGGBB or #RRGGBBAA</param>
+    /// <returns><see cref="TrayColor"/></returns>
+    /// <exception cref="FormatException"></exception>
+    public static TrayColor FromHex(string hexString) => FromHex(hexString);
+
+    /// <summary>
+    /// Creates a <see cref="TrayColor"/> from a HEX color string in the format #RRGGBB or #RRGGBBAA
+    /// </summary>
+    /// <param name="hexString">The HEX color string in format #RRGGBB or #RRGGBBAA</param>
+    /// <returns><see cref="TrayColor"/></returns>
+    /// <exception cref="FormatException"></exception>
+    public static TrayColor FromHex(ReadOnlySpan<char> hexString)
+    {
+        if (hexString.Length is not 7 or 9 || hexString[0] != '#') throw new FormatException("HEX color needs to be in the format #RRGGBB or #RRGGBBAA");
+
+        if (!uint.TryParse(hexString[1..], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var hex)) throw new FormatException("HEX color needs to be in the format #RRGGBB or #RRGGBBAA");
+
+        byte r, g, b, a;
+        if (hexString.Length == 7)
+        {
+            r = (byte)(hex >> 16);
+            g = (byte)(hex >> 8);
+            b = (byte)hex;
+            a = Max;
+        }
+        else
+        {
+            r = (byte)(hex >> 24);
+            g = (byte)(hex >> 16);
+            b = (byte)(hex >> 8);
+            a = (byte)hex;
+        }
+
+        return new TrayColor(r, g, b, a);
+    }
+
+    /// <summary>
+    /// Generates a <see cref="TrayColor"/> with random RGB values.<br/>
+    /// Optionally the A value can be random as well
+    /// </summary>
+    /// <param name="randomAlpha"><see langword="true"/> if the alpha value should be random as well, otherwise <see langword="false"/></param>
+    /// <returns><see cref="TrayColor"/></returns>
+    public static TrayColor Random(bool randomAlpha = false)
+    {
+        Span<byte> bytes = stackalloc byte[4];
+        RandomNumberGenerator.Fill(bytes);
+        return new TrayColor(bytes[0], bytes[1], bytes[2], randomAlpha ? bytes[3] : Max);
+    }
 }

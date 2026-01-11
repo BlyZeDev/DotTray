@@ -36,11 +36,12 @@ internal static partial class PInvoke
     public const uint WM_CLOSE = 0x0010;
 
     public const int WM_APP = 0x8000;
-    public const uint WM_APP_TRAYICON = WM_APP + 1;
+    public const uint WM_APP_TRAYICON_CLICK = WM_APP + 1;
     public const uint WM_APP_TRAYICON_ICON = WM_APP + 2;
     public const uint WM_APP_TRAYICON_TOOLTIP = WM_APP + 3;
     public const uint WM_APP_TRAYICON_VISIBILITY = WM_APP + 4;
     public const uint WM_APP_TRAYICON_BALLOON = WM_APP + 5;
+    public const uint WM_APP_TRAYICON_RESTART_SESSION = WM_APP + 6;
 
     public const int WM_MOUSEMOVE = 0x0200;
     public const int WM_MOUSELEAVE = 0x02A3;

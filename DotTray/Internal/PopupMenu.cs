@@ -9,12 +9,12 @@ using System.Runtime.Versioning;
 [SupportedOSPlatform("Windows")]
 internal sealed partial class PopupMenu
 {
+    private readonly PopupMenuLayout _layout;
     private readonly PopupMenuSession _session;
     private readonly MenuItemCollection _menuItems;
     private readonly nint _hWnd;
     private readonly PInvoke.WndProc _wndProc;
 
-    private PopupMenuLayout layout;
     private nint childHWnd;
     private bool isMouseTracking;
     private int hoverIndex;
@@ -26,7 +26,6 @@ internal sealed partial class PopupMenu
         _session = session;
         _menuItems = menuItems;
 
-        _session.OwnerIcon.Updated += OnRedrawRequired;
         _menuItems.Updated += OnRedrawRequired;
 
         hoverIndex = -1;
@@ -42,7 +41,7 @@ internal sealed partial class PopupMenu
             nint.Zero);
 
         var dpi = PInvoke.GetDpiForWindow(_hWnd);
-        layout = new PopupMenuLayout(_session.OwnerIcon.FontSize, dpi);
+        _layout = new PopupMenuLayout(_session.OwnerIcon.FontSize, dpi);
 
         _wndProc = new PInvoke.WndProc(WndProcFunc);
         PInvoke.SetWindowLongPtr(_hWnd, PInvoke.GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProc));
@@ -57,23 +56,7 @@ internal sealed partial class PopupMenu
         PInvoke.UpdateWindow(_hWnd);
     }
 
-    private void OnRedrawRequired()
-    {
-        var dpi = PInvoke.GetDpiForWindow(_hWnd);
-        layout = new PopupMenuLayout(_session.OwnerIcon.FontSize, dpi);
-
-        PInvoke.GetWindowRect(_hWnd, out var windowRect);
-
-        CalcWindowSize(layout, _menuItems, out var width, out var height);
-        CalcWindowPos(new POINT
-        {
-            x = windowRect.Left,
-            y = windowRect.Top
-        }, width, height, out var x, out var y);
-
-        PInvoke.SetWindowPos(_hWnd, nint.Zero, x, y, width, height, PInvoke.SWP_NOACTIVATE | PInvoke.SWP_ZORDER);
-        PInvoke.InvalidateRect(_hWnd, nint.Zero, true);
-    }
+    private void OnRedrawRequired() => _session.NotifyUpdate();
 
     private nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
     {
@@ -118,7 +101,7 @@ internal sealed partial class PopupMenu
 
             if (menuItem.HasSubMenu)
             {
-                CalcWindowSize(layout, menuItem.SubMenu, out var width, out var height);
+                CalcWindowSize(_layout, menuItem.SubMenu, out var width, out var height);
 
                 var topLeft = new POINT
                 {
@@ -158,6 +141,8 @@ internal sealed partial class PopupMenu
 
         if (_menuItems[hitIndex] is MenuItem menuItem && !menuItem.IsDisabled)
         {
+            _menuItems.Updated -= OnRedrawRequired;
+
             if (menuItem.IsChecked.HasValue) menuItem.IsChecked = !menuItem.IsChecked;
 
             menuItem.Clicked?.Invoke(new MenuItemClickedArgs
@@ -181,7 +166,6 @@ internal sealed partial class PopupMenu
 
     private nint HandleDestroy()
     {
-        _session.OwnerIcon.Updated -= OnRedrawRequired;
         _menuItems.Updated -= OnRedrawRequired;
 
         if (IsRoot) _session.Dispose();

@@ -56,10 +56,9 @@ public sealed partial class NotifyIcon : IDisposable
     private nint instanceHandle;
     private nint hWnd;
 
-    private PopupMenuSession? popupMenu;
+    private POINT lastMousePos;
+    private PopupMenuSession? popupMenuSession;
     private BalloonNotification? nextBalloon;
-
-    internal event Action? Updated;
 
     /// <summary>
     /// The unique identifier of this <see cref="NotifyIcon"/> instance
@@ -107,7 +106,7 @@ public sealed partial class NotifyIcon : IDisposable
             if (field == value) return;
 
             field = value;
-            Updated?.Invoke();
+            AttemptSessionRestart();
         }
     }
 
@@ -122,7 +121,7 @@ public sealed partial class NotifyIcon : IDisposable
             if (field == value) return;
 
             field = value;
-            Updated?.Invoke();
+            AttemptSessionRestart();
         }
     }
 
@@ -196,7 +195,7 @@ public sealed partial class NotifyIcon : IDisposable
                 hWnd = hWnd,
                 guidItem = Id,
                 uFlags = PInvoke.NIF_MESSAGE | PInvoke.NIF_ICON | PInvoke.NIF_GUID,
-                uCallbackMessage = PInvoke.WM_APP_TRAYICON,
+                uCallbackMessage = PInvoke.WM_APP_TRAYICON_CLICK,
                 hIcon = icoHandle
             };
             PInvoke.Shell_NotifyIcon(PInvoke.NIM_ADD, ref iconData);

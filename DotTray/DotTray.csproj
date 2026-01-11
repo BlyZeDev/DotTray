@@ -19,8 +19,11 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <Version>2.1.1</Version>
-    <PackageReleaseNotes>- Fixed emojis not rendering correctly</PackageReleaseNotes>
+    <Version>2.2.0</Version>
+    <PackageReleaseNotes>- Fixed PopupMenu not scaling correctly for different resolutions
+- Fixed Runtime Updates not be handled 100% correctly
+- Added NotifyIcon.FontSize, which allows to control the PopupMenu size freely
+- Added some convenience methods in TrayColor</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

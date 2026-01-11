@@ -100,6 +100,10 @@ sealed class Program
         Console.WriteLine("The icon is back");
         tray.PopupMenuColor = TrayColor.White;
         tray.FontSize = 25f;
+        foreach (var iterator in tray.MenuItems.OfType<MenuItem>())
+        {
+            iterator.TextColor = TrayColor.Random();
+        }
 
         Console.ReadLine();
 

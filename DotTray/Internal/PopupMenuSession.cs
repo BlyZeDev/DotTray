@@ -33,6 +33,8 @@ internal sealed class PopupMenuSession : IDisposable
 
     public void SetLeafHWnd(nint leafHWnd) => _mouseHook.LeafHWnd = leafHWnd;
 
+    public void NotifyUpdate() => OwnerIcon.AttemptSessionRestart();
+
     public void Dispose()
     {
         if (activeSession != this) return;

@@ -11,13 +11,15 @@ using System.Threading.Tasks;
 
 public sealed partial class NotifyIcon
 {
+    internal void AttemptSessionRestart() => PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_RESTART_SESSION, nint.Zero, nint.Zero);
+
     private void SetIcon(nint icoHandle, bool needsIcoDestroy) => PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_ICON, icoHandle, needsIcoDestroy ? 1 : 0);
 
     private unsafe nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
     {
         switch (msg)
         {
-            case PInvoke.WM_APP_TRAYICON: HandleClick(lParam); break;
+            case PInvoke.WM_APP_TRAYICON_CLICK: HandleClick(lParam); break;
 
             case PInvoke.WM_APP_TRAYICON_ICON: HandleIcon(hWnd, wParam, lParam); break;
 
@@ -26,6 +28,8 @@ public sealed partial class NotifyIcon
             case PInvoke.WM_APP_TRAYICON_VISIBILITY: HandleVisibility(hWnd); break;
 
             case PInvoke.WM_APP_TRAYICON_BALLOON: HandleBalloon(hWnd); break;
+
+            case PInvoke.WM_APP_TRAYICON_RESTART_SESSION: HandleSessionRestartAttempt(); break;
 
             case PInvoke.WM_DESTROY: PInvoke.PostQuitMessage(0); return 0;
         }
@@ -47,18 +51,18 @@ public sealed partial class NotifyIcon
 
         if (clickedButton is not MouseButton.None && MouseButtons.HasFlag(clickedButton))
         {
-            PInvoke.GetCursorPos(out var mousePos);
+            PInvoke.GetCursorPos(out lastMousePos);
 
             PopupShowing?.Invoke(clickedButton);
-            popupMenu = PopupMenuSession.Show(this, _popupWindowClassName, instanceHandle, mousePos);
-            popupMenu.Disposed += PopupDismissedCallback;
+            popupMenuSession = PopupMenuSession.Show(this, _popupWindowClassName, instanceHandle, lastMousePos);
+            popupMenuSession.Disposed += PopupDismissedCallback;
         }
     }
 
     private void PopupDismissedCallback()
     {
-        popupMenu!.Disposed -= PopupDismissedCallback;
-        popupMenu = null;
+        popupMenuSession!.Disposed -= PopupDismissedCallback;
+        popupMenuSession = null;
         PopupHiding?.Invoke();
     }
 
@@ -70,7 +74,7 @@ public sealed partial class NotifyIcon
             hWnd = hWnd,
             guidItem = Id,
             uFlags = PInvoke.NIF_ICON | PInvoke.NIF_GUID,
-            uCallbackMessage = PInvoke.WM_APP_TRAYICON,
+            uCallbackMessage = PInvoke.WM_APP_TRAYICON_CLICK,
             hIcon = wParam
         };
         PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
@@ -131,6 +135,15 @@ public sealed partial class NotifyIcon
         nextBalloon = null;
 
         PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
+    }
+
+    private void HandleSessionRestartAttempt()
+    {
+        if (popupMenuSession is null) return;
+
+        popupMenuSession.Disposed -= PopupDismissedCallback;
+        popupMenuSession = PopupMenuSession.Show(this, _popupWindowClassName, instanceHandle, lastMousePos);
+        popupMenuSession.Disposed += PopupDismissedCallback;
     }
 
     private static NotifyIcon Run(nint iconHandle, bool needIconDestroy, Action<MenuItem>? defaultMenuItemConfig, Action<SeparatorItem>? defaultSeparatorItemConfig, CancellationToken cancellationToken)
