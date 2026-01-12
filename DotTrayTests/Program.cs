@@ -44,6 +44,12 @@ sealed class Program
         var testItem = defaultTray.MenuItems.AddItem("SubMenu here").SubMenu.AddItem("Submenu Test").SubMenu.AddItem("Submenu 2 Test").SubMenu.AddItem("Submenu 3 Test");
         testItem.SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").Clicked += (args) => Console.WriteLine("tf you're doing here mate");
         defaultTray.MenuItems.AddSeparator();
+        testItem = defaultTray.MenuItems.AddItem("Submenus");
+        testItem.SubMenu.AddItem("1");
+        testItem.SubMenu.AddItem("2");
+        testItem.SubMenu.AddItem("3");
+        testItem.SubMenu.AddItem("4");
+        testItem.SubMenu.AddItem("5");
         defaultTray.MenuItems.AddItem("Last Item");
 
         var menuItem = tray.MenuItems.AddItem("Test");

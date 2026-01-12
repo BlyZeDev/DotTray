@@ -106,7 +106,7 @@ internal sealed partial class PopupMenu
                 var topLeft = new POINT
                 {
                     x = (int)MathF.Ceiling(menuItem.HitBox.X + menuItem.HitBox.Width),
-                    y = (int)MathF.Ceiling(menuItem.HitBox.Y)
+                    y = (int)MathF.Ceiling(menuItem.HitBox.Y + (menuItem.HitBox.Height - height) * 0.5f)
                 };
                 PInvoke.ClientToScreen(hWnd, ref topLeft);
 

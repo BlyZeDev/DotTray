@@ -19,11 +19,8 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <Version>2.2.0</Version>
-    <PackageReleaseNotes>- Fixed PopupMenu not scaling correctly for different resolutions
-- Fixed Runtime Updates not be handled 100% correctly
-- Added NotifyIcon.FontSize, which allows to control the PopupMenu size freely
-- Added some convenience methods in TrayColor</PackageReleaseNotes>
+    <Version>2.2.1</Version>
+    <PackageReleaseNotes>- Fixed PopupMenu Submenu with more than 1 item being aligned to the first item instead of the center of the window</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
