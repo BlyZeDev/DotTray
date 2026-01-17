@@ -13,15 +13,13 @@ public sealed partial class NotifyIcon
 {
     internal void AttemptSessionRestart() => PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_RESTART_SESSION, nint.Zero, nint.Zero);
 
-    private void SetIcon(nint icoHandle, bool needsIcoDestroy) => PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_ICON, icoHandle, needsIcoDestroy ? 1 : 0);
-
     private unsafe nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
     {
         switch (msg)
         {
             case PInvoke.WM_APP_TRAYICON_CLICK: HandleClick(lParam); break;
 
-            case PInvoke.WM_APP_TRAYICON_ICON: HandleIcon(hWnd, wParam, lParam); break;
+            case PInvoke.WM_APP_TRAYICON_ICON: HandleIcon(hWnd, wParam); break;
 
             case PInvoke.WM_APP_TRAYICON_TOOLTIP: HandleToolTip(hWnd); break;
 
@@ -66,7 +64,7 @@ public sealed partial class NotifyIcon
         PopupHiding?.Invoke();
     }
 
-    private void HandleIcon(nint hWnd, nint wParam, nint lParam)
+    private void HandleIcon(nint hWnd, nint wParam)
     {
         var iconData = new NOTIFYICONDATA
         {
@@ -79,10 +77,9 @@ public sealed partial class NotifyIcon
         };
         PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
 
-        if (needsIcoDestroy) PInvoke.DestroyIcon(icoHandle);
+        PInvoke.DestroyIcon(icoHandle);
 
         icoHandle = wParam;
-        needsIcoDestroy = lParam != 0;
     }
 
     private unsafe void HandleToolTip(nint hWnd)
@@ -146,11 +143,11 @@ public sealed partial class NotifyIcon
         popupMenuSession.Disposed += PopupDismissedCallback;
     }
 
-    private static NotifyIcon Run(nint iconHandle, bool needIconDestroy, Action<MenuItem>? defaultMenuItemConfig, Action<SeparatorItem>? defaultSeparatorItemConfig, CancellationToken cancellationToken)
+    private static NotifyIcon RunInternal(nint icoHandle, Action<MenuItem>? defaultMenuItemConfig, Action<SeparatorItem>? defaultSeparatorItemConfig, CancellationToken cancellationToken)
     {
         using (var manualLock = new ManualResetEventSlim(false))
         {
-            var icon = new NotifyIcon(iconHandle, needIconDestroy, manualLock.Set, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
+            var icon = new NotifyIcon(icoHandle, manualLock.Set, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
 
             manualLock.Wait(cancellationToken);
 
@@ -158,11 +155,11 @@ public sealed partial class NotifyIcon
         }
     }
 
-    private static async Task<NotifyIcon> RunAsync(nint iconHandle, bool needIconDestroy, Action<MenuItem>? defaultMenuItemConfig, Action<SeparatorItem>? defaultSeparatorItemConfig, CancellationToken cancellationToken)
+    private static async Task<NotifyIcon> RunInternalAsync(nint icoHandle, Action<MenuItem>? defaultMenuItemConfig, Action<SeparatorItem>? defaultSeparatorItemConfig, CancellationToken cancellationToken)
     {
         var manualLock = new AsyncManualResetEvent(false);
 
-        var icon = new NotifyIcon(iconHandle, needIconDestroy, manualLock.Set, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
+        var icon = new NotifyIcon(icoHandle, manualLock.Set, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
 
         await manualLock.WaitAsync(cancellationToken);
 

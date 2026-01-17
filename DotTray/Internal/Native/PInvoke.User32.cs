@@ -15,6 +15,9 @@ internal static partial class PInvoke
     public static partial nint SetCursor(nint hCursor);
 
     [LibraryImport(User32, SetLastError = true)]
+    public static partial nint CopyIcon(nint hIcon);
+
+    [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool DestroyIcon(nint hIcon);
 

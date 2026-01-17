@@ -51,7 +51,6 @@ public sealed partial class NotifyIcon : IDisposable
     private readonly Thread _trayLoopThread;
 
     private nint icoHandle;
-    private bool needsIcoDestroy;
 
     private nint instanceHandle;
     private nint hWnd;
@@ -98,32 +97,12 @@ public sealed partial class NotifyIcon : IDisposable
     /// <summary>
     /// The font size in device-independent pixels (DIP) of the popup menu for this <see cref="NotifyIcon"/> instance
     /// </summary>
-    public float FontSize
-    {
-        get => field;
-        set
-        {
-            if (field == value) return;
-
-            field = value;
-            AttemptSessionRestart();
-        }
-    }
+    public float FontSize { get; private set; }
 
     /// <summary>
     /// The background color of the popup menu for this <see cref="NotifyIcon"/> instance
     /// </summary>
-    public TrayColor PopupMenuColor
-    {
-        get => field;
-        set
-        {
-            if (field == value) return;
-
-            field = value;
-            AttemptSessionRestart();
-        }
-    }
+    public TrayColor PopupMenuColor { get; private set; }
 
     /// <summary>
     /// Fired if the icon popup menu is showing by clicking <see cref="MouseButtons"/>
@@ -135,10 +114,9 @@ public sealed partial class NotifyIcon : IDisposable
     /// </summary>
     public event Action? PopupHiding;
 
-    private unsafe NotifyIcon(nint icoHandle, bool needsIcoDestroy, Action onInitializationFinished, Action<MenuItem>? defaultMenuItemConfig, Action<SeparatorItem>? defaultSeparatorItemConfig, CancellationToken cancellationToken)
+    private unsafe NotifyIcon(nint icoHandle, Action onInitializationFinished, Action<MenuItem>? defaultMenuItemConfig, Action<SeparatorItem>? defaultSeparatorItemConfig, CancellationToken cancellationToken)
     {
         this.icoHandle = icoHandle;
-        this.needsIcoDestroy = needsIcoDestroy;
 
         totalIcons++;
         Id = Guid.CreateVersion7();
@@ -221,7 +199,7 @@ public sealed partial class NotifyIcon : IDisposable
                 };
                 PInvoke.Shell_NotifyIcon(PInvoke.NIM_DELETE, ref iconData);
 
-                if (needsIcoDestroy) PInvoke.DestroyIcon(icoHandle);
+                PInvoke.DestroyIcon(icoHandle);
 
                 if (hWnd != nint.Zero)
                 {
@@ -247,26 +225,30 @@ public sealed partial class NotifyIcon : IDisposable
     }
 
     /// <summary>
-    /// Sets the Icon of this <see cref="NotifyIcon"/> instance
+    /// Sets the Icon for this <see cref="NotifyIcon"/> instance
     /// </summary>
     /// <param name="icoPath">The path to a .ico file</param>
     /// <exception cref="ArgumentException"></exception>
     /// <exception cref="FileNotFoundException"></exception>
     /// <exception cref="FileLoadException"></exception>
-    public void SetIcon(string icoPath) => SetIcon(PrepareIconHandle(icoPath), true);
+    public void SetIcon(string icoPath) => SetIcon(PrepareIconHandle(icoPath));
 
     /// <summary>
-    /// Sets the Icon of this <see cref="NotifyIcon"/> instance
+    /// Sets the Icon for this <see cref="NotifyIcon"/> instance
     /// </summary>
     /// <remarks>
     /// If <paramref name="icoHandle"/> == <see cref="nint.Zero"/> the icon will be invisible.<br/>
     /// <paramref name="icoHandle"/> will not be destroyed, the responsibility lies with the caller
     /// </remarks>
     /// <param name="icoHandle">The handle of a .ico file</param>
-    public void SetIcon(nint icoHandle) => SetIcon(icoHandle, false);
+    public void SetIcon(nint icoHandle)
+    {
+        icoHandle = PInvoke.CopyIcon(icoHandle);
+        PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_ICON, icoHandle, nint.Zero);
+    }
 
     /// <summary>
-    /// Sets the <see cref="ToolTip"/> of this <see cref="NotifyIcon"/> instance
+    /// Sets the <see cref="ToolTip"/> for this <see cref="NotifyIcon"/> instance
     /// </summary>
     /// <remarks>
     /// <paramref name="toolTip"/> is truncated to fit into the allowed Windows tooltip character length
@@ -280,6 +262,30 @@ public sealed partial class NotifyIcon : IDisposable
 
         ToolTip = toolTip;
         PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_TOOLTIP, 0, 0);
+    }
+
+    /// <summary>
+    /// Sets the <see cref="FontSize"/> of the popup menu for this <see cref="NotifyIcon"/> instance
+    /// </summary>
+    /// <param name="fontSize">The size to set for <see cref="FontSize"/></param>
+    public void SetFontSize(float fontSize)
+    {
+        if (FontSize == fontSize) return;
+
+        FontSize = fontSize;
+        AttemptSessionRestart();
+    }
+
+    /// <summary>
+    /// Sets the <see cref="PopupMenuColor"/> of the popup menu for this <see cref="NotifyIcon"/> instance
+    /// </summary>
+    /// <param name="popupMenuColor">The color to set for <see cref="PopupMenuColor"/></param>
+    public void SetPopupMenuColor(TrayColor popupMenuColor)
+    {
+        if (PopupMenuColor == popupMenuColor) return;
+
+        PopupMenuColor = popupMenuColor;
+        AttemptSessionRestart();
     }
 
     /// <summary>
@@ -349,7 +355,7 @@ public sealed partial class NotifyIcon : IDisposable
     /// <exception cref="FileNotFoundException"></exception>
     /// <exception cref="FileLoadException"></exception>
     public static NotifyIcon Run(string icoPath, CancellationToken cancellationToken, Action<MenuItem>? defaultMenuItemConfig = null, Action<SeparatorItem>? defaultSeparatorItemConfig = null)
-        => Run(PrepareIconHandle(icoPath), true, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
+        => RunInternal(PrepareIconHandle(icoPath), defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
 
     /// <summary>
     /// Creates and runs a <see cref="NotifyIcon"/> instance synchronously
@@ -366,9 +372,13 @@ public sealed partial class NotifyIcon : IDisposable
     /// <exception cref="ArgumentNullException"></exception>
     public static NotifyIcon Run(nint icoHandle, CancellationToken cancellationToken, Action<MenuItem>? defaultMenuItemConfig = null, Action<SeparatorItem>? defaultSeparatorItemConfig = null)
     {
+        if (icoHandle == nint.Zero) throw new ArgumentNullException(nameof(icoHandle), "The handle cannot be null");
+
+        icoHandle = PInvoke.CopyIcon(icoHandle);
+
         return icoHandle == nint.Zero
             ? throw new ArgumentNullException(nameof(icoHandle), "The handle cannot be null")
-            : Run(icoHandle, false, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
+            : RunInternal(icoHandle, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
     }
 
     /// <summary>
@@ -383,7 +393,7 @@ public sealed partial class NotifyIcon : IDisposable
     /// <exception cref="FileNotFoundException"></exception>
     /// <exception cref="FileLoadException"></exception>
     public static Task<NotifyIcon> RunAsync(string icoPath, CancellationToken cancellationToken, Action<MenuItem>? defaultMenuItemConfig = null, Action<SeparatorItem>? defaultSeparatorItemConfig = null)
-        => RunAsync(PrepareIconHandle(icoPath), true, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
+        => RunInternalAsync(PrepareIconHandle(icoPath), defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
 
     /// <summary>
     /// Creates and runs a <see cref="NotifyIcon"/> instance asynchronously
@@ -399,8 +409,12 @@ public sealed partial class NotifyIcon : IDisposable
     /// <exception cref="ArgumentNullException"></exception>
     public static Task<NotifyIcon> RunAsync(nint icoHandle, CancellationToken cancellationToken, Action<MenuItem>? defaultMenuItemConfig = null, Action<SeparatorItem>? defaultSeparatorItemConfig = null)
     {
+        if (icoHandle == nint.Zero) throw new ArgumentNullException(nameof(icoHandle), "The handle cannot be null");
+
+        icoHandle = PInvoke.CopyIcon(icoHandle);
+
         return icoHandle == nint.Zero
             ? throw new ArgumentNullException(nameof(icoHandle), "The handle cannot be null")
-            : RunAsync(icoHandle, false, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
+            : RunInternalAsync(icoHandle, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
     }
 }

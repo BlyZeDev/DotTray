@@ -18,9 +18,9 @@ sealed class Program
         var defaultTray = await NotifyIcon.RunAsync(tempPath2, cts.Token);
         var tray3 = await NotifyIcon.RunAsync(tempPath, cts.Token, x => x.TextColor = new TrayColor(255, 0, 0), x => x.LineColor = new TrayColor(255, 0, 0));
 
-        tray3.PopupMenuColor = new TrayColor(20, 20, 20);
-        tray3.FontSize = 0;
-        
+        tray3.SetPopupMenuColor(new TrayColor(20, 20, 20));
+        tray3.SetFontSize(18f);
+
         var item = tray3.MenuItems.AddItem("🐣 Hallo 💝 💞");
         tray3.MenuItems.AddSeparator();
         tray3.MenuItems.AddItem("✏️ Hallo 2 🧔🏿 👨‍👩‍👧 ");
@@ -104,8 +104,8 @@ sealed class Program
 
         tray.Show();
         Console.WriteLine("The icon is back");
-        tray.PopupMenuColor = TrayColor.White;
-        tray.FontSize = 25f;
+        tray.SetPopupMenuColor(TrayColor.White);
+        tray.SetFontSize(25f);
         foreach (var iterator in tray.MenuItems.OfType<MenuItem>())
         {
             iterator.TextColor = TrayColor.Random();
