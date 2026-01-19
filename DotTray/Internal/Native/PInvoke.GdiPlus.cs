@@ -79,4 +79,43 @@ internal static partial class PInvoke
 
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static unsafe partial int GdipFillPolygon(nint graphics, nint brush, POINTF* points, int count, int fillMode);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipCreateBitmapFromScan0(int width, int height, int stride, int format, nint scan0, out nint bitmap);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipCreateBitmapFromHBITMAP(nint hbm, nint hpal, out nint bitmap);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipCreateHBITMAPFromBitmap(nint bitmap, out nint hbmReturn, uint background);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipDisposeImage(nint image);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipGetImageGraphicsContext(nint image, out nint graphics);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipDrawImageRect(nint graphics, nint image, float x, float y, float width, float height);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipCreatePath(int brushMode, out nint path);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipAddPathEllipse(nint path, float x, float y, float width, float height);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipAddPathRectangle(nint path, float x, float y, float width, float height);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipAddPathArc(nint path, float x, float y, float width, float height, float startAngle, float sweepAngle);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipClosePathFigure(nint path);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipDeletePath(nint path);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipFillPath(nint graphics, nint brush, nint path);
 }

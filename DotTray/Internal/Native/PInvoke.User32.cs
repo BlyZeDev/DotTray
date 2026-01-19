@@ -134,4 +134,11 @@ internal static partial class PInvoke
     [LibraryImport(User32, EntryPoint = "GetMonitorInfoW", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool GetMonitorInfo(nint hMonitor, ref MONITORINFO lpmi);
+
+    [LibraryImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetIconInfo(nint hIcon, out ICONINFO piconinfo);
+
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial nint CreateIconIndirect(ref ICONINFO piconinfo);
 }

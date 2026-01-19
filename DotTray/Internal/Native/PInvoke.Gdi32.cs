@@ -1,9 +1,13 @@
 ﻿namespace DotTray.Internal.Native;
 
+using DotTray.Internal.Win32;
 using System.Runtime.InteropServices;
 
 internal static unsafe partial class PInvoke
 {
+    [LibraryImport(Gdi32, EntryPoint = "GetObjectW", SetLastError = true)]
+    public static partial int GetObject(nint hObject, int cbBuffer, out BITMAP bitmap);
+
     [LibraryImport(Gdi32, SetLastError = true)]
     public static partial nint SelectObject(nint hdc, nint h);
 

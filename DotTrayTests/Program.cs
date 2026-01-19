@@ -50,7 +50,11 @@ sealed class Program
         testItem.SubMenu.AddItem("3");
         testItem.SubMenu.AddItem("4");
         testItem.SubMenu.AddItem("5");
-        defaultTray.MenuItems.AddItem("Last Item");
+        defaultTray.MenuItems.AddItem("Last Item").Clicked = (args) =>
+        {
+            if (args.Icon.Badge is null) args.Icon.SetBadge(NotifyIconBadge.Default with { Position = NotifyIconBadgePosition.TopRight, BorderRadius = 0f, BackgroundColor = new TrayColor(255, 0, 255) });
+            else args.Icon.SetBadge(null);
+        };
 
         var menuItem = tray.MenuItems.AddItem("Test");
         menuItem.BackgroundColor = new TrayColor(255, 0, 0);
@@ -62,6 +66,7 @@ sealed class Program
             Console.WriteLine(args.MenuItem.IsChecked.HasValue ? args.MenuItem.IsChecked.Value : "NULL");
             Console.WriteLine(args.MouseButton);
             args.MenuItem.Text = "Neuer Text";
+            args.Icon.SetIcon(tempPath2);
         };
 
         tray.MenuItems.AddSeparator();

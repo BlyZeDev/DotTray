@@ -101,4 +101,6 @@ internal static partial class PInvoke
 
     public const int StringAlignmentNear = 0;
     public const int StringAlignmentCenter = 1;
+
+    public const int Format32bppArgb = 0x26200A;
 }
