@@ -50,8 +50,7 @@ public sealed partial class NotifyIcon : IDisposable
     private readonly nint _popupWindowClassName;
     private readonly Thread _trayLoopThread;
 
-    private nint baseIcoHandle;
-    private nint shownIcoHandle;
+    private nint icoHandle;
 
     private nint instanceHandle;
     private nint hWnd;
@@ -106,14 +105,6 @@ public sealed partial class NotifyIcon : IDisposable
     public TrayColor PopupMenuColor { get; private set; }
 
     /// <summary>
-    /// The badge displayed on top of the icon for this <see cref="NotifyIcon"/> instance
-    /// </summary>
-    /// <remarks>
-    /// <see langword="null"/>, if no badge is displayed
-    /// </remarks>
-    public NotifyIconBadge? Badge { get; private set; }
-
-    /// <summary>
     /// Fired if the icon popup menu is showing by clicking <see cref="MouseButtons"/>
     /// </summary>
     public event Action<MouseButton>? PopupShowing;
@@ -125,8 +116,7 @@ public sealed partial class NotifyIcon : IDisposable
 
     private unsafe NotifyIcon(nint icoHandle, Action onInitializationFinished, Action<MenuItem>? defaultMenuItemConfig, Action<SeparatorItem>? defaultSeparatorItemConfig, CancellationToken cancellationToken)
     {
-        baseIcoHandle = icoHandle;
-        shownIcoHandle = PInvoke.CopyIcon(baseIcoHandle);
+        this.icoHandle = icoHandle;
 
         totalIcons++;
         Id = Guid.CreateVersion7();
@@ -141,7 +131,6 @@ public sealed partial class NotifyIcon : IDisposable
         MouseButtons = DefaultMouseButtons;
         FontSize = DefaultFontSize;
         PopupMenuColor = DefaultPopupMenuColor;
-        Badge = null;
 
         _trayLoopThread = new Thread(() =>
         {
@@ -185,7 +174,7 @@ public sealed partial class NotifyIcon : IDisposable
                 guidItem = Id,
                 uFlags = PInvoke.NIF_MESSAGE | PInvoke.NIF_ICON | PInvoke.NIF_GUID,
                 uCallbackMessage = PInvoke.WM_APP_TRAYICON_CLICK,
-                hIcon = shownIcoHandle
+                hIcon = icoHandle
             };
             PInvoke.Shell_NotifyIcon(PInvoke.NIM_ADD, ref iconData);
 
@@ -210,8 +199,7 @@ public sealed partial class NotifyIcon : IDisposable
                 };
                 PInvoke.Shell_NotifyIcon(PInvoke.NIM_DELETE, ref iconData);
 
-                PInvoke.DestroyIcon(baseIcoHandle);
-                PInvoke.DestroyIcon(shownIcoHandle);
+                PInvoke.DestroyIcon(this.icoHandle);
 
                 if (hWnd != nint.Zero)
                 {
@@ -243,7 +231,7 @@ public sealed partial class NotifyIcon : IDisposable
     /// <exception cref="ArgumentException"></exception>
     /// <exception cref="FileNotFoundException"></exception>
     /// <exception cref="FileLoadException"></exception>
-    public void SetIcon(string icoPath) => SetIcon(PrepareIconHandle(icoPath));
+    public void SetIcon(string icoPath) => SetIconUnsafe(PrepareIconHandle(icoPath));
 
     /// <summary>
     /// Sets the Icon for this <see cref="NotifyIcon"/> instance
@@ -253,7 +241,11 @@ public sealed partial class NotifyIcon : IDisposable
     /// <paramref name="icoHandle"/> will not be destroyed, the responsibility lies with the caller
     /// </remarks>
     /// <param name="icoHandle">The handle of a .ico file</param>
-    public void SetIcon(nint icoHandle) => PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_ICON, icoHandle, nint.Zero);
+    public void SetIcon(nint icoHandle)
+    {
+        icoHandle = PInvoke.CopyIcon(icoHandle);
+        SetIconUnsafe(icoHandle);
+    }
 
     /// <summary>
     /// Sets the <see cref="ToolTip"/> for this <see cref="NotifyIcon"/> instance
@@ -294,18 +286,6 @@ public sealed partial class NotifyIcon : IDisposable
 
         PopupMenuColor = popupMenuColor;
         AttemptSessionRestart();
-    }
-
-    /// <summary>
-    /// Sets the <see cref="Badge"/> for this <see cref="NotifyIcon"/> instance
-    /// </summary>
-    /// <param name="badge">The badge to set for <see cref="Badge"/></param>
-    public void SetBadge(NotifyIconBadge? badge)
-    {
-        if (Badge == badge) return;
-
-        Badge = badge;
-        SetIcon(baseIcoHandle);
     }
 
     /// <summary>

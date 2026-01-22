@@ -4,7 +4,6 @@ using DotTray.Internal;
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -12,6 +11,8 @@ using System.Threading.Tasks;
 
 public sealed partial class NotifyIcon
 {
+    private void SetIconUnsafe(nint icoHandle) => PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_ICON, icoHandle, nint.Zero);
+
     internal void AttemptSessionRestart() => PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_RESTART_SESSION, nint.Zero, nint.Zero);
 
     private unsafe nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
@@ -67,13 +68,6 @@ public sealed partial class NotifyIcon
 
     private void HandleIcon(nint hWnd, nint wParam)
     {
-        wParam = PInvoke.CopyIcon(wParam);
-
-        PInvoke.DestroyIcon(baseIcoHandle);
-        baseIcoHandle = wParam;
-
-        var newShownIcon = CreateBadgedIcon(baseIcoHandle, Badge);
-
         var iconData = new NOTIFYICONDATA
         {
             cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
@@ -81,12 +75,12 @@ public sealed partial class NotifyIcon
             guidItem = Id,
             uFlags = PInvoke.NIF_ICON | PInvoke.NIF_GUID,
             uCallbackMessage = PInvoke.WM_APP_TRAYICON_CLICK,
-            hIcon = newShownIcon
+            hIcon = wParam
         };
         PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
 
-        PInvoke.DestroyIcon(shownIcoHandle);
-        shownIcoHandle = newShownIcon;
+        PInvoke.DestroyIcon(icoHandle);
+        icoHandle = wParam;
     }
 
     private unsafe void HandleToolTip(nint hWnd)
@@ -128,7 +122,7 @@ public sealed partial class NotifyIcon
             cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
             hWnd = hWnd,
             guidItem = Id,
-            hIcon = (nextBalloon.Icon is BalloonNotificationIcon.User) ? baseIcoHandle : nint.Zero,
+            hIcon = (nextBalloon.Icon is BalloonNotificationIcon.User) ? icoHandle : nint.Zero,
             uFlags = PInvoke.NIF_INFO | PInvoke.NIF_GUID,
             dwInfoFlags = (uint)nextBalloon.Icon | (nextBalloon.NoSound ? PInvoke.NIIF_NOSOUND : 0)
         };
@@ -180,101 +174,5 @@ public sealed partial class NotifyIcon
 
         var handle = PInvoke.LoadImage(nint.Zero, icoPath, PInvoke.IMAGE_ICON, 0, 0, PInvoke.LR_LOADFROMFILE | PInvoke.LR_DEFAULTSIZE);
         return handle == nint.Zero ? throw new FileLoadException("The .ico file could not be loaded", icoPath) : handle;
-    }
-
-    private static nint CreateBadgedIcon(nint baseIcoHandle, NotifyIconBadge? badge)
-    {
-        if (badge is null) return PInvoke.CopyIcon(baseIcoHandle);
-
-        PInvoke.GetIconInfo(baseIcoHandle, out var iconInfo);
-
-        try
-        {
-            PInvoke.GetObject(iconInfo.hbmColor, Marshal.SizeOf<BITMAP>(), out var bitmap);
-
-            var width = bitmap.bmWidth;
-            var height = bitmap.bmHeight;
-
-            PInvoke.GdipCreateBitmapFromScan0(width, height, 0, PInvoke.Format32bppArgb, nint.Zero, out nint bitmapHandle);
-            PInvoke.GdipGetImageGraphicsContext(bitmapHandle, out nint graphicsHandle);
-            PInvoke.GdipSetSmoothingMode(graphicsHandle, PInvoke.SmoothingModeAntiAlias8x8);
-
-            PInvoke.GdipCreateBitmapFromHBITMAP(iconInfo.hbmColor, nint.Zero, out nint iconBitmapHandle);
-            PInvoke.GdipDrawImageRect(graphicsHandle, iconBitmapHandle, 0f, 0f, width, height);
-            PInvoke.GdipDisposeImage(iconBitmapHandle);
-
-            var badgeSize = MathF.Min(width, height) * 0.5f;
-            var halfBadge = badgeSize * 0.5f;
-
-            var centerX = badge.Position switch
-            {
-                NotifyIconBadgePosition.TopLeft or NotifyIconBadgePosition.BottomLeft => halfBadge,
-                _ => width - halfBadge
-            };
-
-            var centerY = badge.Position switch
-            {
-                NotifyIconBadgePosition.TopLeft or NotifyIconBadgePosition.TopRight => halfBadge,
-                _ => height - halfBadge
-            };
-
-            var rect = new RECTF
-            {
-                X = centerX - badgeSize * 0.5f,
-                Y = centerY - badgeSize * 0.5f,
-                Width = badgeSize,
-                Height = badgeSize
-            };
-
-            PInvoke.GdipCreatePath(0, out nint path);
-
-            var radius = Math.Clamp(badge.BorderRadius, 0f, 1f) * (badgeSize * 0.5f);
-            if (radius >= badgeSize * 0.5f)
-            {
-                PInvoke.GdipAddPathEllipse(path, rect.X, rect.Y, rect.Width, rect.Height);
-            }
-            else if (radius <= 0f)
-            {
-                PInvoke.GdipAddPathRectangle(path, rect.X, rect.Y, rect.Width, rect.Height);
-            }
-            else
-            {
-                var rX = Math.Min(radius, rect.Width * 0.5f);
-                var rY = Math.Min(radius, rect.Height * 0.5f);
-
-                PInvoke.GdipAddPathArc(path, rect.X, rect.Y, rX * 2, rY * 2, 180, 90);
-                PInvoke.GdipAddPathArc(path, rect.X + rect.Width - rX * 2, rect.Y, rX * 2, rY * 2, 270, 90);
-                PInvoke.GdipAddPathArc(path, rect.X + rect.Width - rX * 2, rect.Y + rect.Height - rY * 2, rX * 2, rY * 2, 0, 90);
-                PInvoke.GdipAddPathArc(path, rect.X, rect.Y + rect.Height - rY * 2, rX * 2, rY * 2, 90, 90);
-                PInvoke.GdipClosePathFigure(path);
-            }
-
-            PInvoke.GdipCreateSolidFill(badge.BackgroundColor.ToGdiPlus(), out var bgBrush);
-            PInvoke.GdipFillPath(graphicsHandle, bgBrush, path);
-            PInvoke.GdipDeleteBrush(bgBrush);
-
-            PInvoke.GdipDeletePath(path);
-
-            PInvoke.GdipCreateHBITMAPFromBitmap(bitmapHandle, out var bitmapReturnHandle, 0);
-            var createIconInfo = new ICONINFO
-            {
-                fIcon = 1,
-                hbmColor = bitmapReturnHandle,
-                hbmMask = bitmapReturnHandle,
-            };
-
-            var resultHandle = PInvoke.CreateIconIndirect(ref createIconInfo);
-
-            PInvoke.DeleteObject(bitmapReturnHandle);
-            PInvoke.GdipDeleteGraphics(graphicsHandle);
-            PInvoke.GdipDisposeImage(bitmapHandle);
-
-            return resultHandle;
-        }
-        finally
-        {
-            PInvoke.DeleteObject(iconInfo.hbmColor);
-            PInvoke.DeleteObject(iconInfo.hbmMask);
-        }
     }
 }

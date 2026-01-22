@@ -52,8 +52,7 @@ sealed class Program
         testItem.SubMenu.AddItem("5");
         defaultTray.MenuItems.AddItem("Last Item").Clicked = (args) =>
         {
-            if (args.Icon.Badge is null) args.Icon.SetBadge(NotifyIconBadge.Default with { Position = NotifyIconBadgePosition.TopRight, BorderRadius = 0f, BackgroundColor = new TrayColor(255, 0, 255) });
-            else args.Icon.SetBadge(null);
+            Console.WriteLine("You clicked the last item!");
         };
 
         var menuItem = tray.MenuItems.AddItem("Test");
