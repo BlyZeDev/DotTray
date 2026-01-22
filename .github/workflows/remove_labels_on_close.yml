@@ -15,7 +15,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const labelsToRemove = ["🗃️ Backlog", "⚙️ Work in progress"];
+            const labelsToRemove = ["🗃️ Backlog", "⚙️ Work in progress", "🔍 In triage"];
             const issueNumber = context.payload.issue.number;
             const currentLabels = context.payload.issue.labels.map(l => l.name);
             
