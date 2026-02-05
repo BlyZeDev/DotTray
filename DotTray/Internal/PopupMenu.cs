@@ -9,7 +9,7 @@ using System.Runtime.Versioning;
 [SupportedOSPlatform("Windows")]
 internal sealed partial class PopupMenu
 {
-    private readonly PopupMenuLayout _layout;
+    private readonly uint _dpi;
     private readonly PopupMenuSession _session;
     private readonly MenuItemCollection _menuItems;
     private readonly nint _hWnd;
@@ -40,8 +40,7 @@ internal sealed partial class PopupMenu
             session.InstanceHandle,
             nint.Zero);
 
-        var dpi = PInvoke.GetDpiForWindow(_hWnd);
-        _layout = new PopupMenuLayout(_session.OwnerIcon.FontSize, dpi);
+        _dpi = PInvoke.GetDpiForWindow(_hWnd);
 
         _wndProc = new PInvoke.WndProc(WndProcFunc);
         PInvoke.SetWindowLongPtr(_hWnd, PInvoke.GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProc));
@@ -94,14 +93,14 @@ internal sealed partial class PopupMenu
         hoverIndex = hitIndex;
         PInvoke.InvalidateRect(hWnd, nint.Zero, false);
 
-        if (hoverIndex != -1 && _menuItems[hoverIndex] is MenuItem menuItem && !menuItem.IsDisabled)
+        if (hoverIndex != -1 && _menuItems[hoverIndex] is IHoverable menuItem && !menuItem.IsDisabled)
         {
             PInvoke.SetCursor(_handCursor);
             CloseSubmenu();
 
             if (menuItem.HasSubMenu)
             {
-                CalcWindowSize(_layout, menuItem.SubMenu, out var width, out var height);
+                CalcWindowSize(_session.OwnerIcon.FontSize, _dpi / BaseDpi, menuItem.SubMenu, out var width, out var height);
 
                 var topLeft = new POINT
                 {
@@ -139,7 +138,7 @@ internal sealed partial class PopupMenu
     {
         if (hitIndex == -1) return 0;
 
-        if (_menuItems[hitIndex] is MenuItem menuItem && !menuItem.IsDisabled)
+        if (_menuItems[hitIndex] is IClickable menuItem && !menuItem.IsDisabled)
         {
             _menuItems.Updated -= OnRedrawRequired;
 
@@ -180,12 +179,12 @@ internal sealed partial class PopupMenu
 
         for (int i = 0; i < _menuItems.Count; i++)
         {
-            if (_menuItems[i] is not MenuItem menuItem) continue;
+            if (_menuItems[i] is not IHoverable hoverable) continue;
 
-            if (mouseX > menuItem.HitBox.X
-                && mouseX < menuItem.HitBox.X + menuItem.HitBox.Width
-                && mouseY > menuItem.HitBox.Y
-                && mouseY < menuItem.HitBox.Y + menuItem.HitBox.Height) return i;
+            if (mouseX > hoverable.Hitbox.X
+                && mouseX < hoverable.Hitbox.X + hoverable.Hitbox.Width
+                && mouseY > hoverable.Hitbox.Y
+                && mouseY < hoverable.Hitbox.Y + hoverable.Hitbox.Height) return i;
         }
 
         return -1;
@@ -213,9 +212,7 @@ internal sealed partial class PopupMenu
         var monitorHandle = PInvoke.MonitorFromPoint(mousePos, PInvoke.MONITOR_DEFAULTTONEAREST);
         PInvoke.GetDpiForMonitor(monitorHandle, PInvoke.MDT_EFFECTIVE_DPI, out var dpi, out _);
 
-        var layout = new PopupMenuLayout(session.OwnerIcon.FontSize, dpi);
-
-        CalcWindowSize(layout, session.OwnerIcon.MenuItems, out var width, out var height);
+        CalcWindowSize(session.OwnerIcon.FontSize, dpi / BaseDpi, session.OwnerIcon.MenuItems, out var width, out var height);
         CalcWindowPos(mousePos, width, height, out var x, out var y);
 
         var menu = new PopupMenu(session, nint.Zero, session.OwnerIcon.MenuItems, x, y, width, height);
@@ -233,10 +230,12 @@ internal sealed partial class PopupMenu
         if (y + height > screenHeight) y = Math.Abs(y - height);
     }
 
-    private static void CalcWindowSize(PopupMenuLayout layout, MenuItemCollection menuItems, out int width, out int height)
+    private static void CalcWindowSize(float fontSize, float scale, MenuItemCollection menuItems, out int width, out int height)
     {
+        var absoluteFontSize = fontSize * scale;
+
         _ = PInvoke.GdipCreateFontFamilyFromName(FontFamilyName, nint.Zero, out var fontFamily);
-        _ = PInvoke.GdipCreateFont(fontFamily, layout.FontSizePx, 0, PInvoke.UnitPixel, out var font);
+        _ = PInvoke.GdipCreateFont(fontFamily, absoluteFontSize, 0, PInvoke.UnitPixel, out var font);
         _ = PInvoke.GdipCreateStringFormat(0, 0, out var format);
         _ = PInvoke.GdipSetStringFormatFlags(format, PInvoke.StringFormatFlagsNoWrap);
         _ = PInvoke.GdipSetStringFormatAlign(format, PInvoke.StringAlignmentNear);
@@ -245,28 +244,13 @@ internal sealed partial class PopupMenu
         var dcHandle = PInvoke.CreateCompatibleDC(nint.Zero);
         _ = PInvoke.GdipCreateFromHDC(dcHandle, out var graphicsHandle);
 
-        var maxTextWidth = 0f;
-        var layoutRect = new RECTF
-        {
-            X = 0,
-            Y = 0,
-            Width = float.MaxValue
-        };
-
-        string text;
-        float currentHeight = 0f;
+        var requiredWidth = 0f;
+        var requiredHeight = 0f;
         foreach (var item in menuItems)
         {
-            currentHeight += item.HeightMultiplier * layout.FontSizePx;
-
-            if (item is MenuItem menuItem)
-            {
-                layoutRect.Height = item.HeightMultiplier * layout.FontSizePx;
-
-                text = NormalizeText(menuItem.Text);
-                _ = PInvoke.GdipMeasureString(graphicsHandle, text, text.Length, font, ref layoutRect, format, out var boundingBox, out _, out _);
-                maxTextWidth = MathF.Max(maxTextWidth, boundingBox.Width);
-            }
+            item.Measure(new PopupMenuInfo(graphicsHandle, font, format, scale, absoluteFontSize), out var itemWidth, out var itemHeight);
+            requiredWidth += itemWidth;
+            requiredHeight += itemHeight;
         }
 
         _ = PInvoke.GdipDeleteFont(font);
@@ -274,16 +258,14 @@ internal sealed partial class PopupMenu
         _ = PInvoke.GdipDeleteGraphics(graphicsHandle);
         _ = PInvoke.DeleteDC(dcHandle);
 
-        width = (int)MathF.Ceiling(layout.CheckBoxWidthPx + layout.TextPaddingPx + maxTextWidth + layout.TextPaddingPx + layout.SubmenuArrowWidthPx + layout.TextPaddingPx);
-        height = (int)MathF.Ceiling(currentHeight);
+        width = (int)MathF.Ceiling(requiredWidth);
+        height = (int)MathF.Ceiling(requiredHeight);
     }
-
-    private static string NormalizeText(string text) => text.Replace("\uFE0F", "");
 
     private static void GetMonitorWorkArea(POINT point, out int width, out int height)
     {
         var monitorHandle = PInvoke.MonitorFromPoint(point, PInvoke.MONITOR_DEFAULTTONEAREST);
-
+        
         var monitorInfo = new MONITORINFO
         {
             cbSize = (uint)Marshal.SizeOf<MONITORINFO>()

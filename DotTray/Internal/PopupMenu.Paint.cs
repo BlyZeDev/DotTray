@@ -86,7 +86,7 @@ internal sealed partial class PopupMenu
         _ = PInvoke.GdipDeleteBrush(bgBrush);
     }
 
-    private static unsafe void DrawMenuItem(nint graphicsHandle, PopupMenuLayout layout, MenuItem menuItem, nint font, uint backgroundColor, uint textColor, POINTF* checkBoxPoints, POINTF* submenuArrowPoints)
+    private static unsafe void DrawMenuItem(nint graphicsHandle, PopupMenuInfo layout, MenuItem menuItem, nint font, uint backgroundColor, uint textColor, POINTF* checkBoxPoints, POINTF* submenuArrowPoints)
     {
         var itemRect = menuItem.HitBox;
 
@@ -112,7 +112,7 @@ internal sealed partial class PopupMenu
         if (menuItem.HasSubMenu) DrawSubmenuArrow(graphicsHandle, layout, textColor, itemRect, centerY, submenuArrowPoints);
     }
 
-    private static void DrawSeparatorItem(nint graphicsHandle, PopupMenuLayout layout, SeparatorItem separatorItem, RECTF itemRect)
+    private static void DrawSeparatorItem(nint graphicsHandle, PopupMenuInfo layout, SeparatorItem separatorItem, RECTF itemRect)
     {
         _ = PInvoke.GdipCreateSolidFill(separatorItem.BackgroundColor.ToGdiPlus(), out var backgroundBrush);
         _ = PInvoke.GdipFillRectangle(graphicsHandle, backgroundBrush, itemRect.X, itemRect.Y, itemRect.Width, itemRect.Height);
@@ -124,7 +124,7 @@ internal sealed partial class PopupMenu
         _ = PInvoke.GdipDeletePen(pen);
     }
 
-    private static unsafe void DrawCheckBox(nint graphicsHandle, PopupMenuLayout layout, uint color, RECTF itemRect, float centerY, POINTF* points)
+    private static unsafe void DrawCheckBox(nint graphicsHandle, PopupMenuInfo layout, uint color, RECTF itemRect, float centerY, POINTF* points)
     {
         var checkX = itemRect.X + layout.TextPaddingPx * 0.65f;
         var checkY = centerY - layout.CheckBoxWidthPx * 0.5f;
@@ -153,7 +153,7 @@ internal sealed partial class PopupMenu
         _ = PInvoke.GdipDeleteStringFormat(format);
     }
 
-    private static unsafe void DrawSubmenuArrow(nint graphicsHandle, PopupMenuLayout layout, uint color, RECTF itemRect, float centerY, POINTF* points)
+    private static unsafe void DrawSubmenuArrow(nint graphicsHandle, PopupMenuInfo layout, uint color, RECTF itemRect, float centerY, POINTF* points)
     {
         var arrowX = itemRect.X + itemRect.Width - layout.TextPaddingPx - layout.SubmenuArrowWidthPx * 1.5f;
 

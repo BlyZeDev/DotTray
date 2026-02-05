@@ -4,6 +4,7 @@ using DotTray.Internal.Native;
 
 internal sealed partial class PopupMenu
 {
+    private const float BaseDpi = 96f;
     private const string FontFamilyName = "Segoe UI Emoji";
     private const int ArrowPoints = 3;
     private const int CheckBoxPoints = 3;

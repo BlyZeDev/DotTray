@@ -7,9 +7,14 @@ using System;
 /// </summary>
 public abstract class MenuItemBase
 {
-    internal abstract float HeightMultiplier { get; }
-
     internal event Action? Updated;
 
-    private protected void Update() => Updated?.Invoke();
+    /// <summary>
+    /// Calling this method will trigger a redraw of the menu containing this <see cref="MenuItemBase"/>
+    /// </summary>
+    protected void Update() => Updated?.Invoke();
+
+    internal protected abstract void Measure(PopupMenuInfo info, out float width, out float height);
+
+    internal protected abstract void Draw(PopupMenuInfo info);
 }

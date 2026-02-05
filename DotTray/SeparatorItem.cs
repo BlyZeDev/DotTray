@@ -5,7 +5,7 @@
 /// </summary>
 public sealed class SeparatorItem : MenuItemBase
 {
-    internal override float HeightMultiplier => LineThickness * 0.1f;
+    private float HeightMultiplier => LineThickness * 0.1f;
 
     /// <summary>
     /// The background color of this separator
@@ -53,4 +53,17 @@ public sealed class SeparatorItem : MenuItemBase
     }
 
     internal SeparatorItem() { }
+
+    /// <inheritdoc/>
+    internal protected override void Measure(PopupMenuInfo info, out float width, out float height)
+    {
+        width = 0;
+        height = HeightMultiplier * info.AbsoluteFontSize;
+    }
+
+    /// <inheritdoc/>
+    internal protected override void Draw(PopupMenuInfo info)
+    {
+
+    }
 }

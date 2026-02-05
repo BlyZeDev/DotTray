@@ -1,17 +1,21 @@
 ﻿namespace DotTray;
 
+using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using System;
 
 /// <summary>
 /// Represents a <see cref="NotifyIcon"/> menu item
 /// </summary>
-public sealed class MenuItem : MenuItemBase
+public sealed class MenuItem : MenuItemBase, IClickable
 {
-    internal override float HeightMultiplier => 1.6f;
+    private const float HeightMultiplier = 1.6f;
 
-    internal RECTF HitBox { get; set; }
+    private RECTF Hitbox;
+
     internal bool HasSubMenu => SubMenu.Count > 0;
+
+    private string DrawableText => Text.Replace("\uFE0F", "");
 
     /// <summary>
     /// The displayed text
@@ -164,4 +168,30 @@ public sealed class MenuItem : MenuItemBase
         Text = text;
         SubMenu = new MenuItemCollection(defaultMenuItemConfig, defaultSeparatorItemConfig);
     }
+
+    /// <inheritdoc/>
+    internal protected override void Measure(PopupMenuInfo info, out float width, out float height)
+    {
+        height = HeightMultiplier * info.AbsoluteFontSize;
+        var layoutRect = new RECTF
+        {
+            X = 0,
+            Y = 0,
+            Width = float.MaxValue,
+            Height = height
+        };
+
+        _ = PInvoke.GdipMeasureString(info.GdiGraphicsHandle, DrawableText, DrawableText.Length, info.FontFamilyHandle, ref layoutRect, info.FontFormatHandle, out var boundingBox, out _, out _);
+        width = boundingBox.Width;
+    }
+
+    /// <inheritdoc/>
+    internal protected override void Draw(PopupMenuInfo info)
+    {
+        
+    }
+
+    public bool IsHovered(int x, int y) => throw new NotImplementedException();
+
+    public void OnClick() => throw new NotImplementedException();
 }
