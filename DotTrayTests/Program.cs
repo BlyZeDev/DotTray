@@ -28,7 +28,7 @@ sealed class Program
 
         Action<MenuItem> action = x =>
         {
-            x.Text = "TEST";
+            x.Text = "TEST1";
             x.IsChecked = true;
         };
         var item1 = tray.MenuItems.AddItem(action);
