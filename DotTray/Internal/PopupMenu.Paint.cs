@@ -2,6 +2,7 @@
 
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
+using System;
 
 internal sealed partial class PopupMenu
 {
@@ -118,7 +119,7 @@ internal sealed partial class PopupMenu
         _ = PInvoke.GdipFillRectangle(graphicsHandle, backgroundBrush, itemRect.X, itemRect.Y, itemRect.Width, itemRect.Height);
         _ = PInvoke.GdipDeleteBrush(backgroundBrush);
 
-        var y = itemRect.Y + itemRect.Height * 0.5f;
+        var y = (int)MathF.Round(itemRect.Y + itemRect.Height * 0.5f);
         _ = PInvoke.GdipCreatePen1(separatorItem.LineColor.ToGdiPlus(), separatorItem.LineThickness * layout.Scale, PInvoke.UnitPixel, out var pen);
         _ = PInvoke.GdipDrawLine(graphicsHandle, pen, itemRect.X + layout.SeparatorPaddingPx, y, itemRect.X + itemRect.Width - layout.SeparatorPaddingPx, y);
         _ = PInvoke.GdipDeletePen(pen);

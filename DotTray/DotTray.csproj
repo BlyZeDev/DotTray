@@ -15,12 +15,13 @@
     <PackageProjectUrl>https://github.com/BlyZeDev/DotTray</PackageProjectUrl>
     <PackageIcon>icon.png</PackageIcon>
     <RepositoryUrl>https://github.com/BlyZeDev/DotTray</RepositoryUrl>
-    <PackageTags>notify;notifyicon;notification;notificationicon;blyze;blyzedev</PackageTags>
+    <PackageTags>notify;notifyicon;notification;notificationicon;blyze;blyzedev;dottray;tray;trayicon</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <Version>2.2.1</Version>
-    <PackageReleaseNotes>- Fixed PopupMenu Submenu with more than 1 item being aligned to the first item instead of the center of the window</PackageReleaseNotes>
+    <Version>2.2.2</Version>
+    <PackageReleaseNotes>- Fixed PopupMenu separator item looking off in some cases
+- Aligned the API in some cases to be consistent</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

@@ -12,137 +12,53 @@ sealed class Program
         var cts = new CancellationTokenSource();
 
         var tempPath = CreateTestIcon(StockIconId.Error) ?? throw new InvalidOperationException("Icon could not be created");
-        var tempPath2 = CreateTestIcon(StockIconId.AudioFiles) ?? throw new InvalidOperationException("Icon could not be created");
 
-        var tray = await NotifyIcon.RunAsync(tempPath, cts.Token);
-        var defaultTray = await NotifyIcon.RunAsync(tempPath2, cts.Token);
-        var tray3 = await NotifyIcon.RunAsync(tempPath, cts.Token, x => x.TextColor = new TrayColor(255, 0, 0), x => x.LineColor = new TrayColor(255, 0, 0));
-
-        tray3.SetPopupMenuColor(new TrayColor(20, 20, 20));
-        tray3.SetFontSize(18f);
-
-        var item = tray3.MenuItems.AddItem("🐣 Hallo 💝 💞");
-        tray3.MenuItems.AddSeparator();
-        tray3.MenuItems.AddItem("✏️ Hallo 2 🧔🏿 👨‍👩‍👧 ");
-        Console.WriteLine(item.TextHoverColor);
-
-        Action<MenuItem> action = x =>
+        var icon = NotifyIcon.Run(tempPath, cts.Token, x =>
         {
-            x.Text = "TEST1";
-            x.IsChecked = true;
-        };
-        var item1 = tray.MenuItems.AddItem(action);
-        var item2 = tray.MenuItems.AddItem(action);
+            x.BackgroundHoverColor = new TrayColor(218, 83, 225);
+            x.BackgroundDisabledColor = new TrayColor(40, 40, 40);
+            x.TextDisabledColor = new TrayColor(180, 180, 180);
+        }, x => x.LineThickness = 1.2f);
+        icon.SetFontSize(16);
 
-        Console.WriteLine("Ref Equals? " + ReferenceEquals(item1, item2));
-
-        defaultTray.MenuItems.AddItem("🖼️ 🖼️ Item No. 1 🖼️ 🖼️").SubMenu.AddItem("Hi");
-        defaultTray.MenuItems.AddItem("✏️ Item No. 2 ✏️");
-        defaultTray.MenuItems.AddSeparator();
-        defaultTray.MenuItems.AddItem("✏️ Item No. 3").IsChecked = false;
-        defaultTray.MenuItems.AddSeparator();
-        var testItem = defaultTray.MenuItems.AddItem("SubMenu here").SubMenu.AddItem("Submenu Test").SubMenu.AddItem("Submenu 2 Test").SubMenu.AddItem("Submenu 3 Test");
-        testItem.SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").SubMenu.AddItem("---").Clicked += (args) => Console.WriteLine("tf you're doing here mate");
-        defaultTray.MenuItems.AddSeparator();
-        testItem = defaultTray.MenuItems.AddItem("Submenus");
-        testItem.SubMenu.AddItem("1");
-        testItem.SubMenu.AddItem("2");
-        testItem.SubMenu.AddItem("3");
-        testItem.SubMenu.AddItem("4");
-        testItem.SubMenu.AddItem("5");
-        defaultTray.MenuItems.AddItem("Last Item").Clicked = (args) =>
+        icon.MenuItems.AddItem(x =>
         {
-            Console.WriteLine("You clicked the last item!");
-        };
-
-        var menuItem = tray.MenuItems.AddItem("Test");
-        menuItem.BackgroundColor = new TrayColor(255, 0, 0);
-        menuItem.BackgroundDisabledColor = new TrayColor(0, 255, 0);
-        menuItem.BackgroundHoverColor = new TrayColor(0, 0, 255);
-        menuItem.IsChecked = true;
-        menuItem.Clicked = (args) =>
-        {
-            Console.WriteLine(args.MenuItem.IsChecked.HasValue ? args.MenuItem.IsChecked.Value : "NULL");
-            Console.WriteLine(args.MouseButton);
-            args.MenuItem.Text = "Neuer Text";
-            args.Icon.SetIcon(tempPath2);
-        };
-
-        tray.MenuItems.AddSeparator();
-
-        menuItem = tray.MenuItems.AddItem("Test 2");
-        menuItem.BackgroundColor = new TrayColor(255, 255, 255, 50);
-        menuItem.Clicked = (args) =>
-        {
-            if (args.Icon.IsVisible) args.Icon.Hide();
-            else args.Icon.Show();
-
-            Console.WriteLine("Now visible: " + args.Icon.IsVisible);
-        };
-
-        menuItem = menuItem.SubMenu.AddItem("Test Sub 1");
-
-        menuItem.IsChecked = false;
-        menuItem.IsDisabled = true;
-        menuItem.Clicked = (args) => Console.WriteLine(args.MenuItem.IsChecked.HasValue ? args.MenuItem.IsChecked.Value : "NULL");
-
-        var separator = tray.MenuItems.AddSeparator();
-        separator.LineColor = new TrayColor(0, 255, 255);
-        separator.LineThickness = 5f;
-        separator.BackgroundColor = new TrayColor(255, 0, 0);
-
-        menuItem = tray.MenuItems.AddItem("Exit");
-        menuItem.TextColor = new TrayColor(255, 0, 0);
-        menuItem.Clicked = _ => cts.Cancel();
-
-        tray.SetToolTip("🔔 This is a long string with emoji 😊 and more. Super duper insanely giga mega ultra long :o\nHow about getting a job Mr. Squidward 🤣😇😎🥰💩👹, This will not be seen :D");
-        defaultTray.SetToolTip("What's up ma drilla");
-
-        tray.MouseButtons = MouseButton.Left;
-        tray.PopupShowing += args => Console.WriteLine("Showing: " + args);
-        tray.PopupHiding += () => Console.WriteLine("Hiding");
-
-        Console.ReadLine();
-
-        Thread.Sleep(5000);
-
-        tray.Show();
-        Console.WriteLine("The icon is back");
-        tray.SetPopupMenuColor(TrayColor.White);
-        tray.SetFontSize(25f);
-        foreach (var iterator in tray.MenuItems.OfType<MenuItem>())
-        {
-            iterator.TextColor = TrayColor.Random();
-        }
-
-        Console.ReadLine();
-
-        Console.WriteLine("Showing Balloon Notification");
-        tray.ShowBalloon(new BalloonNotification
-        {
-            Icon = BalloonNotificationIcon.User,
-            Title = "Error - Something went wrong",
-            Message = "You have done something wrong. You're cooked :(",
-            NoSound = false
+            x.Text = "Sync now";
         });
-
-        Console.ReadLine();
-
-        Console.WriteLine("Adding Extra menu item in 5 sec");
-        tray.MenuItems.AddItem("---------------- EXTRA ----------------");
-        ((MenuItem)tray.MenuItems[0]).Text = ((MenuItem)tray.MenuItems[0]).Text + " - NEW";
-
-        await Task.Delay(5000);
-
-        testItem.Text = "NEW TEXT AFTER 5 SECONDS !!!";
-
-        Console.ReadLine();
-
-        Console.WriteLine("Destroying Tray Icon");
-        cts.Cancel();
-        tray.Dispose();
-
-        Console.ReadLine();
+        icon.MenuItems.AddItem(x =>
+        {
+            x.Text = $"Next Sync in";
+            x.IsDisabled = true;
+        });
+        icon.MenuItems.AddItem(x =>
+        {
+            x.Text = "Settings";
+            x.SubMenu.AddItem(x =>
+            {
+                x.Text = "Open Application Folder";
+            });
+            x.SubMenu.AddItem(x =>
+            {
+                x.Text = "Autostart";
+            });
+            x.SubMenu.AddItem(x =>
+            {
+                x.Text = "Help";
+            });
+        });
+        icon.MenuItems.AddSeparator();
+        icon.MenuItems.AddItem(x =>
+        {
+            x.Text = $"Version 1.0.0";
+            x.TextDisabledColor = x.TextColor;
+            x.IsDisabled = true;
+        });
+        icon.MenuItems.AddSeparator();
+        icon.MenuItems.AddItem(x =>
+        {
+            x.Text = "Exit";
+            x.Clicked = _ => cts.Cancel();
+        });
 
         try
         {

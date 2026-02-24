@@ -92,16 +92,22 @@ public sealed partial class NotifyIcon : IDisposable
     /// <remarks>
     /// The default value is <see cref="MouseButton.Left"/> | <see cref="MouseButton.Right"/>
     /// </remarks>
-    public MouseButton MouseButtons { get; set; }
+    public MouseButton MouseButtons { get; private set; }
 
     /// <summary>
     /// The font size in device-independent pixels (DIP) of the popup menu for this <see cref="NotifyIcon"/> instance
     /// </summary>
+    /// <remarks>
+    /// The default value is 20f
+    /// </remarks>
     public float FontSize { get; private set; }
 
     /// <summary>
     /// The background color of the popup menu for this <see cref="NotifyIcon"/> instance
     /// </summary>
+    /// <remarks>
+    /// The default value is a dark gray color with RGB values [40, 40, 40]
+    /// </remarks>
     public TrayColor PopupMenuColor { get; private set; }
 
     /// <summary>
@@ -262,6 +268,18 @@ public sealed partial class NotifyIcon : IDisposable
 
         ToolTip = toolTip;
         PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_TOOLTIP, nint.Zero, nint.Zero);
+    }
+
+    /// <summary>
+    /// Sets the <see cref="MouseButtons"/> for this <see cref="NotifyIcon"/> instance
+    /// </summary>
+    /// <param name="mouseButtons">The mouse buttons to set for <see cref="MouseButtons"/></param>
+    public void SetMouseButtons(MouseButton mouseButtons)
+    {
+        if (MouseButtons == mouseButtons) return;
+
+        MouseButtons = mouseButtons;
+        AttemptSessionRestart();
     }
 
     /// <summary>

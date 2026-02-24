@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Project Path="DotTray/DotTray.csproj" />
+  <Project Path="DotTrayTests/DotTrayTests.csproj" />
+</Solution>
