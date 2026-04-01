@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 /// Represents a Notification Icon that is displayed in the Taskbar
 /// </summary>
 /// <remarks>
-/// To get the best possible result it's recommend to use a 16x16 or 32x32 icon with a 32-bit color depth including alpha channel.<br/>
+/// To get the best possible result it's recommended that the icon includes a 16x16 or 32x32 variant with a 32-bit color depth including alpha channel.<br/>
 /// Using other sizes or color depths may lead to unexpected results or poor quality rendering.
 /// </remarks>
 [SupportedOSPlatform("windows")]
