@@ -36,18 +36,25 @@ internal static partial class PInvoke
     public const uint WM_CLOSE = 0x0010;
 
     public const int WM_APP = 0x8000;
-    public const uint WM_APP_TRAYICON_CLICK = WM_APP + 1;
-    public const uint WM_APP_TRAYICON_ICON = WM_APP + 2;
-    public const uint WM_APP_TRAYICON_TOOLTIP = WM_APP + 3;
-    public const uint WM_APP_TRAYICON_VISIBILITY = WM_APP + 4;
-    public const uint WM_APP_TRAYICON_BALLOON = WM_APP + 5;
-    public const uint WM_APP_TRAYICON_RESTART_SESSION = WM_APP + 6;
 
     public const int WM_MOUSEMOVE = 0x0200;
-    public const int WM_MOUSELEAVE = 0x02A3;
-    public const int WM_LBUTTONUP = 0x202;
-    public const int WM_RBUTTONUP = 0x205;
-    public const int WM_MBUTTONUP = 0x208;
+    public const int WM_LBUTTONDOWN = 0x0201;
+    public const int WM_LBUTTONUP = 0x0202;
+    public const int WM_LBUTTONDBLCLK = 0x0203;
+    public const int WM_RBUTTONDOWN = 0x0204;
+    public const int WM_RBUTTONUP = 0x0205;
+    public const int WM_MBUTTONDOWN = 0x0207;
+    public const int WM_MBUTTONUP = 0x0208;
+    public const int WM_CONTEXTMENU = 0x007B;
+
+    public const int NIN_SELECT = 0x0400;
+    public const int NIN_KEYSELECT = 0x0401;
+    public const int NIN_BALLOONSHOW = 0x0402;
+    public const int NIN_BALLOONHIDE = 0x0403;
+    public const int NIN_BALLOONTIMEOUT = 0x0404;
+    public const int NIN_BALLOONUSERCLICK = 0x0405;
+    public const int NIN_POPUPOPEN = 0x0406;
+    public const int NIN_POPUPCLOSE = 0x0407;
 
     public const uint GW_OWNER = 4;
 
@@ -59,6 +66,7 @@ internal static partial class PInvoke
     public const uint NIF_STATE = 0x00000008;
     public const uint NIF_INFO = 0x00000010;
     public const uint NIF_GUID = 0x00000020;
+    public const uint NIF_SHOWTIP = 0x00000080;
 
     public const uint NIS_HIDDEN = 0x00000001;
 
@@ -68,10 +76,12 @@ internal static partial class PInvoke
     public const uint NIIF_ERROR = 0x00000003;
     public const uint NIIF_USER = 0x00000004;
     public const uint NIIF_NOSOUND = 0x00000010;
+    public const uint NIIF_LARGE_ICON = 0x00000020;
 
     public const uint NIM_ADD = 0x00000000;
     public const uint NIM_MODIFY = 0x00000001;
     public const uint NIM_DELETE = 0x00000002;
+    public const uint NIM_SETVERSION = 0x00000004;
 
     public const uint MONITOR_DEFAULTTONEAREST = 2;
 

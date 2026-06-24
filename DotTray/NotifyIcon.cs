@@ -1,68 +1,33 @@
 ﻿namespace DotTray;
 
-using DotTray.Internal;
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
 /// <summary>
 /// Represents a Notification Icon that is displayed in the Taskbar
 /// </summary>
-/// <remarks>
+/// <remarks> 
 /// To get the best possible result it's recommended that the icon includes a 16x16 or 32x32 variant with a 32-bit color depth including alpha channel.<br/>
 /// Using other sizes or color depths may lead to unexpected results or poor quality rendering.
 /// </remarks>
-[SupportedOSPlatform("windows")]
 public sealed partial class NotifyIcon : IDisposable
 {
-    private static readonly string DefaultToolTip = "";
-    private static readonly MouseButton DefaultMouseButtons = MouseButton.Left | MouseButton.Right;
-    private const float DefaultFontSize = 20f;
-    private static readonly TrayColor DefaultPopupMenuColor = new TrayColor(40, 40, 40);
-
-    private static readonly Action<MenuItem> DefaultMenuItemConfig = x =>
-    {
-        x.IsChecked = null;
-        x.IsDisabled = false;
-        x.BackgroundColor = TrayColor.Transparent;
-        x.BackgroundHoverColor = new TrayColor(0, 120, 215);
-        x.BackgroundDisabledColor = TrayColor.Gray;
-        x.TextColor = TrayColor.White;
-        x.TextHoverColor = TrayColor.White;
-        x.TextDisabledColor = new TrayColor(109, 109, 109);
-    };
-
-    private static readonly Action<SeparatorItem> DefaultSeparatorItemConfig = x =>
-    {
-        x.BackgroundColor = TrayColor.Transparent;
-        x.LineColor = TrayColor.White;
-        x.LineThickness = 1f;
-    };
-
-    private static uint totalIcons;
-    private static nint gdipToken;
-
-    private readonly nint _popupWindowClassName;
-    private readonly Thread _trayLoopThread;
-
-    private nint icoHandle;
-
-    private nint instanceHandle;
-    private nint hWnd;
-
-    private POINT lastMousePos;
-    private PopupMenuSession? popupMenuSession;
-    private BalloonNotification? nextBalloon;
-
     /// <summary>
     /// The unique identifier of this <see cref="NotifyIcon"/> instance
     /// </summary>
     public Guid Id { get; }
+
+    /// <summary>
+    /// The underlying window handle used by this <see cref="NotifyIcon"/> instance
+    /// </summary>
+    /// <remarks>
+    /// This can be used as owner handle for any child windows
+    /// </remarks>
+    public nint Handle => hWnd;
 
     /// <summary>
     /// The <see cref="MenuItemCollection"/> of this <see cref="NotifyIcon"/> instance
@@ -70,12 +35,12 @@ public sealed partial class NotifyIcon : IDisposable
     public MenuItemCollection MenuItems { get; }
 
     /// <summary>
-    /// The tooltip text of this <see cref="NotifyIcon"/> instance
+    /// The tooltip text of this <see cref="NotifyIcon"/> instance, or <see langword="null"/> if no tooltip should be shown
     /// </summary>
     /// <remarks>
-    /// The default value is <see cref="string.Empty"/>
+    /// The default value is <see langword="null"/>
     /// </remarks>
-    public string ToolTip { get; private set; }
+    public string? ToolTip { get; private set; }
 
     /// <summary>
     /// The current visibility of this <see cref="NotifyIcon"/>.<br/>
@@ -87,171 +52,12 @@ public sealed partial class NotifyIcon : IDisposable
     public bool IsVisible { get; private set; }
 
     /// <summary>
-    /// The mouse buttons that are allowed to interact with this <see cref="NotifyIcon"/> instance
+    /// Fires whenever the user interacts with the <see cref="NotifyIcon"/> or a <see cref="BalloonNotification"/>.
     /// </summary>
     /// <remarks>
-    /// The default value is <see cref="MouseButton.Left"/> | <see cref="MouseButton.Right"/>
+    /// Note: This event is raised on the <see cref="NotifyIcon"/>'s background STA thread.
     /// </remarks>
-    public MouseButton MouseButtons { get; private set; }
-
-    /// <summary>
-    /// The font size in device-independent pixels (DIP) of the popup menu for this <see cref="NotifyIcon"/> instance
-    /// </summary>
-    /// <remarks>
-    /// The default value is 20f
-    /// </remarks>
-    public float FontSize { get; private set; }
-
-    /// <summary>
-    /// The background color of the popup menu for this <see cref="NotifyIcon"/> instance
-    /// </summary>
-    /// <remarks>
-    /// The default value is a dark gray color with RGB values [40, 40, 40]
-    /// </remarks>
-    public TrayColor PopupMenuColor { get; private set; }
-
-    /// <summary>
-    /// Fired if the icon popup menu is showing by clicking <see cref="MouseButtons"/>
-    /// </summary>
-    public event Action<MouseButton>? PopupShowing;
-
-    /// <summary>
-    /// Fired if the icon popup menu is hiding
-    /// </summary>
-    public event Action? PopupHiding;
-
-    private unsafe NotifyIcon(nint icoHandle, Action onInitializationFinished, Action<MenuItem>? defaultMenuItemConfig, Action<SeparatorItem>? defaultSeparatorItemConfig, CancellationToken cancellationToken)
-    {
-        this.icoHandle = icoHandle;
-
-        totalIcons++;
-        Id = Guid.CreateVersion7();
-
-        var windowClassNameString = $"{nameof(DotTray)}NotifyIconWindow{Id}";
-        var windowClassName = Marshal.StringToHGlobalUni(windowClassNameString);
-        _popupWindowClassName = Marshal.StringToHGlobalUni($"{windowClassNameString}_Popup");
-
-        MenuItems = new MenuItemCollection(DefaultMenuItemConfig + defaultMenuItemConfig, DefaultSeparatorItemConfig + defaultSeparatorItemConfig);
-        ToolTip = DefaultToolTip;
-        IsVisible = true;
-        MouseButtons = DefaultMouseButtons;
-        FontSize = DefaultFontSize;
-        PopupMenuColor = DefaultPopupMenuColor;
-
-        _trayLoopThread = new Thread(() =>
-        {
-            PInvoke.SetThreadDpiAwarenessContext(PInvoke.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-
-            if (gdipToken == nint.Zero)
-            {
-                var input = new GDIPLUSSTARTUPINPUT
-                {
-                    GdiplusVersion = 1
-                };
-                _ = PInvoke.GdiplusStartup(out gdipToken, ref input, out _);
-            }
-
-            instanceHandle = PInvoke.GetModuleHandle(null);
-
-            var wndProc = new PInvoke.WndProc(WndProcFunc);
-            var wndClass = new WNDCLASS
-            {
-                lpfnWndProc = Marshal.GetFunctionPointerForDelegate(wndProc),
-                hInstance = instanceHandle,
-                lpszClassName = windowClassName
-            };
-            PInvoke.RegisterClass(ref wndClass);
-
-            var popupWndProc = new PInvoke.WndProc((hWnd, msg, wParam, lParam) => PInvoke.DefWindowProc(hWnd, msg, wParam, lParam));
-            var popupWndClass = new WNDCLASS
-            {
-                lpfnWndProc = Marshal.GetFunctionPointerForDelegate(popupWndProc),
-                hInstance = instanceHandle,
-                lpszClassName = _popupWindowClassName
-            };
-            PInvoke.RegisterClass(ref popupWndClass);
-
-            hWnd = PInvoke.CreateWindowEx(0, windowClassName, nint.Zero, 0, 0, 0, 0, 0, nint.Zero, nint.Zero, instanceHandle, nint.Zero);
-
-            var iconData = new NOTIFYICONDATA
-            {
-                cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
-                hWnd = hWnd,
-                guidItem = Id,
-                uFlags = PInvoke.NIF_MESSAGE | PInvoke.NIF_ICON | PInvoke.NIF_GUID,
-                uCallbackMessage = PInvoke.WM_APP_TRAYICON_CLICK,
-                hIcon = icoHandle
-            };
-            PInvoke.Shell_NotifyIcon(PInvoke.NIM_ADD, ref iconData);
-
-            onInitializationFinished();
-
-            using (var registration = cancellationToken.Register(() => PInvoke.PostMessage(hWnd, PInvoke.WM_CLOSE, 0, 0)))
-            {
-                PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_TOOLTIP, 0, 0);
-
-                while (PInvoke.GetMessage(out var message, nint.Zero, 0, 0))
-                {
-                    PInvoke.TranslateMessage(ref message);
-                    PInvoke.DispatchMessage(ref message);
-                }
-
-                iconData = new NOTIFYICONDATA
-                {
-                    cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
-                    hWnd = hWnd,
-                    guidItem = Id,
-                    uFlags = PInvoke.NIF_GUID
-                };
-                PInvoke.Shell_NotifyIcon(PInvoke.NIM_DELETE, ref iconData);
-
-                PInvoke.DestroyIcon(this.icoHandle);
-
-                if (hWnd != nint.Zero)
-                {
-                    PInvoke.DestroyWindow(hWnd);
-                    hWnd = nint.Zero;
-
-                    PInvoke.UnregisterClass(_popupWindowClassName, instanceHandle);
-                    PInvoke.UnregisterClass(windowClassName, instanceHandle);
-
-                    Marshal.FreeHGlobal(windowClassName);
-                    Marshal.FreeHGlobal(_popupWindowClassName);
-
-                    instanceHandle = nint.Zero;
-                }
-            }
-
-            GC.KeepAlive(wndProc);
-            GC.KeepAlive(popupWndProc);
-        });
-        _trayLoopThread.Name = $"{nameof(NotifyIcon)}::{Id}";
-        _trayLoopThread.SetApartmentState(ApartmentState.STA);
-        _trayLoopThread.Start();
-    }
-
-    /// <summary>
-    /// Sets the Icon for this <see cref="NotifyIcon"/> instance
-    /// </summary>
-    /// <param name="icoPath">The path to a .ico file</param>
-    /// <exception cref="ArgumentException"></exception>
-    /// <exception cref="FileNotFoundException"></exception>
-    /// <exception cref="FileLoadException"></exception>
-    public void SetIcon(string icoPath) => SetIconUnsafe(PrepareIconHandle(icoPath));
-
-    /// <summary>
-    /// Sets the Icon for this <see cref="NotifyIcon"/> instance
-    /// </summary>
-    /// <remarks>
-    /// If <paramref name="icoHandle"/> == <see cref="nint.Zero"/> the icon will be invisible.<br/>
-    /// <paramref name="icoHandle"/> will not be destroyed, the responsibility lies with the caller
-    /// </remarks>
-    /// <param name="icoHandle">The handle of a .ico file</param>
-    public void SetIcon(nint icoHandle)
-    {
-        icoHandle = PInvoke.CopyIcon(icoHandle);
-        SetIconUnsafe(icoHandle);
-    }
+    public event Action<NotifyIconInteractedEventArgs>? Interacted;
 
     /// <summary>
     /// Sets the <see cref="ToolTip"/> for this <see cref="NotifyIcon"/> instance
@@ -260,50 +66,20 @@ public sealed partial class NotifyIcon : IDisposable
     /// <paramref name="toolTip"/> is truncated to fit into the allowed Windows tooltip character length
     /// </remarks>
     /// <param name="toolTip">The text to set as <see cref="ToolTip"/></param>
-    public void SetToolTip(string toolTip)
+    public void SetToolTip(string? toolTip)
     {
-        toolTip = toolTip.Length > NOTIFYICONDATA.SZTIP_LENGTH ? toolTip[..NOTIFYICONDATA.SZTIP_LENGTH] : toolTip;
+        if (ToolTip is null && toolTip is null) return;
 
-        if (ToolTip.Equals(toolTip, StringComparison.Ordinal)) return;
+        if (toolTip is not null)
+        {
+            toolTip = toolTip.Length > NOTIFYICONDATA.SZTIP_LENGTH ? toolTip[..NOTIFYICONDATA.SZTIP_LENGTH] : toolTip;
+
+            if (ToolTip?.Equals(toolTip, StringComparison.Ordinal) ?? false) return;
+        }
 
         ToolTip = toolTip;
-        PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_TOOLTIP, nint.Zero, nint.Zero);
-    }
-
-    /// <summary>
-    /// Sets the <see cref="MouseButtons"/> for this <see cref="NotifyIcon"/> instance
-    /// </summary>
-    /// <param name="mouseButtons">The mouse buttons to set for <see cref="MouseButtons"/></param>
-    public void SetMouseButtons(MouseButton mouseButtons)
-    {
-        if (MouseButtons == mouseButtons) return;
-
-        MouseButtons = mouseButtons;
-        AttemptSessionRestart();
-    }
-
-    /// <summary>
-    /// Sets the <see cref="FontSize"/> of the popup menu for this <see cref="NotifyIcon"/> instance
-    /// </summary>
-    /// <param name="fontSize">The size to set for <see cref="FontSize"/></param>
-    public void SetFontSize(float fontSize)
-    {
-        if (FontSize == fontSize) return;
-
-        FontSize = fontSize;
-        AttemptSessionRestart();
-    }
-
-    /// <summary>
-    /// Sets the <see cref="PopupMenuColor"/> of the popup menu for this <see cref="NotifyIcon"/> instance
-    /// </summary>
-    /// <param name="popupMenuColor">The color to set for <see cref="PopupMenuColor"/></param>
-    public void SetPopupMenuColor(TrayColor popupMenuColor)
-    {
-        if (PopupMenuColor == popupMenuColor) return;
-
-        PopupMenuColor = popupMenuColor;
-        AttemptSessionRestart();
+        var success = PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_TOOLTIP, 0, 0);
+        NotifyIconException.ThrowIfFalse(success, "Posting a tooltip message failed");
     }
 
     /// <summary>
@@ -314,7 +90,8 @@ public sealed partial class NotifyIcon : IDisposable
         if (!IsVisible) return;
 
         IsVisible = false;
-        PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_VISIBILITY, 0, 0);
+        var success = PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_VISIBILITY, 0, 0);
+        NotifyIconException.ThrowIfFalse(success, "Posting a visibility message failed");
     }
 
     /// <summary>
@@ -325,7 +102,8 @@ public sealed partial class NotifyIcon : IDisposable
         if (IsVisible) return;
 
         IsVisible = true;
-        PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_VISIBILITY, 0, 0);
+        var success = PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_VISIBILITY, 0, 0);
+        NotifyIconException.ThrowIfFalse(success, "Posting a visibility message failed");
     }
 
     /// <summary>
@@ -340,99 +118,52 @@ public sealed partial class NotifyIcon : IDisposable
             Message = balloon.Message.Length > NOTIFYICONDATA.SZINFO_LENGTH ? balloon.Message[..NOTIFYICONDATA.SZINFO_LENGTH] : balloon.Message
         };
 
-        PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_BALLOON, 0, 0);
+        var success = PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_BALLOON, 0, 0);
+        NotifyIconException.ThrowIfFalse(success, "Posting a balloon message failed");
     }
 
     /// <inheritdoc/>
     public void Dispose()
     {
-        PInvoke.PostMessage(hWnd, PInvoke.WM_CLOSE, 0, 0);
+        var success = PInvoke.PostMessage(hWnd, PInvoke.WM_CLOSE, 0, 0);
+        NotifyIconException.ThrowIfFalse(success, "Posting a close message failed");
 
-        if (_trayLoopThread.IsAlive) _trayLoopThread.Join();
+        if (_thread.IsAlive) _thread.Join();
 
         totalIcons--;
-        if (totalIcons == 0)
-        {
-            PInvoke.GdiplusShutdown(gdipToken);
-            gdipToken = nint.Zero;
-        }
-    }
+        if (totalIcons > 0 || gdipToken == nint.Zero) return;
 
-    /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon"/> instance synchronously
-    /// </summary>
-    /// <remarks>
-    /// This will block until the <see cref="NotifyIcon"/> instance is ready or an <see cref="Exception"/> occurs
-    /// </remarks>
-    /// <param name="icoPath">The path to a .ico file</param>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon"/> instance</param>
-    /// <param name="defaultMenuItemConfig">The default configuration for <see cref="MenuItem"/> instances</param>
-    /// <param name="defaultSeparatorItemConfig">The default configuration for <see cref="SeparatorItem"/> instances</param>
-    /// <returns><see cref="NotifyIcon"/></returns>
-    /// <exception cref="ArgumentException"></exception>
-    /// <exception cref="FileNotFoundException"></exception>
-    /// <exception cref="FileLoadException"></exception>
-    public static NotifyIcon Run(string icoPath, CancellationToken cancellationToken, Action<MenuItem>? defaultMenuItemConfig = null, Action<SeparatorItem>? defaultSeparatorItemConfig = null)
-        => RunInternal(PrepareIconHandle(icoPath), defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
+        PInvoke.GdiplusShutdown(gdipToken);
+        gdipToken = nint.Zero;
+    }
 
     /// <summary>
     /// Creates and runs a <see cref="NotifyIcon"/> instance synchronously
     /// </summary>
     /// <remarks>
     /// This will block until the <see cref="NotifyIcon"/> instance is ready or an <see cref="Exception"/> occurs.<br/>
-    /// <paramref name="icoHandle"/> will not be destroyed, the responsibility lies with the caller
+    /// When using an icon handle as <paramref name="source"/> it will not be destroyed, the responsibility lies with the caller
     /// </remarks>
-    /// <param name="icoHandle">The handle of a .ico file</param>
+    /// <param name="source">The source of the icon to use</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon"/> instance</param>
-    /// <param name="defaultMenuItemConfig">The default configuration for <see cref="MenuItem"/> instances</param>
-    /// <param name="defaultSeparatorItemConfig">The default configuration for <see cref="SeparatorItem"/> instances</param>
+    /// <param name="handler">The handler to use for interaction with this <see cref="NotifyIcon"/> instance</param>
     /// <returns><see cref="NotifyIcon"/></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public static NotifyIcon Run(nint icoHandle, CancellationToken cancellationToken, Action<MenuItem>? defaultMenuItemConfig = null, Action<SeparatorItem>? defaultSeparatorItemConfig = null)
-    {
-        if (icoHandle == nint.Zero) throw new ArgumentNullException(nameof(icoHandle), "The handle cannot be null");
-
-        icoHandle = PInvoke.CopyIcon(icoHandle);
-
-        return icoHandle == nint.Zero
-            ? throw new ArgumentNullException(nameof(icoHandle), "The handle cannot be null")
-            : RunInternal(icoHandle, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
-    }
+    /// <exception cref="NotifyIconException"></exception>
+    public static NotifyIcon Run(IconSource source, CancellationToken cancellationToken, INotifyIconHandler? handler = null) => RunInternal(PrepareIconHandle(source), handler, cancellationToken);
 
     /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon"/> instance asynchronously
-    /// </summary>
-    /// <param name="icoPath">The path to a .ico file</param>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon"/> instance</param>
-    /// <param name="defaultMenuItemConfig">The default configuration for <see cref="MenuItem"/> instances</param>
-    /// <param name="defaultSeparatorItemConfig">The default configuration for <see cref="SeparatorItem"/> instances</param>
-    /// <returns><see cref="NotifyIcon"/></returns>
-    /// <exception cref="ArgumentException"></exception>
-    /// <exception cref="FileNotFoundException"></exception>
-    /// <exception cref="FileLoadException"></exception>
-    public static Task<NotifyIcon> RunAsync(string icoPath, CancellationToken cancellationToken, Action<MenuItem>? defaultMenuItemConfig = null, Action<SeparatorItem>? defaultSeparatorItemConfig = null)
-        => RunInternalAsync(PrepareIconHandle(icoPath), defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
-
-    /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon"/> instance asynchronously
+    /// Creates and runs a <see cref="NotifyIcon"/> instance synchronously
     /// </summary>
     /// <remarks>
-    /// <paramref name="icoHandle"/> will not be destroyed, the responsibility lies with the caller
+    /// This will block until the <see cref="NotifyIcon"/> instance is ready or an <see cref="Exception"/> occurs.<br/>
+    /// When using an icon handle as <paramref name="source"/> it will not be destroyed, the responsibility lies with the caller
     /// </remarks>
-    /// <param name="icoHandle">The handle of a .ico file</param>
+    /// <param name="source">The source of the icon to use</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon"/> instance</param>
-    /// <param name="defaultMenuItemConfig">The default configuration for <see cref="MenuItem"/> instances</param>
-    /// <param name="defaultSeparatorItemConfig">The default configuration for <see cref="SeparatorItem"/> instances</param>
+    /// <param name="handler">The handler to use for interaction with this <see cref="NotifyIcon"/> instance</param>
     /// <returns><see cref="NotifyIcon"/></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public static Task<NotifyIcon> RunAsync(nint icoHandle, CancellationToken cancellationToken, Action<MenuItem>? defaultMenuItemConfig = null, Action<SeparatorItem>? defaultSeparatorItemConfig = null)
-    {
-        if (icoHandle == nint.Zero) throw new ArgumentNullException(nameof(icoHandle), "The handle cannot be null");
-
-        icoHandle = PInvoke.CopyIcon(icoHandle);
-
-        return icoHandle == nint.Zero
-            ? throw new ArgumentNullException(nameof(icoHandle), "The handle cannot be null")
-            : RunInternalAsync(icoHandle, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
-    }
+    /// <exception cref="NotifyIconException"></exception>
+    public static Task<NotifyIcon> RunAsync(IconSource source, CancellationToken cancellationToken, INotifyIconHandler? handler = null) => RunInternalAsync(PrepareIconHandle(source), handler, cancellationToken);
 }

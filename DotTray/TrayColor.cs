@@ -87,8 +87,6 @@ public readonly record struct TrayColor
         A = a;
     }
 
-    internal readonly uint ToGdiPlus() => (uint)(A << 24 | R << 16 | G << 8 | B);
-
     /// <summary>
     /// Creates a <see cref="TrayColor"/> from a HEX color string in the format #RRGGBB or #RRGGBBAA
     /// </summary>

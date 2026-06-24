@@ -4,7 +4,7 @@ using DotTray.Internal.Win32;
 using System;
 
 /// <summary>
-/// Represents a balloon message that can be send using <see cref="NotifyIcon"/>
+/// Represents a balloon message that can be shown using <see cref="NotifyIcon"/>
 /// </summary>
 public sealed record BalloonNotification
 {

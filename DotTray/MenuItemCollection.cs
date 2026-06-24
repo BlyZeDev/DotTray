@@ -1,19 +1,16 @@
 ﻿namespace DotTray;
 
+using DotTray.Popup;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
-/// Represents a collection of <see cref="MenuItem"/>
+/// Represents a collection of menu items
 /// </summary>
 public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
 {
     private readonly List<MenuItemBase> _items;
-    private readonly Action<MenuItem> _defaultMenuItemConfig;
-    private readonly Action<SeparatorItem> _defaultSeparatorItemConfig;
-
-    internal event Action? Updated;
 
     /// <inheritdoc/>
     public int Count => _items.Count;
@@ -23,12 +20,9 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// </summary>
     public bool IsEmpty => _items.Count == 0;
 
-    internal MenuItemCollection(Action<MenuItem> defaultMenuItemConfig, Action<SeparatorItem> defaultSeparatorItemConfig)
+    internal MenuItemCollection()
     {
         _items = [];
-
-        _defaultMenuItemConfig = defaultMenuItemConfig;
-        _defaultSeparatorItemConfig = defaultSeparatorItemConfig;
     }
 
     /// <inheritdoc/>
@@ -40,109 +34,42 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// <typeparam name="TItem">The type at the specific index</typeparam>
     /// <param name="index">The zero-based index of the element to get</param>
     /// <returns>Anything that derives from <see cref="MenuItemBase"/></returns>
-    public TItem GetAt<TItem>(int index) where TItem : MenuItemBase => (TItem)_items[index];
+    /// <exception cref="InvalidCastException"></exception>
+    public TItem GetAt<TItem>(int index) where TItem : MenuItemBase => (TItem)this[index];
 
     /// <summary>
-    /// Adds a <see cref="MenuItem"/> to the collection
+    /// Adds a new item with the specified configuration to the collection
     /// </summary>
-    /// <param name="text">The display text</param>
-    /// <returns><see cref="MenuItem"/></returns>
-    public MenuItem AddItem(string text)
+    /// <typeparam name="TItem">The type of the item</typeparam>
+    /// <param name="configuration">The configuration of the item</param>
+    public void Add<TItem>(Action<TItem> configuration) where TItem : MenuItemBase, new()
     {
-        var item = new MenuItem(text, _defaultMenuItemConfig, _defaultSeparatorItemConfig);
-        _defaultMenuItemConfig(item);
-
-        item.Updated += Update;
-
+        var item = new TItem();
+        configuration(item);
         _items.Add(item);
-        Update();
-
-        return item;
     }
 
     /// <summary>
-    /// Adds a <see cref="MenuItem"/> to the collection
+    /// Adds multiple new items with the specified configurations to the collection
     /// </summary>
-    /// <param name="menuItemConfig">The configuration to use</param>
-    /// <returns><see cref="MenuItem"/></returns>
-    public MenuItem AddItem(Action<MenuItem> menuItemConfig)
+    /// <typeparam name="TItem">The type of the item</typeparam>
+    /// <param name="configurations">The configurations of the items</param>
+    public void AddRange<TItem>(params ReadOnlySpan<Action<TItem>> configurations) where TItem : MenuItemBase, new()
     {
-        var item = new MenuItem("", _defaultMenuItemConfig, _defaultSeparatorItemConfig);
-        _defaultMenuItemConfig(item);
-        menuItemConfig(item);
-
-        item.Updated += Update;
-
-        _items.Add(item);
-        Update();
-
-        return item;
-    }
-
-    /// <summary>
-    /// Adds a <see cref="SeparatorItem"/> to the collection
-    /// </summary>
-    /// <returns><see cref="SeparatorItem"/></returns>
-    public SeparatorItem AddSeparator()
-    {
-        var item = new SeparatorItem();
-        _defaultSeparatorItemConfig(item);
-
-        item.Updated += Update;
-
-        _items.Add(item);
-        Update();
-
-        return item;
-    }
-
-    /// <summary>
-    /// Adds a <see cref="SeparatorItem"/> to the collection
-    /// </summary>
-    /// <param name="separatorItemConfig">The configuration to use</param>
-    /// <returns></returns>
-    public SeparatorItem AddSeparator(Action<SeparatorItem> separatorItemConfig)
-    {
-        var item = new SeparatorItem();
-        _defaultSeparatorItemConfig(item);
-        separatorItemConfig(item);
-
-        item.Updated += Update;
-
-        _items.Add(item);
-        Update();
-
-        return item;
-    }
-
-    /// <summary>
-    /// Removes a <see cref="MenuItemBase"/> at a specified index
-    /// </summary>
-    /// <param name="index">The zero-based index to remove the item at</param>
-    public void RemoveAt(int index)
-    {
-        _items[index].Updated -= Update;
-        _items.RemoveAt(index);
-        Update();
-    }
-
-    /// <summary>
-    /// Clears the collection
-    /// </summary>
-    public void Clear()
-    {
-        foreach (var item in _items)
+        foreach (var configuration in configurations)
         {
-            item.Updated -= Update;
+            Add(configuration);
         }
-
-        _items.Clear();
     }
+
+    /// <summary>
+    /// Removes the element at the specified index
+    /// </summary>
+    /// <param name="index">The zero-based index of the element to remove</param>
+    public void RemoveAt(int index) => _items.RemoveAt(index);
 
     /// <inheritdoc/>
     public IEnumerator<MenuItemBase> GetEnumerator() => _items.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-    private void Update() => Updated?.Invoke();
 }

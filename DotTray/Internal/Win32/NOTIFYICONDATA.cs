@@ -3,7 +3,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 internal unsafe struct NOTIFYICONDATA
 {
     public const int SZTIP_LENGTH = 128;

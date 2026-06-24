@@ -3,7 +3,9 @@
 using DotTray.Internal;
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
+using DotTray.Popup;
 using System;
+using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -11,25 +13,159 @@ using System.Threading.Tasks;
 
 public sealed partial class NotifyIcon
 {
-    private void SetIconUnsafe(nint icoHandle) => PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_ICON, icoHandle, nint.Zero);
+    private const uint WM_APP_TRAYICON_CALLBACK = PInvoke.WM_APP + 1;
+    private const uint WM_APP_TRAYICON_TOOLTIP = PInvoke.WM_APP + 2;
+    private const uint WM_APP_TRAYICON_VISIBILITY = PInvoke.WM_APP + 3;
+    private const uint WM_APP_TRAYICON_BALLOON = PInvoke.WM_APP + 4;
 
-    internal void AttemptSessionRestart() => PInvoke.PostMessage(hWnd, PInvoke.WM_APP_TRAYICON_RESTART_SESSION, nint.Zero, nint.Zero);
+    private static uint totalIcons;
+    private static nint gdipToken;
+
+    private readonly nint _icoHandle;
+    private readonly INotifyIconHandler _handler;
+
+    private readonly nint _popupWindowClassName;
+    private readonly nint _instanceHandle;
+    private readonly Thread _thread;
+
+    private nint hWnd;
+
+    private BalloonNotification? nextBalloon;
+
+    private NotifyIcon(nint icoHandle, INotifyIconHandler? handler, Action onInitializationFinished, CancellationToken token)
+    {
+        totalIcons++;
+        Id = Guid.CreateVersion7();
+
+        _icoHandle = icoHandle;
+        _handler = handler ?? new DefaultPopupMenuHandler();
+
+        MenuItems = [];
+        ToolTip = null;
+        IsVisible = true;
+
+        var windowClassNameString = $"{nameof(DotTray)}NotifyIconWindow{Id}";
+        var windowClassName = Marshal.StringToHGlobalUni(windowClassNameString);
+        _popupWindowClassName = Marshal.StringToHGlobalUni($"{windowClassNameString}_Popup");
+
+        _instanceHandle = PInvoke.GetModuleHandle(null);
+        NotifyIconException.ThrowIfNull(_instanceHandle, "Acquiring module handle failed");
+
+        _thread = new Thread(() =>
+        {
+            var result = PInvoke.SetThreadDpiAwarenessContext(PInvoke.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+            NotifyIconException.ThrowIfNull(result, "Setting the DPI awareness for this thread failed");
+
+            if (gdipToken == nint.Zero)
+            {
+                var input = new GDIPLUSSTARTUPINPUT
+                {
+                    GdiplusVersion = 1
+                };
+                var gdipStatus = (PInvoke.GdiPlusStatus)PInvoke.GdiplusStartup(out gdipToken, ref input, out _);
+                NotifyIconException.ThrowIfNotOk(gdipStatus, "GDI+ startup failed");
+            }
+
+            var wndProc = new PInvoke.WndProc(WndProcFunc);
+            var wndClass = new WNDCLASS
+            {
+                lpfnWndProc = Marshal.GetFunctionPointerForDelegate(wndProc),
+                hInstance = _instanceHandle,
+                lpszClassName = windowClassName
+            };
+            var atom = PInvoke.RegisterClass(ref wndClass);
+            NotifyIconException.ThrowIfZero(atom, "Registering the window class failed");
+
+            var popupWndProc = new PInvoke.WndProc((hWnd, msg, wParam, lParam) => PInvoke.DefWindowProc(hWnd, msg, wParam, lParam));
+            var popupWndClass = new WNDCLASS
+            {
+                lpfnWndProc = Marshal.GetFunctionPointerForDelegate(popupWndProc),
+                hInstance = _instanceHandle,
+                lpszClassName = _popupWindowClassName
+            };
+            atom = PInvoke.RegisterClass(ref popupWndClass);
+            NotifyIconException.ThrowIfZero(atom, "Registering the window class failed");
+
+            hWnd = PInvoke.CreateWindowEx(0, windowClassName, nint.Zero, 0, 0, 0, 0, 0, nint.Zero, nint.Zero, _instanceHandle, nint.Zero);
+            NotifyIconException.ThrowIfNull(hWnd, "Creating a window failed");
+
+            var iconData = new NOTIFYICONDATA
+            {
+                cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
+                hWnd = hWnd,
+                guidItem = Id,
+                uFlags = PInvoke.NIF_MESSAGE | PInvoke.NIF_ICON | PInvoke.NIF_GUID,
+                uCallbackMessage = WM_APP_TRAYICON_CALLBACK,
+                hIcon = _icoHandle
+            };
+            var success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_ADD, ref iconData);
+            NotifyIconException.ThrowIfFalse(success, "Creating a notification icon failed");
+
+            iconData.uTimeoutOrVersion = 4;
+            success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_SETVERSION, ref iconData);
+            NotifyIconException.ThrowIfFalse(success, "Setting the version of a notification icon failed");
+
+            onInitializationFinished();
+
+            using (var registration = token.Register(() => PInvoke.PostMessage(hWnd, PInvoke.WM_CLOSE, 0, 0)))
+            {
+                success = PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_TOOLTIP, 0, 0);
+                NotifyIconException.ThrowIfFalse(success, "Posting a message failed");
+
+                while (PInvoke.GetMessage(out var message, nint.Zero, 0, 0))
+                {
+                    PInvoke.TranslateMessage(ref message);
+                    PInvoke.DispatchMessage(ref message);
+                }
+
+                iconData = new NOTIFYICONDATA
+                {
+                    cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
+                    hWnd = hWnd,
+                    guidItem = Id,
+                    uFlags = PInvoke.NIF_GUID
+                };
+                success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_DELETE, ref iconData);
+                NotifyIconException.ThrowIfFalse(success, "Deleting a notification icon failed");
+
+                success = PInvoke.DestroyIcon(_icoHandle);
+                NotifyIconException.ThrowIfFalse(success, "Destroying the icon failed");
+
+                if (hWnd != nint.Zero)
+                {
+                    success = PInvoke.DestroyWindow(hWnd);
+                    NotifyIconException.ThrowIfFalse(success, "Destroying the window failed");
+                    hWnd = nint.Zero;
+
+                    success = PInvoke.UnregisterClass(_popupWindowClassName, _instanceHandle);
+                    NotifyIconException.ThrowIfFalse(success, "Unregistering a class failed");
+                    success = PInvoke.UnregisterClass(windowClassName, _instanceHandle);
+                    NotifyIconException.ThrowIfFalse(success, "Unregistering a class failed");
+
+                    Marshal.FreeHGlobal(windowClassName);
+                    Marshal.FreeHGlobal(_popupWindowClassName);
+                }
+            }
+
+            GC.KeepAlive(wndProc);
+            GC.KeepAlive(popupWndProc);
+        });
+        _thread.Name = $"{nameof(NotifyIcon)}::{Id}";
+        _thread.SetApartmentState(ApartmentState.STA);
+        _thread.Start();
+    }
 
     private unsafe nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
     {
         switch (msg)
         {
-            case PInvoke.WM_APP_TRAYICON_CLICK: HandleClick(lParam); break;
+            case WM_APP_TRAYICON_CALLBACK: HandleCallback(wParam, lParam); break;
 
-            case PInvoke.WM_APP_TRAYICON_ICON: HandleIcon(hWnd, wParam); break;
+            case WM_APP_TRAYICON_TOOLTIP: HandleToolTip(hWnd); break;
 
-            case PInvoke.WM_APP_TRAYICON_TOOLTIP: HandleToolTip(hWnd); break;
+            case WM_APP_TRAYICON_VISIBILITY: HandleVisibility(hWnd); break;
 
-            case PInvoke.WM_APP_TRAYICON_VISIBILITY: HandleVisibility(hWnd); break;
-
-            case PInvoke.WM_APP_TRAYICON_BALLOON: HandleBalloon(hWnd); break;
-
-            case PInvoke.WM_APP_TRAYICON_RESTART_SESSION: HandleSessionRestartAttempt(); break;
+            case WM_APP_TRAYICON_BALLOON: HandleBalloon(hWnd); break;
 
             case PInvoke.WM_DESTROY: PInvoke.PostQuitMessage(0); return 0;
         }
@@ -37,50 +173,16 @@ public sealed partial class NotifyIcon
         return PInvoke.DefWindowProc(hWnd, msg, wParam, lParam);
     }
 
-    private void HandleClick(nint lParam)
+    private void HandleCallback(nint wParam, nint lParam)
     {
-        if (MenuItems.IsEmpty) return;
-
-        var clickedButton = lParam.ToInt32() switch
+        var interaction = new NotifyIconInteractedEventArgs
         {
-            PInvoke.WM_LBUTTONUP => MouseButton.Left,
-            PInvoke.WM_RBUTTONUP => MouseButton.Right,
-            PInvoke.WM_MBUTTONUP => MouseButton.Middle,
-            _ => MouseButton.None
+            Type = (InteractionType)(uint)(lParam & 0xFFFF),
+            MousePosition = new Point((short)(wParam & 0xFFFF), (short)((wParam >> 16) & 0xFFFF))
         };
 
-        if (clickedButton is not MouseButton.None && MouseButtons.HasFlag(clickedButton))
-        {
-            PInvoke.GetCursorPos(out lastMousePos);
-
-            PopupShowing?.Invoke(clickedButton);
-            popupMenuSession = PopupMenuSession.Show(this, _popupWindowClassName, instanceHandle, lastMousePos);
-            popupMenuSession.Disposed += PopupDismissedCallback;
-        }
-    }
-
-    private void PopupDismissedCallback()
-    {
-        popupMenuSession!.Disposed -= PopupDismissedCallback;
-        popupMenuSession = null;
-        PopupHiding?.Invoke();
-    }
-
-    private void HandleIcon(nint hWnd, nint wParam)
-    {
-        var iconData = new NOTIFYICONDATA
-        {
-            cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
-            hWnd = hWnd,
-            guidItem = Id,
-            uFlags = PInvoke.NIF_ICON | PInvoke.NIF_GUID,
-            uCallbackMessage = PInvoke.WM_APP_TRAYICON_CLICK,
-            hIcon = wParam
-        };
-        PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
-
-        PInvoke.DestroyIcon(icoHandle);
-        icoHandle = wParam;
+        Interacted?.Invoke(interaction);
+        _handler.HandleInteraction(this, interaction);
     }
 
     private unsafe void HandleToolTip(nint hWnd)
@@ -90,12 +192,12 @@ public sealed partial class NotifyIcon
             cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
             hWnd = hWnd,
             guidItem = Id,
-            uFlags = PInvoke.NIF_TIP | PInvoke.NIF_GUID
+            uFlags = PInvoke.NIF_TIP | PInvoke.NIF_SHOWTIP | PInvoke.NIF_GUID
         };
+        NativeString.WriteFixed(iconData.szTip, NOTIFYICONDATA.SZTIP_LENGTH, ToolTip ?? "");
 
-        NativeString.WriteFixed(iconData.szTip, NOTIFYICONDATA.SZTIP_LENGTH, ToolTip);
-
-        PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
+        var success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
+        NotifyIconException.ThrowIfFalse(success, "Modifying the notification icon failed");
     }
 
     private void HandleVisibility(nint hWnd)
@@ -110,7 +212,8 @@ public sealed partial class NotifyIcon
             dwStateMask = PInvoke.NIS_HIDDEN
         };
 
-        PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
+        var success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
+        NotifyIconException.ThrowIfFalse(success, "Modifying the notification icon failed");
     }
 
     private unsafe void HandleBalloon(nint hWnd)
@@ -122,9 +225,9 @@ public sealed partial class NotifyIcon
             cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
             hWnd = hWnd,
             guidItem = Id,
-            hIcon = (nextBalloon.Icon is BalloonNotificationIcon.User) ? icoHandle : nint.Zero,
+            hBalloonIcon = (nextBalloon.Icon is BalloonNotificationIcon.User) ? _icoHandle : nint.Zero,
             uFlags = PInvoke.NIF_INFO | PInvoke.NIF_GUID,
-            dwInfoFlags = (uint)nextBalloon.Icon | (nextBalloon.NoSound ? PInvoke.NIIF_NOSOUND : 0)
+            dwInfoFlags = (uint)nextBalloon.Icon | (nextBalloon.NoSound ? PInvoke.NIIF_NOSOUND : 0) | (nextBalloon.Icon is BalloonNotificationIcon.User ? PInvoke.NIIF_LARGE_ICON : 0)
         };
 
         NativeString.WriteFixed(iconData.szInfoTitle, NOTIFYICONDATA.SZINFOTITLE_LENGTH, nextBalloon.Title);
@@ -132,23 +235,15 @@ public sealed partial class NotifyIcon
 
         nextBalloon = null;
 
-        PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
+        var success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
+        NotifyIconException.ThrowIfFalse(success, "Modifying the notification icon failed");
     }
 
-    private void HandleSessionRestartAttempt()
-    {
-        if (popupMenuSession is null) return;
-
-        popupMenuSession.Disposed -= PopupDismissedCallback;
-        popupMenuSession = PopupMenuSession.Show(this, _popupWindowClassName, instanceHandle, lastMousePos);
-        popupMenuSession.Disposed += PopupDismissedCallback;
-    }
-
-    private static NotifyIcon RunInternal(nint icoHandle, Action<MenuItem>? defaultMenuItemConfig, Action<SeparatorItem>? defaultSeparatorItemConfig, CancellationToken cancellationToken)
+    private static NotifyIcon RunInternal(nint preparedIcoHandle, INotifyIconHandler? handler, CancellationToken cancellationToken)
     {
         using (var manualLock = new ManualResetEventSlim(false))
         {
-            var icon = new NotifyIcon(icoHandle, manualLock.Set, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
+            var icon = new NotifyIcon(preparedIcoHandle, handler, manualLock.Set, cancellationToken);
 
             manualLock.Wait(cancellationToken);
 
@@ -156,23 +251,36 @@ public sealed partial class NotifyIcon
         }
     }
 
-    private static async Task<NotifyIcon> RunInternalAsync(nint icoHandle, Action<MenuItem>? defaultMenuItemConfig, Action<SeparatorItem>? defaultSeparatorItemConfig, CancellationToken cancellationToken)
+    private static async Task<NotifyIcon> RunInternalAsync(nint preparedIcoHandle, INotifyIconHandler? handler, CancellationToken cancellationToken)
     {
         var manualLock = new AsyncManualResetEvent(false);
 
-        var icon = new NotifyIcon(icoHandle, manualLock.Set, defaultMenuItemConfig, defaultSeparatorItemConfig, cancellationToken);
+        var icon = new NotifyIcon(preparedIcoHandle, handler, manualLock.Set, cancellationToken);
 
         await manualLock.WaitAsync(cancellationToken);
 
         return icon;
     }
 
-    private static nint PrepareIconHandle(string icoPath)
+    private static nint PrepareIconHandle(IconSource source)
     {
-        if (!Path.GetExtension(icoPath).Equals(".ico", StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("The path needs to point to an .ico file", nameof(icoPath));
-        if (!File.Exists(icoPath)) throw new FileNotFoundException("The .ico file could not be found", icoPath);
+        if (source.IsPath)
+        {
+            var path = source.Path;
 
-        var handle = PInvoke.LoadImage(nint.Zero, icoPath, PInvoke.IMAGE_ICON, 0, 0, PInvoke.LR_LOADFROMFILE | PInvoke.LR_DEFAULTSIZE);
-        return handle == nint.Zero ? throw new FileLoadException("The .ico file could not be loaded", icoPath) : handle;
+            if (!Path.GetExtension(path).Equals(".ico", StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("The path needs to point to an .ico file", nameof(source));
+            if (!File.Exists(path)) throw new FileNotFoundException("The .ico file could not be found", path);
+
+            var handle = PInvoke.LoadImage(nint.Zero, path, PInvoke.IMAGE_ICON, 0, 0, PInvoke.LR_LOADFROMFILE | PInvoke.LR_DEFAULTSIZE);
+            NotifyIconException.ThrowIfNull(handle, "The .ico file could not be loaded");
+            return handle;
+        }
+        else if (source.IsHandle)
+        {
+            var copyHandle = PInvoke.CopyIcon(source.Handle);
+            NotifyIconException.ThrowIfNull(copyHandle, "Copying the icon handle failed");
+            return copyHandle;
+        }
+        else throw new ArgumentException("The icon source is invalid", nameof(source));
     }
 }
