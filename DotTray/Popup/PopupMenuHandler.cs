@@ -1,5 +1,6 @@
 ﻿namespace DotTray.Popup;
 
+using DotTray.Abstract;
 using System.Drawing;
 
 /// <summary>
@@ -8,7 +9,7 @@ using System.Drawing;
 public abstract class PopupMenuHandler : INotifyIconHandler
 {
     /// <inheritdoc/>
-    public void HandleInteraction(NotifyIcon owner, NotifyIconInteractedEventArgs args)
+    void INotifyIconHandler.HandleInteraction<THandler>(NotifyIcon<THandler> owner, NotifyIconInteractedEventArgs args)
     {
         switch (args.Type)
         {
@@ -22,16 +23,16 @@ public abstract class PopupMenuHandler : INotifyIconHandler
     /// <summary>
     /// Called when the popup menu is requested
     /// </summary>
-    /// <param name="owner">The <see cref="NotifyIcon"/> that owns this handler</param>
+    /// <param name="owner">The <see cref="NotifyIcon{THandler}"/> that owns this handler</param>
     /// <param name="mousePosition">The coordinates of the cursor (in screen coordinates) at the exact moment the interaction occurred</param>
-    public abstract void Show(NotifyIcon owner, Point mousePosition);
+    protected abstract void Show<THandler>(NotifyIcon<THandler> owner, Point mousePosition) where THandler : class, INotifyIconHandler;
 
     /// <summary>
     /// Called when the popup context menu is requested
     /// </summary>
-    /// <param name="owner">The <see cref="NotifyIcon"/> that owns this handler</param>
+    /// <param name="owner">The <see cref="NotifyIcon{THandler}"/> that owns this handler</param>
     /// <param name="mousePosition">The coordinates of the cursor (in screen coordinates) at the exact moment the interaction occurred</param>
-    public abstract void ShowContext(NotifyIcon owner, Point mousePosition);
+    protected abstract void ShowContext<THandler>(NotifyIcon<THandler> owner, Point mousePosition) where THandler : class, INotifyIconHandler;
 
     /// <summary>
     /// Called when showing the tooltip is requested
@@ -39,9 +40,9 @@ public abstract class PopupMenuHandler : INotifyIconHandler
     /// <remarks>
     /// It is recommended to disable the default tooltip as showing both might clash
     /// </remarks>
-    /// <param name="owner">The <see cref="NotifyIcon"/> that owns this handler</param>
+    /// <param name="owner">The <see cref="NotifyIcon{THandler}"/> that owns this handler</param>
     /// <param name="mousePosition">The coordinates of the cursor (in screen coordinates) at the exact moment the interaction occurred</param>
-    public virtual void ShowToolTip(NotifyIcon owner, Point mousePosition) { }
+    protected virtual void ShowToolTip<THandler>(NotifyIcon<THandler> owner, Point mousePosition) where THandler : class, INotifyIconHandler { }
 
     /// <summary>
     /// Called when hiding the tooltip is requested
@@ -49,7 +50,7 @@ public abstract class PopupMenuHandler : INotifyIconHandler
     /// <remarks>
     /// It is recommended to disable the default tooltip as showing both might clash
     /// </remarks>
-    /// <param name="owner">The <see cref="NotifyIcon"/> that owns this handler</param>
+    /// <param name="owner">The <see cref="NotifyIcon{THandler}"/> that owns this handler</param>
     /// <param name="mousePosition">The coordinates of the cursor (in screen coordinates) at the exact moment the interaction occurred</param>
-    public virtual void HideToolTip(NotifyIcon owner, Point mousePosition) { }
+    protected virtual void HideToolTip<THandler>(NotifyIcon<THandler> owner, Point mousePosition) where THandler : class, INotifyIconHandler { }
 }

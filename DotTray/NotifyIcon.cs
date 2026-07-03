@@ -1,169 +1,126 @@
 ﻿namespace DotTray;
 
+using DotTray.Abstract;
+using DotTray.Internal;
 using DotTray.Internal.Native;
-using DotTray.Internal.Win32;
+using DotTray.Popup;
 using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
 /// <summary>
-/// Represents a Notification Icon that is displayed in the Taskbar
+/// Provides factory methods for creating Notification Icons
 /// </summary>
-/// <remarks> 
-/// To get the best possible result it's recommended that the icon includes a 16x16 or 32x32 variant with a 32-bit color depth including alpha channel.<br/>
-/// Using other sizes or color depths may lead to unexpected results or poor quality rendering.
-/// </remarks>
-public sealed partial class NotifyIcon : IDisposable
+public static class NotifyIcon
 {
-    /// <summary>
-    /// The unique identifier of this <see cref="NotifyIcon"/> instance
-    /// </summary>
-    public Guid Id { get; }
+    internal static uint TotalIcons;
+    internal static nint GdipToken;
 
     /// <summary>
-    /// The underlying window handle used by this <see cref="NotifyIcon"/> instance
+    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance synchronously using <see cref="NativePopupMenuHandler"/>
+    /// </summary>
+    /// <param name="source">The source of the icon to display</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon{THandler}"/> instance</param>
+    /// <returns><see cref="NotifyIcon{THandler}"/></returns>
+    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="FileNotFoundException"></exception>
+    /// <exception cref="NotifyIconException"></exception>
+    public static NotifyIcon<NativePopupMenuHandler> Run(IconSource source, CancellationToken cancellationToken)
+        => RunInternal(PrepareIconHandle(source), new NativePopupMenuHandler(), cancellationToken);
+
+    /// <summary>
+    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance synchronously
     /// </summary>
     /// <remarks>
-    /// This can be used as owner handle for any child windows
+    /// This will block until the <see cref="NotifyIcon{THandler}"/> instance is ready or an <see cref="Exception"/> occurs.<br/>
+    /// When using an icon handle as <paramref name="source"/> it will not be destroyed, the responsibility lies with the caller
     /// </remarks>
-    public nint Handle => hWnd;
+    /// <param name="source">The source of the icon to display</param>
+    /// <param name="handler">The handler to use for interaction with this <see cref="NotifyIcon{THandler}"/> instance</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon{THandler}"/> instance</param>
+    /// <returns><see cref="NotifyIcon{THandler}"/></returns>
+    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="FileNotFoundException"></exception>
+    /// <exception cref="NotifyIconException"></exception>
+    public static NotifyIcon<THandler> Run<THandler>(IconSource source, THandler handler, CancellationToken cancellationToken)
+        where THandler : class, INotifyIconHandler
+        => RunInternal(PrepareIconHandle(source), handler, cancellationToken);
 
     /// <summary>
-    /// The <see cref="MenuItemCollection"/> of this <see cref="NotifyIcon"/> instance
+    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance asynchronously using <see cref="NativePopupMenuHandler"/>
     /// </summary>
-    public MenuItemCollection MenuItems { get; }
+    /// <param name="source">The source of the icon to display</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon{THandler}"/> instance</param>
+    /// <returns><see cref="NotifyIcon{THandler}"/></returns>
+    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="FileNotFoundException"></exception>
+    /// <exception cref="NotifyIconException"></exception>
+    public static Task<NotifyIcon<NativePopupMenuHandler>> RunAsync(IconSource source, CancellationToken cancellationToken)
+        => RunInternalAsync(PrepareIconHandle(source), new NativePopupMenuHandler(), cancellationToken);
 
     /// <summary>
-    /// The tooltip text of this <see cref="NotifyIcon"/> instance, or <see langword="null"/> if no tooltip should be shown
-    /// </summary>
-    /// <remarks>
-    /// The default value is <see langword="null"/>
-    /// </remarks>
-    public string? ToolTip { get; private set; }
-
-    /// <summary>
-    /// The current visibility of this <see cref="NotifyIcon"/>.<br/>
-    /// <see langword="true"/> if it is visible, otherwise <see langword="false"/>
-    /// </summary>
-    /// <remarks>
-    /// The default value is <see langword="true"/>
-    /// </remarks>
-    public bool IsVisible { get; private set; }
-
-    /// <summary>
-    /// Fires whenever the user interacts with the <see cref="NotifyIcon"/> or a <see cref="BalloonNotification"/>.
-    /// </summary>
-    /// <remarks>
-    /// Note: This event is raised on the <see cref="NotifyIcon"/>'s background STA thread.
-    /// </remarks>
-    public event Action<NotifyIconInteractedEventArgs>? Interacted;
-
-    /// <summary>
-    /// Sets the <see cref="ToolTip"/> for this <see cref="NotifyIcon"/> instance
+    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance synchronously
     /// </summary>
     /// <remarks>
-    /// <paramref name="toolTip"/> is truncated to fit into the allowed Windows tooltip character length
+    /// This will block until the <see cref="NotifyIcon{THandler}"/> instance is ready or an <see cref="Exception"/> occurs.<br/>
+    /// When using an icon handle as <paramref name="source"/> it will not be destroyed, the responsibility lies with the caller
     /// </remarks>
-    /// <param name="toolTip">The text to set as <see cref="ToolTip"/></param>
-    public void SetToolTip(string? toolTip)
+    /// <param name="source">The source of the icon to display</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon{THandler}"/> instance</param>
+    /// <param name="handler">The handler to use for interaction with this <see cref="NotifyIcon{THandler}"/> instance</param>
+    /// <returns><see cref="NotifyIcon{THandler}"/></returns>
+    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="FileNotFoundException"></exception>
+    /// <exception cref="NotifyIconException"></exception>
+    public static Task<NotifyIcon<THandler>> RunAsync<THandler>(IconSource source, THandler handler, CancellationToken cancellationToken)
+        where THandler : class, INotifyIconHandler
+        => RunInternalAsync(PrepareIconHandle(source), handler, cancellationToken);
+
+    private static NotifyIcon<THandler> RunInternal<THandler>(nint preparedIcoHandle, THandler handler, CancellationToken cancellationToken)
+        where THandler : class, INotifyIconHandler
     {
-        if (ToolTip is null && toolTip is null) return;
-
-        if (toolTip is not null)
+        using (var manualLock = new ManualResetEventSlim(false))
         {
-            toolTip = toolTip.Length > NOTIFYICONDATA.SZTIP_LENGTH ? toolTip[..NOTIFYICONDATA.SZTIP_LENGTH] : toolTip;
+            var icon = new NotifyIcon<THandler>(preparedIcoHandle, handler, manualLock.Set, cancellationToken);
 
-            if (ToolTip?.Equals(toolTip, StringComparison.Ordinal) ?? false) return;
+            manualLock.Wait(cancellationToken);
+
+            return icon;
         }
-
-        ToolTip = toolTip;
-        var success = PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_TOOLTIP, 0, 0);
-        NotifyIconException.ThrowIfFalse(success, "Posting a tooltip message failed");
     }
 
-    /// <summary>
-    /// Hides this <see cref="NotifyIcon"/> instance
-    /// </summary>
-    public void Hide()
+    private static async Task<NotifyIcon<THandler>> RunInternalAsync<THandler>(nint preparedIcoHandle, THandler handler, CancellationToken cancellationToken)
+        where THandler : class, INotifyIconHandler
     {
-        if (!IsVisible) return;
+        var manualLock = new AsyncManualResetEvent(false);
 
-        IsVisible = false;
-        var success = PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_VISIBILITY, 0, 0);
-        NotifyIconException.ThrowIfFalse(success, "Posting a visibility message failed");
+        var icon = new NotifyIcon<THandler>(preparedIcoHandle, handler, manualLock.Set, cancellationToken);
+
+        await manualLock.WaitAsync(cancellationToken);
+
+        return icon;
     }
 
-    /// <summary>
-    /// Shows this <see cref="NotifyIcon"/> instance
-    /// </summary>
-    public void Show()
+    private static nint PrepareIconHandle(IconSource source)
     {
-        if (IsVisible) return;
-
-        IsVisible = true;
-        var success = PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_VISIBILITY, 0, 0);
-        NotifyIconException.ThrowIfFalse(success, "Posting a visibility message failed");
-    }
-
-    /// <summary>
-    /// Shows a balloon notification
-    /// </summary>
-    /// <param name="balloon">The balloon notification to show</param>
-    public void ShowBalloon(BalloonNotification balloon)
-    {
-        nextBalloon = balloon with
+        if (source.IsPath)
         {
-            Title = balloon.Title.Length > NOTIFYICONDATA.SZINFOTITLE_LENGTH ? balloon.Title[..NOTIFYICONDATA.SZINFOTITLE_LENGTH] : balloon.Title,
-            Message = balloon.Message.Length > NOTIFYICONDATA.SZINFO_LENGTH ? balloon.Message[..NOTIFYICONDATA.SZINFO_LENGTH] : balloon.Message
-        };
+            var path = source.Path;
 
-        var success = PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_BALLOON, 0, 0);
-        NotifyIconException.ThrowIfFalse(success, "Posting a balloon message failed");
+            if (!Path.GetExtension(path).Equals(".ico", StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("The path needs to point to an .ico file", nameof(source));
+            if (!File.Exists(path)) throw new FileNotFoundException("The .ico file could not be found", path);
+
+            var handle = PInvoke.LoadImage(nint.Zero, path, PInvoke.IMAGE_ICON, 0, 0, PInvoke.LR_LOADFROMFILE | PInvoke.LR_DEFAULTSIZE);
+            NotifyIconException.ThrowIfNull(handle, "The .ico file could not be loaded");
+            return handle;
+        }
+        else if (source.IsHandle)
+        {
+            var copyHandle = PInvoke.CopyIcon(source.Handle);
+            NotifyIconException.ThrowIfNull(copyHandle, "Copying the icon handle failed");
+            return copyHandle;
+        }
+        else throw new ArgumentException("The icon source is invalid", nameof(source));
     }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        var success = PInvoke.PostMessage(hWnd, PInvoke.WM_CLOSE, 0, 0);
-        NotifyIconException.ThrowIfFalse(success, "Posting a close message failed");
-
-        if (_thread.IsAlive) _thread.Join();
-
-        totalIcons--;
-        if (totalIcons > 0 || gdipToken == nint.Zero) return;
-
-        PInvoke.GdiplusShutdown(gdipToken);
-        gdipToken = nint.Zero;
-    }
-
-    /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon"/> instance synchronously
-    /// </summary>
-    /// <remarks>
-    /// This will block until the <see cref="NotifyIcon"/> instance is ready or an <see cref="Exception"/> occurs.<br/>
-    /// When using an icon handle as <paramref name="source"/> it will not be destroyed, the responsibility lies with the caller
-    /// </remarks>
-    /// <param name="source">The source of the icon to use</param>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon"/> instance</param>
-    /// <param name="handler">The handler to use for interaction with this <see cref="NotifyIcon"/> instance</param>
-    /// <returns><see cref="NotifyIcon"/></returns>
-    /// <exception cref="ArgumentNullException"></exception>
-    /// <exception cref="NotifyIconException"></exception>
-    public static NotifyIcon Run(IconSource source, CancellationToken cancellationToken, INotifyIconHandler? handler = null) => RunInternal(PrepareIconHandle(source), handler, cancellationToken);
-
-    /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon"/> instance synchronously
-    /// </summary>
-    /// <remarks>
-    /// This will block until the <see cref="NotifyIcon"/> instance is ready or an <see cref="Exception"/> occurs.<br/>
-    /// When using an icon handle as <paramref name="source"/> it will not be destroyed, the responsibility lies with the caller
-    /// </remarks>
-    /// <param name="source">The source of the icon to use</param>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon"/> instance</param>
-    /// <param name="handler">The handler to use for interaction with this <see cref="NotifyIcon"/> instance</param>
-    /// <returns><see cref="NotifyIcon"/></returns>
-    /// <exception cref="ArgumentNullException"></exception>
-    /// <exception cref="NotifyIconException"></exception>
-    public static Task<NotifyIcon> RunAsync(IconSource source, CancellationToken cancellationToken, INotifyIconHandler? handler = null) => RunInternalAsync(PrepareIconHandle(source), handler, cancellationToken);
 }

@@ -20,6 +20,11 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// </summary>
     public bool IsEmpty => _items.Count == 0;
 
+    /// <summary>
+    /// Fired if this collection or an item that implements <see cref="INotifyUpdate"/> is updated
+    /// </summary>
+    public event Action? Updated;
+
     internal MenuItemCollection()
     {
         _items = [];
@@ -46,7 +51,11 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     {
         var item = new TItem();
         configuration(item);
+
+        if (item is INotifyUpdate update) update.Updated += OnUpdate;
+
         _items.Add(item);
+        OnUpdate();
     }
 
     /// <summary>
@@ -66,10 +75,16 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// Removes the element at the specified index
     /// </summary>
     /// <param name="index">The zero-based index of the element to remove</param>
-    public void RemoveAt(int index) => _items.RemoveAt(index);
+    public void RemoveAt(int index)
+    {
+        _items.RemoveAt(index);
+        OnUpdate();
+    }
 
     /// <inheritdoc/>
     public IEnumerator<MenuItemBase> GetEnumerator() => _items.GetEnumerator();
+
+    private void OnUpdate() => Updated?.Invoke();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

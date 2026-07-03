@@ -1,25 +1,21 @@
 ﻿namespace DotTray;
 
+using DotTray.Abstract;
 using DotTray.Internal;
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using DotTray.Popup;
 using System;
 using System.Drawing;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 
-public sealed partial class NotifyIcon
+public sealed partial class NotifyIcon<THandler>
 {
     private const uint WM_APP_TRAYICON_CALLBACK = PInvoke.WM_APP + 1;
     private const uint WM_APP_TRAYICON_TOOLTIP = PInvoke.WM_APP + 2;
     private const uint WM_APP_TRAYICON_VISIBILITY = PInvoke.WM_APP + 3;
     private const uint WM_APP_TRAYICON_BALLOON = PInvoke.WM_APP + 4;
-
-    private static uint totalIcons;
-    private static nint gdipToken;
 
     private readonly nint _icoHandle;
     private readonly INotifyIconHandler _handler;
@@ -32,15 +28,14 @@ public sealed partial class NotifyIcon
 
     private BalloonNotification? nextBalloon;
 
-    private NotifyIcon(nint icoHandle, INotifyIconHandler? handler, Action onInitializationFinished, CancellationToken token)
+    internal NotifyIcon(nint icoHandle, INotifyIconHandler? handler, Action onInitializationFinished, CancellationToken token)
     {
-        totalIcons++;
+        NotifyIcon.TotalIcons++;
         Id = Guid.CreateVersion7();
 
         _icoHandle = icoHandle;
-        _handler = handler ?? new DefaultPopupMenuHandler();
+        _handler = handler ?? new NativePopupMenuHandler();
 
-        MenuItems = [];
         ToolTip = null;
         IsVisible = true;
 
@@ -56,13 +51,13 @@ public sealed partial class NotifyIcon
             var result = PInvoke.SetThreadDpiAwarenessContext(PInvoke.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
             NotifyIconException.ThrowIfNull(result, "Setting the DPI awareness for this thread failed");
 
-            if (gdipToken == nint.Zero)
+            if (NotifyIcon.GdipToken == nint.Zero)
             {
                 var input = new GDIPLUSSTARTUPINPUT
                 {
                     GdiplusVersion = 1
                 };
-                var gdipStatus = (PInvoke.GdiPlusStatus)PInvoke.GdiplusStartup(out gdipToken, ref input, out _);
+                var gdipStatus = (PInvoke.GdiPlusStatus)PInvoke.GdiplusStartup(out NotifyIcon.GdipToken, ref input, out _);
                 NotifyIconException.ThrowIfNotOk(gdipStatus, "GDI+ startup failed");
             }
 
@@ -237,50 +232,5 @@ public sealed partial class NotifyIcon
 
         var success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
         NotifyIconException.ThrowIfFalse(success, "Modifying the notification icon failed");
-    }
-
-    private static NotifyIcon RunInternal(nint preparedIcoHandle, INotifyIconHandler? handler, CancellationToken cancellationToken)
-    {
-        using (var manualLock = new ManualResetEventSlim(false))
-        {
-            var icon = new NotifyIcon(preparedIcoHandle, handler, manualLock.Set, cancellationToken);
-
-            manualLock.Wait(cancellationToken);
-
-            return icon;
-        }
-    }
-
-    private static async Task<NotifyIcon> RunInternalAsync(nint preparedIcoHandle, INotifyIconHandler? handler, CancellationToken cancellationToken)
-    {
-        var manualLock = new AsyncManualResetEvent(false);
-
-        var icon = new NotifyIcon(preparedIcoHandle, handler, manualLock.Set, cancellationToken);
-
-        await manualLock.WaitAsync(cancellationToken);
-
-        return icon;
-    }
-
-    private static nint PrepareIconHandle(IconSource source)
-    {
-        if (source.IsPath)
-        {
-            var path = source.Path;
-
-            if (!Path.GetExtension(path).Equals(".ico", StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("The path needs to point to an .ico file", nameof(source));
-            if (!File.Exists(path)) throw new FileNotFoundException("The .ico file could not be found", path);
-
-            var handle = PInvoke.LoadImage(nint.Zero, path, PInvoke.IMAGE_ICON, 0, 0, PInvoke.LR_LOADFROMFILE | PInvoke.LR_DEFAULTSIZE);
-            NotifyIconException.ThrowIfNull(handle, "The .ico file could not be loaded");
-            return handle;
-        }
-        else if (source.IsHandle)
-        {
-            var copyHandle = PInvoke.CopyIcon(source.Handle);
-            NotifyIconException.ThrowIfNull(copyHandle, "Copying the icon handle failed");
-            return copyHandle;
-        }
-        else throw new ArgumentException("The icon source is invalid", nameof(source));
     }
 }
