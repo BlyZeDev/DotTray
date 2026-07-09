@@ -14,6 +14,7 @@ internal static partial class PInvoke
 
     public const uint WS_EX_TOPMOST = 0x00000008;
     public const uint WS_EX_TOOLWINDOW = 0x00000080;
+    public const uint WS_EX_LAYERED = 0x00080000;
     public const uint WS_EX_NOACTIVATE = 0x08000000;
 
     public const uint WS_VISIBLE = 0x10000000;
@@ -30,7 +31,10 @@ internal static partial class PInvoke
 
     public const int SW_SHOWNOACTIVATE = 4;
 
+    public const uint WM_NCACTIVATE = 0x0086;
+    public const uint WM_ERASEBKGND = 0x0014;
     public const uint WM_PAINT = 0x000F;
+    public const uint WM_SIZE = 0x0005;
 
     public const uint WM_DESTROY = 0x0002;
     public const uint WM_CLOSE = 0x0010;
@@ -45,6 +49,7 @@ internal static partial class PInvoke
     public const int WM_RBUTTONUP = 0x0205;
     public const int WM_MBUTTONDOWN = 0x0207;
     public const int WM_MBUTTONUP = 0x0208;
+    public const int WM_MOUSELEAVE = 0x02A3;
     public const int WM_CONTEXTMENU = 0x007B;
 
     public const int NIN_SELECT = 0x0400;
@@ -100,6 +105,7 @@ internal static partial class PInvoke
 
     public const uint SWP_NOACTIVATE = 0x0010;
     public const uint SWP_ZORDER = 0x0004;
+    public const uint SWP_NOREDRAW = 0x0008;
 
     public const nint DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4;
 

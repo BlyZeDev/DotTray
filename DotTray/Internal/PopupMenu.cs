@@ -1,0 +1,184 @@
+﻿namespace DotTray.Internal;
+
+using DotTray.Internal.Native;
+using DotTray.Internal.Win32;
+using DotTray.Popup.Default;
+using System;
+using System.Drawing;
+using System.Runtime.InteropServices;
+
+internal sealed class PopupMenu
+{
+    private const float BaseDpi = 96f;
+    private const uint WM_APP_POPUP_CALCWND = PInvoke.WM_APP + 0x2000;
+
+    private readonly float _scale;
+    private readonly PInvoke.WndProc _wndProc;
+    private readonly PopupMenuTree _tree;
+
+    public nint HWnd { get; }
+
+    public PopupMenu(PopupMenuTree tree, nint ownerHWnd)
+    {
+        _tree = tree;
+        _tree.Owner.Handler.MenuItems.Updated += OnRedrawRequested;
+
+        HWnd = PInvoke.CreateWindowEx(
+            PInvoke.WS_EX_NOACTIVATE | PInvoke.WS_EX_TOOLWINDOW | PInvoke.WS_EX_TOPMOST,
+            _tree.Owner.PopupWindowClassName, nint.Zero,
+            PInvoke.WS_CLIPCHILDREN | PInvoke.WS_CLIPSIBLINGS | PInvoke.WS_POPUP,
+            0, 0, 0, 0,
+            ownerHWnd,
+            nint.Zero,
+            _tree.Owner.InstanceHandle,
+            nint.Zero);
+
+        _scale = PInvoke.GetDpiForWindow(HWnd) / BaseDpi;
+
+        var cornerRadius = PInvoke.DWMWCP_ROUND;
+        PInvoke.DwmSetWindowAttribute(HWnd, PInvoke.DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerRadius, sizeof(int));
+
+        _wndProc = new PInvoke.WndProc(WndProcFunc);
+        PInvoke.SetWindowLongPtr(HWnd, PInvoke.GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProc));
+
+        HandleCalcWnd(HWnd);
+        PInvoke.ShowWindow(HWnd, PInvoke.SW_SHOWNOACTIVATE);
+    }
+
+    private void OnRedrawRequested() => PInvoke.PostMessage(HWnd, WM_APP_POPUP_CALCWND, nint.Zero, nint.Zero);
+
+    private nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
+    {
+        switch (msg)
+        {
+            case PInvoke.WM_NCACTIVATE: return 1;
+            case WM_APP_POPUP_CALCWND: return HandleCalcWnd(hWnd);
+            case PInvoke.WM_SIZE: PInvoke.InvalidateRect(hWnd, nint.Zero, false); return 0;
+            case PInvoke.WM_ERASEBKGND: return 1;
+            case PInvoke.WM_PAINT: return HandlePaint(hWnd);
+
+            case PInvoke.WM_CLOSE: PInvoke.DestroyWindow(hWnd); return 0;
+            case PInvoke.WM_DESTROY: return HandleDestroy();
+        }
+
+        return PInvoke.DefWindowProc(hWnd, msg, wParam, lParam);
+    }
+
+    private nint HandleCalcWnd(nint hWnd)
+    {
+        PInvoke.GetCursorPos(out var pos);
+        var (x, y, width, height) = CalcWindowArea(pos, _tree.Owner.Handler.MenuItems);
+        PInvoke.SetWindowPos(hWnd, nint.Zero, x, y, width, height, PInvoke.SWP_ZORDER | PInvoke.SWP_NOACTIVATE);
+
+        return nint.Zero;
+    }
+
+    private unsafe nint HandlePaint(nint hWnd)
+    {
+        var hPaint = PInvoke.BeginPaint(hWnd, out var paint);
+
+        try
+        {
+            PInvoke.GetClientRect(hWnd, out var cRect);
+
+            var dc = PInvoke.CreateCompatibleDC(hPaint);
+            var hBitmap = PInvoke.CreateCompatibleBitmap(hPaint, cRect.Right - cRect.Left, cRect.Bottom - cRect.Top);
+            var hOldBitmap = PInvoke.SelectObject(dc, hBitmap);
+
+            PInvoke.GdipCreateFromHDC(dc, out var gdip);
+            PInvoke.GdipSetSmoothingMode(gdip, PInvoke.SmoothingModeAntiAlias8x8);
+
+            DrawMenuBackground(gdip, cRect, _tree.Owner.Handler.Color.ToGdip());
+
+            using (var drawing = new DrawingContext(gdip, _scale))
+            {
+                var itemTop = (float)cRect.Top;
+                for (int i = 0; i < _tree.Owner.Handler.MenuItems.Count; i++)
+                {
+                    var box = _tree.Owner.Handler.MenuItems[i].DrawBox;
+
+                    drawing.Bounds = new RectangleF(cRect.Left, itemTop, box.Width, box.Height);
+                    _tree.Owner.Handler.MenuItems[i].Draw(drawing);
+
+                    itemTop += box.Height;
+                }
+            }
+
+            PInvoke.GdipDeleteGraphics(gdip);
+
+            PInvoke.BitBlt(hPaint, 0, 0, cRect.Right - cRect.Left, cRect.Bottom - cRect.Top, dc, 0, 0, PInvoke.SRCCOPY);
+
+            PInvoke.SelectObject(dc, hOldBitmap);
+            PInvoke.DeleteObject(hBitmap);
+            PInvoke.DeleteDC(dc);
+        }
+        finally
+        {
+            PInvoke.EndPaint(hWnd, ref paint);
+        }
+
+        return 0;
+    }
+
+    private static void DrawMenuBackground(nint gdip, RECT cRect, uint color)
+    {
+        PInvoke.GdipCreateSolidFill(color, out var hBrush);
+        PInvoke.GdipFillRectangle(gdip, hBrush, cRect.Left, cRect.Top, cRect.Right - cRect.Left, cRect.Bottom - cRect.Top);
+        PInvoke.GdipDeleteBrush(hBrush);
+    }
+
+    private nint HandleDestroy()
+    {
+        _tree.Owner.Handler.MenuItems.Updated -= OnRedrawRequested;
+        return nint.Zero;
+    }
+
+    private (int X, int Y, int Width, int Height) CalcWindowArea(POINT anchor, MenuItemCollection items)
+    {
+        var hdc = PInvoke.CreateCompatibleDC(nint.Zero);
+        _ = PInvoke.GdipCreateFromHDC(hdc, out var gdip);
+        PInvoke.GdipSetSmoothingMode(gdip, PInvoke.SmoothingModeAntiAlias8x8);
+
+        var maxWidth = 0f;
+        var totalHeight = 0f;
+
+        using (var measuring = new MeasuringContext(gdip, _scale))
+        {
+            foreach (var item in items)
+            {
+                var size = item.Measure(measuring);
+                item.DrawBox = size.ToRECTF(0, totalHeight);
+                maxWidth = MathF.Max(maxWidth, size.Width);
+                totalHeight += size.Height;
+            }
+        }
+
+        _ = PInvoke.GdipDeleteGraphics(gdip);
+        _ = PInvoke.DeleteDC(hdc);
+
+        var width = (int)MathF.Ceiling(maxWidth);
+        var height = (int)MathF.Ceiling(totalHeight);
+
+        var hMonitor = PInvoke.MonitorFromPoint(anchor, PInvoke.MONITOR_DEFAULTTONEAREST);
+        var (screenWidth, screenHeight) = GetMonitorWorkArea(hMonitor);
+
+        var x = anchor.x;
+        var y = anchor.y;
+
+        if (x + width > screenWidth) x = Math.Abs(x - width);
+        if (y + height > screenHeight) y = Math.Abs(y - height);
+
+        return (x, y, width, height);
+    }
+
+    private static (int Width, int Height) GetMonitorWorkArea(nint monitorHandle)
+    {
+        var monitorInfo = new MONITORINFO
+        {
+            cbSize = (uint)Marshal.SizeOf<MONITORINFO>()
+        };
+        PInvoke.GetMonitorInfo(monitorHandle, ref monitorInfo);
+
+        return (monitorInfo.rcWork.Right - monitorInfo.rcWork.Left, monitorInfo.rcWork.Bottom - monitorInfo.rcWork.Top);
+    }
+}

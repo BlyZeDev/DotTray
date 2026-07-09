@@ -1,6 +1,6 @@
-﻿namespace DotTray;
+﻿namespace DotTray.Popup.Default;
 
-using DotTray.Popup;
+using DotTray.Popup.Default.Abstract;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -21,7 +21,7 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     public bool IsEmpty => _items.Count == 0;
 
     /// <summary>
-    /// Fired if this collection or an item that implements <see cref="INotifyUpdate"/> is updated
+    /// Fired if this collection or an item is updated
     /// </summary>
     public event Action? Updated;
 
@@ -52,7 +52,7 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
         var item = new TItem();
         configuration(item);
 
-        if (item is INotifyUpdate update) update.Updated += OnUpdate;
+        item.Updated += OnUpdate;
 
         _items.Add(item);
         OnUpdate();

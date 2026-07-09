@@ -1,10 +1,8 @@
 ﻿namespace DotTray;
 
-using DotTray.Abstract;
 using DotTray.Internal;
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
-using DotTray.Popup;
 using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
@@ -18,33 +16,32 @@ public sealed partial class NotifyIcon<THandler>
     private const uint WM_APP_TRAYICON_BALLOON = PInvoke.WM_APP + 4;
 
     private readonly nint _icoHandle;
-    private readonly INotifyIconHandler _handler;
-
-    private readonly nint _popupWindowClassName;
-    private readonly nint _instanceHandle;
     private readonly Thread _thread;
+
+    internal readonly nint PopupWindowClassName;
+    internal readonly nint InstanceHandle;
 
     private nint hWnd;
 
     private BalloonNotification? nextBalloon;
 
-    internal NotifyIcon(nint icoHandle, INotifyIconHandler? handler, Action onInitializationFinished, CancellationToken token)
+    internal NotifyIcon(nint icoHandle, THandler handler, Action onInitializationFinished, CancellationToken token)
     {
         NotifyIcon.TotalIcons++;
         Id = Guid.CreateVersion7();
 
         _icoHandle = icoHandle;
-        _handler = handler ?? new NativePopupMenuHandler();
+        Handler = handler;
 
         ToolTip = null;
         IsVisible = true;
 
         var windowClassNameString = $"{nameof(DotTray)}NotifyIconWindow{Id}";
         var windowClassName = Marshal.StringToHGlobalUni(windowClassNameString);
-        _popupWindowClassName = Marshal.StringToHGlobalUni($"{windowClassNameString}_Popup");
+        PopupWindowClassName = Marshal.StringToHGlobalUni($"{windowClassNameString}_Popup");
 
-        _instanceHandle = PInvoke.GetModuleHandle(null);
-        NotifyIconException.ThrowIfNull(_instanceHandle, "Acquiring module handle failed");
+        InstanceHandle = PInvoke.GetModuleHandle(null);
+        NotifyIconException.ThrowIfNull(InstanceHandle, "Acquiring module handle failed");
 
         _thread = new Thread(() =>
         {
@@ -65,7 +62,7 @@ public sealed partial class NotifyIcon<THandler>
             var wndClass = new WNDCLASS
             {
                 lpfnWndProc = Marshal.GetFunctionPointerForDelegate(wndProc),
-                hInstance = _instanceHandle,
+                hInstance = InstanceHandle,
                 lpszClassName = windowClassName
             };
             var atom = PInvoke.RegisterClass(ref wndClass);
@@ -75,13 +72,14 @@ public sealed partial class NotifyIcon<THandler>
             var popupWndClass = new WNDCLASS
             {
                 lpfnWndProc = Marshal.GetFunctionPointerForDelegate(popupWndProc),
-                hInstance = _instanceHandle,
-                lpszClassName = _popupWindowClassName
+                hInstance = InstanceHandle,
+                lpszClassName = PopupWindowClassName,
+                hbrBackground = nint.Zero
             };
             atom = PInvoke.RegisterClass(ref popupWndClass);
             NotifyIconException.ThrowIfZero(atom, "Registering the window class failed");
 
-            hWnd = PInvoke.CreateWindowEx(0, windowClassName, nint.Zero, 0, 0, 0, 0, 0, nint.Zero, nint.Zero, _instanceHandle, nint.Zero);
+            hWnd = PInvoke.CreateWindowEx(0, windowClassName, nint.Zero, 0, 0, 0, 0, 0, nint.Zero, nint.Zero, InstanceHandle, nint.Zero);
             NotifyIconException.ThrowIfNull(hWnd, "Creating a window failed");
 
             var iconData = new NOTIFYICONDATA
@@ -132,13 +130,13 @@ public sealed partial class NotifyIcon<THandler>
                     NotifyIconException.ThrowIfFalse(success, "Destroying the window failed");
                     hWnd = nint.Zero;
 
-                    success = PInvoke.UnregisterClass(_popupWindowClassName, _instanceHandle);
+                    success = PInvoke.UnregisterClass(PopupWindowClassName, InstanceHandle);
                     NotifyIconException.ThrowIfFalse(success, "Unregistering a class failed");
-                    success = PInvoke.UnregisterClass(windowClassName, _instanceHandle);
+                    success = PInvoke.UnregisterClass(windowClassName, InstanceHandle);
                     NotifyIconException.ThrowIfFalse(success, "Unregistering a class failed");
 
                     Marshal.FreeHGlobal(windowClassName);
-                    Marshal.FreeHGlobal(_popupWindowClassName);
+                    Marshal.FreeHGlobal(PopupWindowClassName);
                 }
             }
 
@@ -177,7 +175,7 @@ public sealed partial class NotifyIcon<THandler>
         };
 
         Interacted?.Invoke(interaction);
-        _handler.HandleInteraction(this, interaction);
+        Handler.HandleInteraction(this, interaction);
     }
 
     private unsafe void HandleToolTip(nint hWnd)
@@ -189,7 +187,7 @@ public sealed partial class NotifyIcon<THandler>
             guidItem = Id,
             uFlags = PInvoke.NIF_TIP | PInvoke.NIF_SHOWTIP | PInvoke.NIF_GUID
         };
-        NativeString.WriteFixed(iconData.szTip, NOTIFYICONDATA.SZTIP_LENGTH, ToolTip ?? "");
+        NativeUtil.WriteFixed(iconData.szTip, NOTIFYICONDATA.SZTIP_LENGTH, ToolTip ?? "");
 
         var success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
         NotifyIconException.ThrowIfFalse(success, "Modifying the notification icon failed");
@@ -225,8 +223,8 @@ public sealed partial class NotifyIcon<THandler>
             dwInfoFlags = (uint)nextBalloon.Icon | (nextBalloon.NoSound ? PInvoke.NIIF_NOSOUND : 0) | (nextBalloon.Icon is BalloonNotificationIcon.User ? PInvoke.NIIF_LARGE_ICON : 0)
         };
 
-        NativeString.WriteFixed(iconData.szInfoTitle, NOTIFYICONDATA.SZINFOTITLE_LENGTH, nextBalloon.Title);
-        NativeString.WriteFixed(iconData.szInfo, NOTIFYICONDATA.SZINFO_LENGTH, nextBalloon.Message);
+        NativeUtil.WriteFixed(iconData.szInfoTitle, NOTIFYICONDATA.SZINFOTITLE_LENGTH, nextBalloon.Title);
+        NativeUtil.WriteFixed(iconData.szInfo, NOTIFYICONDATA.SZINFO_LENGTH, nextBalloon.Message);
 
         nextBalloon = null;
 

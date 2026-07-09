@@ -3,7 +3,7 @@
 using DotTray.Abstract;
 using DotTray.Internal;
 using DotTray.Internal.Native;
-using DotTray.Popup;
+using DotTray.Popup.Default;
 using System;
 using System.IO;
 using System.Threading;
@@ -18,7 +18,7 @@ public static class NotifyIcon
     internal static nint GdipToken;
 
     /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance synchronously using <see cref="NativePopupMenuHandler"/>
+    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance synchronously using <see cref="DefaultPopupMenuHandler"/>
     /// </summary>
     /// <param name="source">The source of the icon to display</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon{THandler}"/> instance</param>
@@ -26,8 +26,8 @@ public static class NotifyIcon
     /// <exception cref="ArgumentException"></exception>
     /// <exception cref="FileNotFoundException"></exception>
     /// <exception cref="NotifyIconException"></exception>
-    public static NotifyIcon<NativePopupMenuHandler> Run(IconSource source, CancellationToken cancellationToken)
-        => RunInternal(PrepareIconHandle(source), new NativePopupMenuHandler(), cancellationToken);
+    public static NotifyIcon<DefaultPopupMenuHandler> Run(IconSource source, CancellationToken cancellationToken)
+        => RunInternal(PrepareIconHandle(source), new DefaultPopupMenuHandler(), cancellationToken);
 
     /// <summary>
     /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance synchronously
@@ -48,7 +48,7 @@ public static class NotifyIcon
         => RunInternal(PrepareIconHandle(source), handler, cancellationToken);
 
     /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance asynchronously using <see cref="NativePopupMenuHandler"/>
+    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance asynchronously using <see cref="DefaultPopupMenuHandler"/>
     /// </summary>
     /// <param name="source">The source of the icon to display</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon{THandler}"/> instance</param>
@@ -56,8 +56,8 @@ public static class NotifyIcon
     /// <exception cref="ArgumentException"></exception>
     /// <exception cref="FileNotFoundException"></exception>
     /// <exception cref="NotifyIconException"></exception>
-    public static Task<NotifyIcon<NativePopupMenuHandler>> RunAsync(IconSource source, CancellationToken cancellationToken)
-        => RunInternalAsync(PrepareIconHandle(source), new NativePopupMenuHandler(), cancellationToken);
+    public static Task<NotifyIcon<DefaultPopupMenuHandler>> RunAsync(IconSource source, CancellationToken cancellationToken)
+        => RunInternalAsync(PrepareIconHandle(source), new DefaultPopupMenuHandler(), cancellationToken);
 
     /// <summary>
     /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance synchronously

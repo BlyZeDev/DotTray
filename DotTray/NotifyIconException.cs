@@ -7,6 +7,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
+/// <summary>
+/// Represents an exception that can occur when using a <see cref="NotifyIcon"/>
+/// </summary>
 public sealed class NotifyIconException : Exception
 {
     private NotifyIconException(string? message, Exception? innerException) : base(message, innerException) { }

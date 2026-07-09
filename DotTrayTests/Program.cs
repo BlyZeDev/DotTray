@@ -2,6 +2,7 @@
 
 using AsyncAwaitBestPractices;
 using DotTray;
+using DotTray.Popup.Default;
 using System.Drawing;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
@@ -28,6 +29,7 @@ sealed class Program
             icon.SetToolTip(Random.Shared.Next(0, 2) == 0 ? tempPath : null);
         }, TimeSpan.FromSeconds(6)).SafeFireAndForget();
 
+        /*
         PeriodicAction(() =>
         {
             icon2.ShowBalloon(new BalloonNotification
@@ -38,46 +40,14 @@ sealed class Program
                 NoSound = false
             });
         }, TimeSpan.FromSeconds(12)).SafeFireAndForget();
-        /*
-        icon.MenuItems.Add(x =>
-        {
-            x.Text = "Sync now";
-        });
-        icon.MenuItems.Add(x =>
-        {
-            x.Text = $"Next Sync in";
-            x.IsDisabled = true;
-        });
-        icon.MenuItems.Add(x =>
-        {
-            x.Text = "Settings";
-            x.SubMenu.Add(x =>
-            {
-                x.Text = "Open Application Folder";
-            });
-            x.SubMenu.Add(x =>
-            {
-                x.Text = "Autostart";
-            });
-            x.SubMenu.Add(x =>
-            {
-                x.Text = "Help";
-            });
-        });
-        icon.MenuItems.Add();
-        icon.MenuItems.Add(x =>
-        {
-            x.Text = $"Version 1.0.0";
-            x.TextDisabledColor = x.TextColor;
-            x.IsDisabled = true;
-        });
-        icon.MenuItems.Add();
-        icon.MenuItems.Add(x =>
-        {
-            x.Text = "Exit";
-            x.Clicked = _ => cts.Cancel();
-        });
         */
+
+        icon.Handler.MenuItems.Add<MenuItem>(x => { });
+        icon.Handler.MenuItems.Add<SeparatorItem>(x => { });
+        icon.Handler.MenuItems.Add<MenuItem>(x => { });
+
+        icon2.Handler.MenuItems.Add<SeparatorItem>(x => { });
+
         try
         {
             await Task.Delay(Timeout.Infinite, cts.Token);

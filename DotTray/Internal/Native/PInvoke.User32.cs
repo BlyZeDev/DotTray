@@ -15,6 +15,12 @@ internal static partial class PInvoke
     public static partial nint SetCursor(nint hCursor);
 
     [LibraryImport(User32, SetLastError = true)]
+    public static partial nint SetCapture(nint hWnd);
+
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial nint ReleaseCapture();
+
+    [LibraryImport(User32, SetLastError = true)]
     public static partial nint CopyIcon(nint hIcon);
 
     [LibraryImport(User32, SetLastError = true)]
@@ -37,6 +43,10 @@ internal static partial class PInvoke
     [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool ShowWindow(nint hWnd, int nCmdShow);
+
+    [LibraryImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetLayeredWindowAttributes(nint hwnd, uint crKey, byte bAlpha, uint dwFlags);
 
     [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
