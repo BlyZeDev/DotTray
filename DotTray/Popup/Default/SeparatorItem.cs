@@ -1,6 +1,5 @@
 ﻿namespace DotTray.Popup.Default;
 
-using DotTray.Popup.Default.Abstract;
 using System.Drawing;
 
 /// <summary>
@@ -17,6 +16,6 @@ public class SeparatorItem : MenuItemBase
     /// <inheritdoc/>
     internal protected override void Draw(DrawingContext context)
     {
-        context.Fill(TrayColor.Random());
+        context.Fill(TrayColor.Transparent);
     }
 }

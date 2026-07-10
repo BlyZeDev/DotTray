@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 
 // Original code by AsyncEx library: https://github.com/StephenCleary/AsyncEx/blob/master/src/Nito.AsyncEx.Coordination/AsyncManualResetEvent.cs
 // Adapted for my use case
-
 internal sealed class AsyncManualResetEvent
 {
     private readonly Lock _lock;

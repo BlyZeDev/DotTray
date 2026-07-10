@@ -1,6 +1,5 @@
 ﻿namespace DotTray.Popup.Default;
 
-using DotTray.Popup.Default.Abstract;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -41,6 +40,20 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// <returns>Anything that derives from <see cref="MenuItemBase"/></returns>
     /// <exception cref="InvalidCastException"></exception>
     public TItem GetAt<TItem>(int index) where TItem : MenuItemBase => (TItem)this[index];
+
+    /// <summary>
+    /// Adds a new item to the collection
+    /// </summary>
+    /// <typeparam name="TItem">The type of the item</typeparam>
+    public void Add<TItem>() where TItem : MenuItemBase, new()
+    {
+        var item = new TItem();
+
+        item.Updated += OnUpdate;
+
+        _items.Add(item);
+        OnUpdate();
+    }
 
     /// <summary>
     /// Adds a new item with the specified configuration to the collection

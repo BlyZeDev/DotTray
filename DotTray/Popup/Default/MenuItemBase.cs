@@ -1,4 +1,4 @@
-﻿namespace DotTray.Popup.Default.Abstract;
+﻿namespace DotTray.Popup.Default;
 
 using DotTray.Internal.Win32;
 using System;

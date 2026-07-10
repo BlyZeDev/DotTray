@@ -3,7 +3,10 @@
 using DotTray;
 using DotTray.Internal;
 using DotTray.Internal.Native;
+using DotTray.Internal.Win32;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 /// <summary>
@@ -33,6 +36,21 @@ public sealed class PopupMenuTree : IDisposable
         var root = new PopupMenu(this, nint.Zero);
         _rootHWnd = root.HWnd;
         currentLeafHWnd = _rootHWnd;
+    }
+
+    /// <summary>
+    /// Recreates the current popup window tree
+    /// </summary>
+    /// <param name="destroyOnClickOutside"><see langword="true"/> if this popup tree should be destroyed when clicked outside, otherwise <see langword="false"/></param>
+    /// <returns><see cref="PopupMenuTree"/></returns>
+    public PopupMenuTree Regrow(bool destroyOnClickOutside)
+    {
+        foreach (var hWnd in EnumerateOwnerWindows(currentLeafHWnd, true))
+        {
+            PInvoke.PostMessage(hWnd, PopupMenu.WM_APP_POPUP_CALCWND, nint.Zero, nint.Zero);
+        }
+
+        return Show(Owner, destroyOnClickOutside);
     }
 
     /// <summary>
@@ -91,15 +109,29 @@ public sealed class PopupMenuTree : IDisposable
     {
         PInvoke.GetCursorPos(out var pos);
 
-        var current = currentLeafHWnd;
-
-        while (current != nint.Zero)
+        foreach (var hWnd in EnumerateOwnerWindows(currentLeafHWnd, true))
         {
-            if (PInvoke.GetWindowRect(current, out var rect) && PInvoke.PtInRect(ref rect, pos)) return true;
-
-            current = PInvoke.GetWindow(current, PInvoke.GW_OWNER);
+            if (IsHit(hWnd, pos)) return true;
         }
 
         return false;
     }
+
+    private static IEnumerable<nint> EnumerateOwnerWindows(nint leafWindow, bool includeLeafWindow = false)
+    {
+        if (includeLeafWindow)
+        {
+            if (leafWindow == nint.Zero) yield break;
+            yield return leafWindow;
+        }
+
+        while (true)
+        {
+            leafWindow = PInvoke.GetWindow(leafWindow, PInvoke.GW_OWNER);
+            if (leafWindow == nint.Zero) yield break;
+            yield return leafWindow;
+        }
+    }
+
+    private static bool IsHit(nint hWnd, POINT pos) => PInvoke.GetWindowRect(hWnd, out var rect) && PInvoke.PtInRect(ref rect, pos);
 }

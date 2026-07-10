@@ -2,7 +2,8 @@
 
 using DotTray.Internal;
 using DotTray.Internal.Native;
-using DotTray.Popup.Default.Abstract;
+using DotTray.Internal.Win32;
+using DotTray.Popup.Default.Common;
 using System;
 using System.ComponentModel;
 using System.Drawing;
@@ -49,21 +50,60 @@ public sealed class DrawingContext : IDisposable
     /// <summary>
     /// Fills the whole <see cref="Bounds"/> with <paramref name="color"/>
     /// </summary>
-    /// <param name="color">The color to fill</param>
-    public void Fill(TrayColor color)
+    /// <param name="color">The color to use</param>
+    public void Fill(TrayColor color) => FillRect(Bounds, color);
+
+    /// <summary>
+    /// Fills the whole <paramref name="rect"/> with <paramref name="color"/>
+    /// </summary>
+    /// <param name="rect">The rectangle to fill</param>
+    /// <param name="color">The color to use</param>
+    public void FillRect(RectangleF rect, TrayColor color)
     {
-        var target = Offset(Local());
         PInvoke.GdipCreateSolidFill(color.ToGdip(), out var hBrush);
-        PInvoke.GdipFillRectangle(_gdip, hBrush, target.X, target.Y, target.Width, target.Height);
+
+        PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeHighSpeed);
+        PInvoke.GdipFillRectangle(_gdip, hBrush, rect.X, rect.Y, rect.Width, rect.Height);
+
         PInvoke.GdipDeleteBrush(hBrush);
     }
 
-    private RectangleF Local() => new RectangleF(0, 0, Bounds.Width, Bounds.Height);
-    private RectangleF Offset(RectangleF local) => new RectangleF(Bounds.X + local.X, Bounds.Y + local.Y, local.Width, local.Height);
+    /// <summary>
+    /// Write <paramref name="text"/> to the whole <see cref="Bounds"/>
+    /// </summary>
+    /// <param name="text">The text to write</param>
+    /// <param name="font">The font to use</param>
+    /// <param name="color">The color to use</param>
+    public void Write(string text, FontInfo font, TrayColor color)
+    {
+        PInvoke.GdipCreateFontFamilyFromName(font.FontFamilyName, nint.Zero, out var hFamily);
+        PInvoke.GdipCreateFont(hFamily, font.Size * Scale, 0, PInvoke.UnitPixel, out var hFont);
 
+        PInvoke.GdipCreateStringFormat(0, 0, out var hFormat);
+        PInvoke.GdipSetStringFormatFlags(hFormat, PInvoke.StringFormatFlagsNoWrap);
+        PInvoke.GdipSetStringFormatAlign(hFormat, PInvoke.StringAlignmentNear);
+        PInvoke.GdipSetStringFormatLineAlign(hFormat, PInvoke.StringAlignmentCenter);
+
+        PInvoke.GdipCreateSolidFill(color.ToGdip(), out var hBrush);
+
+        var layoutRect = Bounds.ToRECTF();
+        text = SanitizeText(text);
+
+        PInvoke.GdipSetTextRenderingHint(_gdip, PInvoke.TextRenderingHintAntiAliasGridFit);
+        PInvoke.GdipDrawString(_gdip, text, text.Length, hFont, ref layoutRect, hFormat, hBrush);
+
+        PInvoke.GdipDeleteBrush(hBrush);
+        PInvoke.GdipDeleteStringFormat(hFormat);
+        PInvoke.GdipDeleteFont(hFont);
+        PInvoke.GdipDeleteFontFamily(hFamily);
+    }
+
+    private RectangleF Offset(RectangleF local) => new RectangleF(Bounds.X + local.X, Bounds.Y + local.Y, local.Width, local.Height);
 
     void IDisposable.Dispose()
     {
 
     }
+
+    private static string SanitizeText(string text) => text.Replace("\uFE0F", "");
 }

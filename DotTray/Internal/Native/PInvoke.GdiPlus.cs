@@ -118,4 +118,7 @@ internal static partial class PInvoke
 
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipFillPath(nint graphics, nint brush, nint path);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipSetTextRenderingHint(nint graphics, int textRenderingHint);
 }

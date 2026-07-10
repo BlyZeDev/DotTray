@@ -109,7 +109,19 @@ internal static partial class PInvoke
 
     public const nint DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4;
 
+    public const int SmoothingModeDefault = 0;
+    public const int SmoothingModeHighSpeed = 1;
+    public const int SmoothingModeHighQuality = 2;
+    public const int SmoothingModeNone = 3;
+    public const int SmoothingModeAntiAlias8x4 = 4;
     public const int SmoothingModeAntiAlias8x8 = 5;
+
+    public const int TextRenderingHintSystemDefault = 0;
+    public const int TextRenderingHintSingleBitPerPixelGridFit = 1;
+    public const int TextRenderingHintSingleBitPerPixel = 2;
+    public const int TextRenderingHintAntiAliasGridFit = 3;
+    public const int TextRenderingHintAntiAlias = 4;
+    public const int TextRenderingHintClearTypeGridFit = 5;
 
     public const int UnitPixel = 2;
 

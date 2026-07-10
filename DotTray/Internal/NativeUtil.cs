@@ -56,4 +56,15 @@ internal static class NativeUtil
             Height = size.Height
         };
     }
+
+    public static RECTF ToRECTF(this RectangleF rect)
+    {
+        return new RECTF
+        {
+            X = rect.X,
+            Y = rect.Y,
+            Width = rect.Width,
+            Height = rect.Height
+        };
+    }
 }

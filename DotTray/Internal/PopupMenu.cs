@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 internal sealed class PopupMenu
 {
     private const float BaseDpi = 96f;
-    private const uint WM_APP_POPUP_CALCWND = PInvoke.WM_APP + 0x2000;
+    public const uint WM_APP_POPUP_CALCWND = PInvoke.WM_APP + 0x2000;
 
     private readonly float _scale;
     private readonly PInvoke.WndProc _wndProc;
@@ -21,7 +21,7 @@ internal sealed class PopupMenu
     public PopupMenu(PopupMenuTree tree, nint ownerHWnd)
     {
         _tree = tree;
-        _tree.Owner.Handler.MenuItems.Updated += OnRedrawRequested;
+        _tree.Owner.Handler.MenuItems.Updated += RequestRedraw;
 
         HWnd = PInvoke.CreateWindowEx(
             PInvoke.WS_EX_NOACTIVATE | PInvoke.WS_EX_TOOLWINDOW | PInvoke.WS_EX_TOPMOST,
@@ -45,7 +45,7 @@ internal sealed class PopupMenu
         PInvoke.ShowWindow(HWnd, PInvoke.SW_SHOWNOACTIVATE);
     }
 
-    private void OnRedrawRequested() => PInvoke.PostMessage(HWnd, WM_APP_POPUP_CALCWND, nint.Zero, nint.Zero);
+    private void RequestRedraw() => PInvoke.PostMessage(HWnd, WM_APP_POPUP_CALCWND, nint.Zero, nint.Zero);
 
     private nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
     {
@@ -86,7 +86,6 @@ internal sealed class PopupMenu
             var hOldBitmap = PInvoke.SelectObject(dc, hBitmap);
 
             PInvoke.GdipCreateFromHDC(dc, out var gdip);
-            PInvoke.GdipSetSmoothingMode(gdip, PInvoke.SmoothingModeAntiAlias8x8);
 
             DrawMenuBackground(gdip, cRect, _tree.Owner.Handler.Color.ToGdip());
 
@@ -129,7 +128,7 @@ internal sealed class PopupMenu
 
     private nint HandleDestroy()
     {
-        _tree.Owner.Handler.MenuItems.Updated -= OnRedrawRequested;
+        _tree.Owner.Handler.MenuItems.Updated -= RequestRedraw;
         return nint.Zero;
     }
 
@@ -137,7 +136,6 @@ internal sealed class PopupMenu
     {
         var hdc = PInvoke.CreateCompatibleDC(nint.Zero);
         _ = PInvoke.GdipCreateFromHDC(hdc, out var gdip);
-        PInvoke.GdipSetSmoothingMode(gdip, PInvoke.SmoothingModeAntiAlias8x8);
 
         var maxWidth = 0f;
         var totalHeight = 0f;

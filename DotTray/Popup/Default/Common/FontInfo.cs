@@ -3,7 +3,7 @@
 /// <summary>
 /// Contains information about a font
 /// </summary>
-public readonly record struct Font
+public readonly record struct FontInfo
 {
     /// <summary>
     /// The font family name
@@ -11,7 +11,7 @@ public readonly record struct Font
     /// <remarks>
     /// For example <i>Segoe UI Emoji</i>
     /// </remarks>
-    public required readonly string FontFamily { get; init; }
+    public required readonly string FontFamilyName { get; init; }
     /// <summary>
     /// The font size
     /// </summary>

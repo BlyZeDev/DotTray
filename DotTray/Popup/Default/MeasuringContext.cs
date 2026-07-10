@@ -2,7 +2,6 @@
 
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
-using DotTray.Popup.Default.Abstract;
 using DotTray.Popup.Default.Common;
 using System;
 using System.ComponentModel;
@@ -44,10 +43,10 @@ public sealed class MeasuringContext : IDisposable
     /// </summary>
     /// <param name="text">The text to measure</param>
     /// <param name="font">The font to measure</param>
-    /// <returns></returns>
-    public SizeF MeasureText(string text, Font font)
+    /// <returns><see cref="SizeF"/></returns>
+    public SizeF MeasureText(string text, FontInfo font)
     {
-        PInvoke.GdipCreateFontFamilyFromName(font.FontFamily, nint.Zero, out var hFamily);
+        PInvoke.GdipCreateFontFamilyFromName(font.FontFamilyName, nint.Zero, out var hFamily);
         PInvoke.GdipCreateFont(hFamily, font.Size * Scale, 0, PInvoke.UnitPixel, out var hFont);
 
         PInvoke.GdipCreateStringFormat(0, 0, out var hFormat);

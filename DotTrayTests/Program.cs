@@ -3,6 +3,7 @@
 using AsyncAwaitBestPractices;
 using DotTray;
 using DotTray.Popup.Default;
+using DotTray.Popup.Default.Common;
 using System.Drawing;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
@@ -42,9 +43,27 @@ sealed class Program
         }, TimeSpan.FromSeconds(12)).SafeFireAndForget();
         */
 
-        icon.Handler.MenuItems.Add<MenuItem>(x => { });
-        icon.Handler.MenuItems.Add<SeparatorItem>(x => { });
-        icon.Handler.MenuItems.Add<MenuItem>(x => { });
+        icon.Handler.SetColor(TrayColor.Green);
+
+        icon.Handler.MenuItems.Add<MenuItem>(x =>
+        {
+            x.Text = "Item No.1";
+            x.FontInfo = new FontInfo
+            {
+                FontFamilyName = "Mistral",
+                Size = 200f
+            };
+        });
+        icon.Handler.MenuItems.Add<SeparatorItem>();
+        icon.Handler.MenuItems.Add<MenuItem>(x =>
+        {
+            x.Text = "Just some looooooooooooooooooooooooooong text :o";
+        });
+        icon.Handler.MenuItems.Add<MenuItem>(x =>
+        {
+            x.Text = "♡👩🏼‍❤️‍👨🏻🐻💩";
+            x.FontInfo = x.FontInfo with { Size = 125f };
+        });
 
         icon2.Handler.MenuItems.Add<SeparatorItem>(x => { });
 
