@@ -1,15 +1,14 @@
 ﻿namespace DotTray.Popup.Default;
 
-using DotTray.Internal.Win32;
+using DotTray.Primitives;
 using System;
-using System.Drawing;
 
 /// <summary>
 /// Represents the base for a popup menu item
 /// </summary>
 public abstract class MenuItemBase
 {
-    internal RECTF DrawBox { get; set; }
+    internal Size DrawBox { get; set; }
     internal event Action? Updated;
 
     /// <summary>
@@ -21,8 +20,8 @@ public abstract class MenuItemBase
     /// Called when this instance needs to be measured
     /// </summary>
     /// <param name="context">Context for measuring this instance</param>
-    /// <returns><see cref="SizeF"/></returns>
-    internal protected abstract SizeF Measure(MeasuringContext context);
+    /// <returns><see cref="Size"/></returns>
+    internal protected abstract Size Measure(MeasuringContext context);
 
     /// <summary>
     /// Called when this instance needs to be drawn

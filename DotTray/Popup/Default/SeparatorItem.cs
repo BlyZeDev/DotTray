@@ -1,6 +1,7 @@
 ﻿namespace DotTray.Popup.Default;
 
-using System.Drawing;
+using DotTray.Popup.Default.Coloring;
+using DotTray.Primitives;
 
 /// <summary>
 /// Represents a basic popup separator item
@@ -8,14 +9,14 @@ using System.Drawing;
 public class SeparatorItem : MenuItemBase
 {
     /// <inheritdoc/>
-    internal protected override SizeF Measure(MeasuringContext context)
+    internal protected override Size Measure(MeasuringContext context)
     {
-        return new SizeF(250, 10);
+        return new Size(250, 10);
     }
 
     /// <inheritdoc/>
     internal protected override void Draw(DrawingContext context)
     {
-        context.Fill(TrayColor.Transparent);
+        context.Fill(SolidColor.Black);
     }
 }

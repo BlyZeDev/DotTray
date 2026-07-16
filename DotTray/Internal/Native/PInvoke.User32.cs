@@ -151,4 +151,10 @@ internal static partial class PInvoke
 
     [LibraryImport(User32, SetLastError = true)]
     public static partial nint CreateIconIndirect(ref ICONINFO piconinfo);
+
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial int SetWindowRgn(nint hWnd, nint hRgn, [MarshalAs(UnmanagedType.Bool)] bool bRedraw);
+
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial int AdjustWindowRectEx(ref RECT lpRect, uint dwStyle, [MarshalAs(UnmanagedType.Bool)] bool bMenu, uint dwExStyle);
 }

@@ -2,10 +2,9 @@
 
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
-using DotTray.Popup.Default.Common;
+using DotTray.Primitives;
 using System;
 using System.ComponentModel;
-using System.Drawing;
 
 /// <summary>
 /// Includes data for measuring <see cref="MenuItemBase"/> instances
@@ -27,9 +26,6 @@ public sealed class MeasuringContext : IDisposable
     /// <summary>
     /// The DPI scale factor of the monitor the menu is being shown on (1.0 = 96 DPI)
     /// </summary>
-    /// <remarks>
-    /// Multiply any DIP-based sizes by this to get actual pixels
-    /// </remarks>
     public float Scale { get; }
 
     internal MeasuringContext(nint gdip, float scale)
@@ -47,7 +43,7 @@ public sealed class MeasuringContext : IDisposable
     public SizeF MeasureText(string text, FontInfo font)
     {
         PInvoke.GdipCreateFontFamilyFromName(font.FontFamilyName, nint.Zero, out var hFamily);
-        PInvoke.GdipCreateFont(hFamily, font.Size * Scale, 0, PInvoke.UnitPixel, out var hFont);
+        PInvoke.GdipCreateFont(hFamily, font.Size, 0, PInvoke.UnitPixel, out var hFont);
 
         PInvoke.GdipCreateStringFormat(0, 0, out var hFormat);
         PInvoke.GdipSetStringFormatFlags(hFormat, PInvoke.StringFormatFlagsNoWrap);

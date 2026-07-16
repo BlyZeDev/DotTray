@@ -1,7 +1,8 @@
 ﻿namespace DotTray.Popup.Default;
 
-using DotTray.Popup.Default.Common;
-using System.Drawing;
+using DotTray.Popup.Default.Coloring;
+using DotTray.Primitives;
+using System;
 
 /// <summary>
 /// Represents a basic popup menu item
@@ -13,10 +14,10 @@ public class MenuItem : MenuItemBase
     /// </summary>
     public string Text
     {
-        get => field;
+        get;
         set
         {
-            if (string.Equals(field, value, System.StringComparison.Ordinal)) return;
+            if (string.Equals(field, value, StringComparison.Ordinal)) return;
 
             field = value;
             Update();
@@ -28,7 +29,7 @@ public class MenuItem : MenuItemBase
     /// </summary>
     public FontInfo FontInfo
     {
-        get => field;
+        get;
         set
         {
             if (field == value) return;
@@ -52,15 +53,18 @@ public class MenuItem : MenuItemBase
     }
 
     /// <inheritdoc/>
-    internal protected override SizeF Measure(MeasuringContext context)
+    internal protected override Size Measure(MeasuringContext context)
     {
-        return context.MeasureText(Text, FontInfo);
+        var text = context.MeasureText(Text, FontInfo);
+        return new Size((int)MathF.Ceiling(text.Width), (int)MathF.Ceiling(text.Height));
     }
 
     /// <inheritdoc/>
     internal protected override void Draw(DrawingContext context)
     {
-        context.Fill(TrayColor.Red);
-        context.Write(Text, FontInfo, TrayColor.Blue);
+        var color = LinearGradientColor.Random();
+
+        context.Fill(color);
+        context.Write(Text, FontInfo, LinearGradientColor.Random());
     }
 }

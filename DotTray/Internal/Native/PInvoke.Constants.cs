@@ -21,6 +21,7 @@ internal static partial class PInvoke
     public const uint WS_CLIPCHILDREN = 0x02000000;
     public const uint WS_CLIPSIBLINGS = 0x04000000;
     public const uint WS_POPUP = 0x80000000;
+    public const uint WS_BORDER = 0x00800000;
 
     public const int WH_MOUSE_LL = 14;
 
@@ -32,6 +33,7 @@ internal static partial class PInvoke
     public const int SW_SHOWNOACTIVATE = 4;
 
     public const uint WM_NCACTIVATE = 0x0086;
+    public const uint WM_NCCALCSIZE = 0x0083;
     public const uint WM_ERASEBKGND = 0x0014;
     public const uint WM_PAINT = 0x000F;
     public const uint WM_SIZE = 0x0005;
@@ -94,6 +96,7 @@ internal static partial class PInvoke
 
     public const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
     public const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
+    public const int DWMWA_REDIRECTIONBITMAP_ALPHA = 39;
 
     public const int DWMWCP_ROUND = 2;
 
@@ -108,6 +111,8 @@ internal static partial class PInvoke
     public const uint SWP_NOREDRAW = 0x0008;
 
     public const nint DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4;
+
+    public const int CombineModeReplace = 0;
 
     public const int SmoothingModeDefault = 0;
     public const int SmoothingModeHighSpeed = 1;

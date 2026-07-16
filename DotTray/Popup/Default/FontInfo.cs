@@ -1,4 +1,4 @@
-﻿namespace DotTray.Popup.Default.Common;
+﻿namespace DotTray.Popup.Default;
 
 /// <summary>
 /// Contains information about a font

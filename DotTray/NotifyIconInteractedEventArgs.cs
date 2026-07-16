@@ -1,6 +1,6 @@
 ﻿namespace DotTray;
 
-using System.Drawing;
+using DotTray.Primitives;
 
 /// <summary>
 /// Event arguments for a <see cref="NotifyIcon"/> interaction

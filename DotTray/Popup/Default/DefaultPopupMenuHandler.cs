@@ -1,8 +1,9 @@
 ﻿namespace DotTray.Popup.Default;
 
 using DotTray.Abstract;
+using DotTray.Popup.Default.Coloring;
+using DotTray.Primitives;
 using System;
-using System.Drawing;
 
 /// <summary>
 /// The default popup behaviour handler
@@ -17,21 +18,24 @@ public sealed class DefaultPopupMenuHandler : PopupMenuHandler
     /// <summary>
     /// The background color of this <see cref="DefaultPopupMenuHandler"/> instance
     /// </summary>
-    public TrayColor Color { get; private set; }
+    /// <remarks>
+    /// Transparency is not supported
+    /// </remarks>
+    public IColorable Color { get; private set; }
 
     internal DefaultPopupMenuHandler()
     {
         MenuItems = [];
-        Color = TrayColor.Black;
+        Color = SolidColor.Black;
     }
 
     /// <summary>
     /// Sets the <see cref="Color"/> of this <see cref="DefaultPopupMenuHandler"/> instance
     /// </summary>
     /// <param name="color">The color to set for <see cref="Color"/></param>
-    public void SetColor(TrayColor color)
+    public void SetColor<TColor>(TColor color) where TColor : notnull, IColorable
     {
-        if (Color == color) return;
+        if (Color.Equals(color)) return;
 
         Color = color;
     }

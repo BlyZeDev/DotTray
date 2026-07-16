@@ -3,7 +3,7 @@
 using AsyncAwaitBestPractices;
 using DotTray;
 using DotTray.Popup.Default;
-using DotTray.Popup.Default.Common;
+using DotTray.Popup.Default.Coloring;
 using System.Drawing;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
@@ -43,7 +43,11 @@ sealed class Program
         }, TimeSpan.FromSeconds(12)).SafeFireAndForget();
         */
 
-        icon.Handler.SetColor(TrayColor.Green);
+        icon.Handler.SetColor(new LinearGradientColor
+        {
+            Start = SolidColor.Red,
+            End = SolidColor.Blue
+        });
 
         icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
@@ -61,12 +65,12 @@ sealed class Program
         });
         icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
-            x.Text = "♡👩🏼‍❤️‍👨🏻🐻💩";
+            x.Text = "-♡👩🏼‍❤️‍👨🏻🐻💩-";
             x.FontInfo = x.FontInfo with { Size = 125f };
         });
 
         icon2.Handler.MenuItems.Add<SeparatorItem>(x => { });
-
+        
         try
         {
             await Task.Delay(Timeout.Infinite, cts.Token);

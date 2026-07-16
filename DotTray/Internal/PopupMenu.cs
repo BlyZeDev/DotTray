@@ -3,8 +3,8 @@
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using DotTray.Popup.Default;
+using DotTray.Primitives;
 using System;
-using System.Drawing;
 using System.Runtime.InteropServices;
 
 internal sealed class PopupMenu
@@ -73,30 +73,40 @@ internal sealed class PopupMenu
         return nint.Zero;
     }
 
-    private unsafe nint HandlePaint(nint hWnd)
+    private nint HandlePaint(nint hWnd)
     {
         var hPaint = PInvoke.BeginPaint(hWnd, out var paint);
 
         try
         {
             PInvoke.GetClientRect(hWnd, out var cRect);
+            var bounds = new Rectangle
+            {
+                X = cRect.Left,
+                Y = cRect.Top,
+                Width = cRect.Right - cRect.Left,
+                Height = cRect.Bottom - cRect.Top
+            };
 
             var dc = PInvoke.CreateCompatibleDC(hPaint);
-            var hBitmap = PInvoke.CreateCompatibleBitmap(hPaint, cRect.Right - cRect.Left, cRect.Bottom - cRect.Top);
+            var hBitmap = PInvoke.CreateCompatibleBitmap(hPaint, bounds.Width, bounds.Height);
             var hOldBitmap = PInvoke.SelectObject(dc, hBitmap);
 
             PInvoke.GdipCreateFromHDC(dc, out var gdip);
 
-            DrawMenuBackground(gdip, cRect, _tree.Owner.Handler.Color.ToGdip());
-
-            using (var drawing = new DrawingContext(gdip, _scale))
+            using (var hBackground = _tree.Owner.Handler.Color.CreateNativeHandle(bounds))
             {
-                var itemTop = (float)cRect.Top;
+                PInvoke.GdipFillRectangleI(gdip, hBackground.DangerousGetHandle(), bounds.X, bounds.Y, bounds.Width, bounds.Height);
+            }
+
+            using (var drawing = new DrawingContext(gdip, _scale, bounds))
+            {
+                var itemTop = bounds.Top;
                 for (int i = 0; i < _tree.Owner.Handler.MenuItems.Count; i++)
                 {
                     var box = _tree.Owner.Handler.MenuItems[i].DrawBox;
 
-                    drawing.Bounds = new RectangleF(cRect.Left, itemTop, box.Width, box.Height);
+                    drawing.ItemBounds = new Rectangle(bounds.Left, itemTop, box.Width, box.Height);
                     _tree.Owner.Handler.MenuItems[i].Draw(drawing);
 
                     itemTop += box.Height;
@@ -105,7 +115,7 @@ internal sealed class PopupMenu
 
             PInvoke.GdipDeleteGraphics(gdip);
 
-            PInvoke.BitBlt(hPaint, 0, 0, cRect.Right - cRect.Left, cRect.Bottom - cRect.Top, dc, 0, 0, PInvoke.SRCCOPY);
+            PInvoke.BitBlt(hPaint, 0, 0, bounds.Width, bounds.Height, dc, 0, 0, PInvoke.SRCCOPY);
 
             PInvoke.SelectObject(dc, hOldBitmap);
             PInvoke.DeleteObject(hBitmap);
@@ -119,13 +129,6 @@ internal sealed class PopupMenu
         return 0;
     }
 
-    private static void DrawMenuBackground(nint gdip, RECT cRect, uint color)
-    {
-        PInvoke.GdipCreateSolidFill(color, out var hBrush);
-        PInvoke.GdipFillRectangle(gdip, hBrush, cRect.Left, cRect.Top, cRect.Right - cRect.Left, cRect.Bottom - cRect.Top);
-        PInvoke.GdipDeleteBrush(hBrush);
-    }
-
     private nint HandleDestroy()
     {
         _tree.Owner.Handler.MenuItems.Updated -= RequestRedraw;
@@ -137,25 +140,21 @@ internal sealed class PopupMenu
         var hdc = PInvoke.CreateCompatibleDC(nint.Zero);
         _ = PInvoke.GdipCreateFromHDC(hdc, out var gdip);
 
-        var maxWidth = 0f;
-        var totalHeight = 0f;
+        var maxWidth = 0;
+        var totalHeight = 0;
 
         using (var measuring = new MeasuringContext(gdip, _scale))
         {
             foreach (var item in items)
             {
-                var size = item.Measure(measuring);
-                item.DrawBox = size.ToRECTF(0, totalHeight);
-                maxWidth = MathF.Max(maxWidth, size.Width);
-                totalHeight += size.Height;
+                item.DrawBox = item.Measure(measuring);
+                maxWidth = Math.Max(maxWidth, item.DrawBox.Width);
+                totalHeight += item.DrawBox.Height;
             }
         }
 
         _ = PInvoke.GdipDeleteGraphics(gdip);
         _ = PInvoke.DeleteDC(hdc);
-
-        var width = (int)MathF.Ceiling(maxWidth);
-        var height = (int)MathF.Ceiling(totalHeight);
 
         var hMonitor = PInvoke.MonitorFromPoint(anchor, PInvoke.MONITOR_DEFAULTTONEAREST);
         var (screenWidth, screenHeight) = GetMonitorWorkArea(hMonitor);
@@ -163,10 +162,10 @@ internal sealed class PopupMenu
         var x = anchor.x;
         var y = anchor.y;
 
-        if (x + width > screenWidth) x = Math.Abs(x - width);
-        if (y + height > screenHeight) y = Math.Abs(y - height);
+        if (x + maxWidth > screenWidth) x = Math.Abs(x - maxWidth);
+        if (y + totalHeight > screenHeight) y = Math.Abs(y - totalHeight);
 
-        return (x, y, width, height);
+        return (x, y, maxWidth, totalHeight);
     }
 
     private static (int Width, int Height) GetMonitorWorkArea(nint monitorHandle)

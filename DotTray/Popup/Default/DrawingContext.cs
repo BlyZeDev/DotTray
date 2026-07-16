@@ -1,12 +1,11 @@
 ﻿namespace DotTray.Popup.Default;
 
-using DotTray.Internal;
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
-using DotTray.Popup.Default.Common;
+using DotTray.Popup.Default.Coloring;
+using DotTray.Primitives;
 using System;
 using System.ComponentModel;
-using System.Drawing;
 
 /// <summary>
 /// Includes data for drawing <see cref="MenuItemBase"/> instances
@@ -26,79 +25,100 @@ public sealed class DrawingContext : IDisposable
     public nint NativeGraphicsHandle => _gdip;
 
     /// <summary>
+    /// The size of the window that contains this item
+    /// </summary>
+    public Size WindowSize { get; }
+
+    /// <summary>
     /// The bounds, in window client coordinates, assigned to the item currently being drawn
     /// </summary>
     /// <remarks>
     /// This is set immediately before each item's <see cref="MenuItemBase.Draw(DrawingContext)"/> is called
     /// </remarks>
-    public RectangleF Bounds { get; internal set; }
+    public Rectangle ItemBounds { get; internal set; }
 
     /// <summary>
     /// The DPI scale factor of the monitor the menu is being shown on (1.0 = 96 DPI)
     /// </summary>
-    /// <remarks>
-    /// Multiply any DIP-based sizes by this to get actual pixels
-    /// </remarks>
     public float Scale { get; }
 
-    internal DrawingContext(nint gdip, float scale)
+    internal DrawingContext(nint gdip, float scale, Rectangle windowBounds)
     {
         _gdip = gdip;
         Scale = scale;
+        WindowSize = new Size(windowBounds.Right - windowBounds.Left, windowBounds.Bottom - windowBounds.Top);
     }
 
     /// <summary>
-    /// Fills the whole <see cref="Bounds"/> with <paramref name="color"/>
+    /// Fills the whole <see cref="ItemBounds"/> with <paramref name="color"/>
     /// </summary>
+    /// <typeparam name="TColor">The color type to use</typeparam>
     /// <param name="color">The color to use</param>
-    public void Fill(TrayColor color) => FillRect(Bounds, color);
+    public void Fill<TColor>(TColor color) where TColor : notnull, IColorable
+        => FillRect(ItemBounds, color);
 
     /// <summary>
     /// Fills the whole <paramref name="rect"/> with <paramref name="color"/>
     /// </summary>
+    /// <typeparam name="TColor">The color type to use</typeparam>
     /// <param name="rect">The rectangle to fill</param>
     /// <param name="color">The color to use</param>
-    public void FillRect(RectangleF rect, TrayColor color)
+    public void FillRect<TColor>(Rectangle rect, TColor color) where TColor : notnull, IColorable
     {
-        PInvoke.GdipCreateSolidFill(color.ToGdip(), out var hBrush);
-
-        PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeHighSpeed);
-        PInvoke.GdipFillRectangle(_gdip, hBrush, rect.X, rect.Y, rect.Width, rect.Height);
-
-        PInvoke.GdipDeleteBrush(hBrush);
+        using (var hBrush = color.CreateNativeHandle(rect))
+        {
+            PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeHighSpeed);
+            PInvoke.GdipFillRectangleI(_gdip, hBrush.DangerousGetHandle(), rect.X, rect.Y, rect.Width, rect.Height);
+        }
     }
 
     /// <summary>
-    /// Write <paramref name="text"/> to the whole <see cref="Bounds"/>
+    /// Fills the whole <see cref="ItemBounds"/> with <paramref name="text"/> using <paramref name="fontInfo"/> and <paramref name="color"/>
     /// </summary>
+    /// <typeparam name="TColor">The color type to use</typeparam>
     /// <param name="text">The text to write</param>
-    /// <param name="font">The font to use</param>
+    /// <param name="fontInfo">The font information to use</param>
     /// <param name="color">The color to use</param>
-    public void Write(string text, FontInfo font, TrayColor color)
+    public void Write<TColor>(string text, FontInfo fontInfo, TColor color) where TColor : notnull, IColorable
+        => WriteRect(ItemBounds, text, fontInfo, color);
+
+    /// <summary>
+    /// Fills the whole <paramref name="rect"/> with <paramref name="text"/> using <paramref name="fontInfo"/> and <paramref name="color"/>
+    /// </summary>
+    /// <typeparam name="TColor">The color type to use</typeparam>
+    /// <param name="rect">The rectangle to fill</param>
+    /// <param name="text">The text to write</param>
+    /// <param name="fontInfo">The font information to use</param>
+    /// <param name="color">The color to use</param>
+    public void WriteRect<TColor>(RectangleF rect, string text, FontInfo fontInfo, TColor color) where TColor : notnull, IColorable
     {
-        PInvoke.GdipCreateFontFamilyFromName(font.FontFamilyName, nint.Zero, out var hFamily);
-        PInvoke.GdipCreateFont(hFamily, font.Size * Scale, 0, PInvoke.UnitPixel, out var hFont);
+        PInvoke.GdipCreateFontFamilyFromName(fontInfo.FontFamilyName, nint.Zero, out var hFamily);
+        PInvoke.GdipCreateFont(hFamily, fontInfo.Size, 0, PInvoke.UnitPixel, out var hFont);
 
         PInvoke.GdipCreateStringFormat(0, 0, out var hFormat);
         PInvoke.GdipSetStringFormatFlags(hFormat, PInvoke.StringFormatFlagsNoWrap);
         PInvoke.GdipSetStringFormatAlign(hFormat, PInvoke.StringAlignmentNear);
         PInvoke.GdipSetStringFormatLineAlign(hFormat, PInvoke.StringAlignmentCenter);
 
-        PInvoke.GdipCreateSolidFill(color.ToGdip(), out var hBrush);
+        using (var hBrush = color.CreateNativeHandle(rect))
+        {
+            var layoutRect = new RECTF
+            {
+                X = rect.X,
+                Y = rect.Y,
+                Width = rect.Width,
+                Height = rect.Height
+            };
+            text = SanitizeText(text);
 
-        var layoutRect = Bounds.ToRECTF();
-        text = SanitizeText(text);
+            PInvoke.GdipSetTextRenderingHint(_gdip, PInvoke.TextRenderingHintAntiAliasGridFit);
+            PInvoke.GdipDrawString(_gdip, text, text.Length, hFont, ref layoutRect, hFormat, hBrush.DangerousGetHandle());
+        }
 
-        PInvoke.GdipSetTextRenderingHint(_gdip, PInvoke.TextRenderingHintAntiAliasGridFit);
-        PInvoke.GdipDrawString(_gdip, text, text.Length, hFont, ref layoutRect, hFormat, hBrush);
-
-        PInvoke.GdipDeleteBrush(hBrush);
         PInvoke.GdipDeleteStringFormat(hFormat);
         PInvoke.GdipDeleteFont(hFont);
         PInvoke.GdipDeleteFontFamily(hFamily);
     }
-
-    private RectangleF Offset(RectangleF local) => new RectangleF(Bounds.X + local.X, Bounds.Y + local.Y, local.Width, local.Height);
 
     void IDisposable.Dispose()
     {

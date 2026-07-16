@@ -3,8 +3,8 @@
 using DotTray.Internal;
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
+using DotTray.Primitives;
 using System;
-using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -187,7 +187,7 @@ public sealed partial class NotifyIcon<THandler>
             guidItem = Id,
             uFlags = PInvoke.NIF_TIP | PInvoke.NIF_SHOWTIP | PInvoke.NIF_GUID
         };
-        NativeUtil.WriteFixed(iconData.szTip, NOTIFYICONDATA.SZTIP_LENGTH, ToolTip ?? "");
+        NativeString.WriteFixed(iconData.szTip, NOTIFYICONDATA.SZTIP_LENGTH, ToolTip ?? "");
 
         var success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
         NotifyIconException.ThrowIfFalse(success, "Modifying the notification icon failed");
@@ -223,8 +223,8 @@ public sealed partial class NotifyIcon<THandler>
             dwInfoFlags = (uint)nextBalloon.Icon | (nextBalloon.NoSound ? PInvoke.NIIF_NOSOUND : 0) | (nextBalloon.Icon is BalloonNotificationIcon.User ? PInvoke.NIIF_LARGE_ICON : 0)
         };
 
-        NativeUtil.WriteFixed(iconData.szInfoTitle, NOTIFYICONDATA.SZINFOTITLE_LENGTH, nextBalloon.Title);
-        NativeUtil.WriteFixed(iconData.szInfo, NOTIFYICONDATA.SZINFO_LENGTH, nextBalloon.Message);
+        NativeString.WriteFixed(iconData.szInfoTitle, NOTIFYICONDATA.SZINFOTITLE_LENGTH, nextBalloon.Title);
+        NativeString.WriteFixed(iconData.szInfo, NOTIFYICONDATA.SZINFO_LENGTH, nextBalloon.Message);
 
         nextBalloon = null;
 

@@ -1,7 +1,7 @@
 ﻿namespace DotTray.Popup;
 
 using DotTray.Abstract;
-using System.Drawing;
+using DotTray.Primitives;
 
 /// <summary>
 /// A specialized handler designed for managing standard contextual popup menus.

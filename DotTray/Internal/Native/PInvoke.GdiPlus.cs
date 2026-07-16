@@ -41,6 +41,9 @@ internal static partial class PInvoke
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipFillRectangle(nint graphics, nint brush, float x, float y, float width, float height);
 
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipFillRectangleI(nint graphics, nint brush, int x, int y, int width, int height);
+
     [LibraryImport(GdiPlus, SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
     public static partial int GdipMeasureString(nint graphics, string text, int length, nint font, ref RECTF layoutRect, nint stringFormat, out RECTF boundingBox, out int codepointsFitted, out int linesFilled);
 
@@ -111,6 +114,15 @@ internal static partial class PInvoke
     public static partial int GdipAddPathArc(nint path, float x, float y, float width, float height, float startAngle, float sweepAngle);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipAddPathLine(nint path, float x, float y, float width, float height);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipResetClip(nint graphics);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipSetClipPath(nint graphics, nint path, int combineMode);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipClosePathFigure(nint path);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
@@ -121,4 +133,22 @@ internal static partial class PInvoke
 
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipSetTextRenderingHint(nint graphics, int textRenderingHint);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipCreateRegion(out nint region);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipSetEmpty(nint region);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipCombineRegionPath(nint region, nint path, int combineMode);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipGetRegionHRgn(nint region, nint graphics, out nint hRgn);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipDeleteRegion(nint region);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipCreateLineBrushFromRectWithAngle(ref RECTF rect, uint color1, uint color2, float angle, [MarshalAs(UnmanagedType.Bool)] bool isAngleScalable, int wrapMode, out nint lineGradient);
 }
