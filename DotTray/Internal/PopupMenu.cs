@@ -38,6 +38,9 @@ internal sealed class PopupMenu
         var cornerRadius = PInvoke.DWMWCP_ROUND;
         PInvoke.DwmSetWindowAttribute(HWnd, PInvoke.DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerRadius, sizeof(int));
 
+        var borderColor = PInvoke.DWMWA_COLOR_NONE;
+        PInvoke.DwmSetWindowAttribute(HWnd, PInvoke.DWMWA_BORDER_COLOR, ref borderColor, sizeof(int));
+
         _wndProc = new PInvoke.WndProc(WndProcFunc);
         PInvoke.SetWindowLongPtr(HWnd, PInvoke.GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProc));
 

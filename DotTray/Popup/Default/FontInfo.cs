@@ -1,5 +1,7 @@
 ﻿namespace DotTray.Popup.Default;
 
+using System.Diagnostics.CodeAnalysis;
+
 /// <summary>
 /// Contains information about a font
 /// </summary>
@@ -19,4 +21,16 @@ public readonly record struct FontInfo
     /// For example <i>20f</i>
     /// </remarks>
     public required readonly float Size { get; init; }
+
+    /// <summary>
+    /// Initializes a new <see cref="FontInfo"/>
+    /// </summary>
+    /// <param name="fontFamilyName">The font family name</param>
+    /// <param name="size">The font size</param>
+    [SetsRequiredMembers]
+    public FontInfo(string fontFamilyName, float size)
+    {
+        FontFamilyName = fontFamilyName;
+        Size = size;
+    }
 }

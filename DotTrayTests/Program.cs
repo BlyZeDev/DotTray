@@ -45,12 +45,14 @@ sealed class Program
 
         icon.Handler.SetColor(new LinearGradientColor
         {
-            Start = SolidColor.Red,
-            End = SolidColor.Blue
+            Start = new SolidColor(0, 0, 255),
+            End = new SolidColor(0, 255, 255)
         });
 
         icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
+            x.Background = SolidColor.Transparent;
+            x.Foreground = new LinearGradientColor(SolidColor.White, SolidColor.Black, 0f);
             x.Text = "Item No.1";
             x.FontInfo = new FontInfo
             {

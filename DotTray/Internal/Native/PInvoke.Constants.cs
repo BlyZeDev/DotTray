@@ -95,9 +95,11 @@ internal static partial class PInvoke
     public const uint MDT_EFFECTIVE_DPI = 0;
 
     public const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+    public const int DWMWA_BORDER_COLOR = 34;
     public const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
     public const int DWMWA_REDIRECTIONBITMAP_ALPHA = 39;
 
+    public const int DWMWA_COLOR_NONE = unchecked((int)0xFFFFFFFE);
     public const int DWMWCP_ROUND = 2;
 
     public const int DWMSBT_TRANSIENTWINDOW = 2;

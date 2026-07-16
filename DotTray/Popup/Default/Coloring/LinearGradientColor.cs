@@ -39,6 +39,12 @@ public readonly record struct LinearGradientColor : IColorable
         Angle = angle;
     }
 
+    /// <summary>
+    /// Reverses the gradient
+    /// </summary>
+    /// <returns><see cref="LinearGradientColor"/></returns>
+    public LinearGradientColor Reverse() => new LinearGradientColor(End, Start, Angle);
+
     /// <inheritdoc/>
     public bool Equals(IColorable? other) => other is LinearGradientColor gradient && Equals(gradient);
 

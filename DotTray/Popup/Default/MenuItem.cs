@@ -10,6 +10,36 @@ using System;
 public class MenuItem : MenuItemBase
 {
     /// <summary>
+    /// The background color
+    /// </summary>
+    public IColorable Background
+    {
+        get;
+        set
+        {
+            if (field.Equals(value)) return;
+
+            field = value;
+            Update();
+        }
+    } = SolidColor.White;
+
+    /// <summary>
+    /// The text color
+    /// </summary>
+    public IColorable Foreground
+    {
+        get;
+        set
+        {
+            if (field.Equals(value)) return;
+
+            field = value;
+            Update();
+        }
+    } = SolidColor.Black;
+
+    /// <summary>
     /// The displayed text
     /// </summary>
     public string Text
@@ -22,7 +52,7 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    }
+    } = "";
 
     /// <summary>
     /// The font info used to display the text
@@ -32,25 +62,17 @@ public class MenuItem : MenuItemBase
         get;
         set
         {
-            if (field == value) return;
+            if (field.Equals(value)) return;
 
             field = value;
             Update();
         }
-    }
+    } = new FontInfo("Segoe UI Emoji", 20f);
 
     /// <summary>
     /// Default configuration for <see cref="MenuItem"/>
     /// </summary>
-    public MenuItem()
-    {
-        Text = "";
-        FontInfo = new FontInfo
-        {
-            FontFamilyName = "Segoe UI Emoji",
-            Size = 16f
-        };
-    }
+    public MenuItem() { }
 
     /// <inheritdoc/>
     internal protected override Size Measure(MeasuringContext context)
@@ -62,9 +84,7 @@ public class MenuItem : MenuItemBase
     /// <inheritdoc/>
     internal protected override void Draw(DrawingContext context)
     {
-        var color = LinearGradientColor.Random();
-
-        context.Fill(color);
-        context.Write(Text, FontInfo, LinearGradientColor.Random());
+        context.Fill(Background);
+        context.Write(Text, FontInfo, Foreground);
     }
 }
