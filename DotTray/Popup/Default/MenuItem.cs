@@ -22,7 +22,7 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    } = SolidColor.White;
+    } = SolidColor.Transparent;
 
     /// <summary>
     /// The text color

@@ -43,11 +43,13 @@ sealed class Program
         }, TimeSpan.FromSeconds(12)).SafeFireAndForget();
         */
 
-        icon.Handler.SetColor(new LinearGradientColor
-        {
-            Start = new SolidColor(0, 0, 255),
-            End = new SolidColor(0, 255, 255)
-        });
+        icon.Handler.SetColor(new LinearGradientStopColor(90f,
+            new GradientStop(SolidColor.FromHex("#000000"), 0f),
+            new GradientStop(SolidColor.FromHex("#000000"), 0.33f),
+            new GradientStop(SolidColor.FromHex("#DD0000"), 0.33f),
+            new GradientStop(SolidColor.FromHex("#DD0000"), 0.66f),
+            new GradientStop(SolidColor.FromHex("#FFCC00"), 0.66f),
+            new GradientStop(SolidColor.FromHex("#FFCC00"), 1f)));
 
         icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
@@ -71,8 +73,10 @@ sealed class Program
             x.FontInfo = x.FontInfo with { Size = 125f };
         });
 
-        icon2.Handler.MenuItems.Add<SeparatorItem>(x => { });
-        
+        icon2.Handler.MenuItems.Add<SeparatorItem>();
+        icon2.Handler.MenuItems.Add<SeparatorItem>();
+        icon2.Handler.MenuItems.Add<MenuItem>(x => x.Text = "Text");
+
         try
         {
             await Task.Delay(Timeout.Infinite, cts.Token);

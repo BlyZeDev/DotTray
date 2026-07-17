@@ -23,7 +23,7 @@ public readonly record struct LinearGradientColor : IColorable
     /// <summary>
     /// The angle, in degrees, of the gradient line
     /// </summary>
-    public float Angle { get; init; } = 0f;
+    public readonly float Angle { get; init; } = 0f;
 
     /// <summary>
     /// Initializes a new <see cref="LinearGradientColor"/>
@@ -43,12 +43,12 @@ public readonly record struct LinearGradientColor : IColorable
     /// Reverses the gradient
     /// </summary>
     /// <returns><see cref="LinearGradientColor"/></returns>
-    public LinearGradientColor Reverse() => new LinearGradientColor(End, Start, Angle);
+    public readonly LinearGradientColor Reverse() => new LinearGradientColor(End, Start, Angle);
 
     /// <inheritdoc/>
-    public bool Equals(IColorable? other) => other is LinearGradientColor gradient && Equals(gradient);
+    public readonly bool Equals(IColorable? other) => other is LinearGradientColor gradient && Equals(gradient);
 
-    SafeHandle IColorable.CreateNativeHandle(RectangleF bounds)
+    readonly SafeHandle IColorable.CreateNativeHandle(RectangleF bounds)
     {
         var rect = new RECTF
         {

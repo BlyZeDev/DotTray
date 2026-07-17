@@ -26,7 +26,7 @@ public sealed class DefaultPopupMenuHandler : PopupMenuHandler
     internal DefaultPopupMenuHandler()
     {
         MenuItems = [];
-        Color = SolidColor.Black;
+        Color = SolidColor.White;
     }
 
     /// <summary>

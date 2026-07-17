@@ -96,13 +96,13 @@ public readonly record struct SolidColor : IColorable
     /// </summary>
     /// <param name="invertAlpha"><see langword="true"/> if <see cref="A"/> should be inverted too, otherwise <see langword="false"/></param>
     /// <returns><see cref="SolidColor"/></returns>
-    public SolidColor Invert(bool invertAlpha = false)
+    public readonly SolidColor Invert(bool invertAlpha = false)
         => new SolidColor((byte)(Max - R), (byte)(Max - G), (byte)(Max - B), invertAlpha ? (byte)(Max - A) : A);
 
     /// <inheritdoc/>
-    public bool Equals(IColorable? other) => other is SolidColor solidColor && Equals(solidColor);
+    public readonly bool Equals(IColorable? other) => other is SolidColor solidColor && Equals(solidColor);
 
-    SafeHandle IColorable.CreateNativeHandle(RectangleF bounds)
+    readonly SafeHandle IColorable.CreateNativeHandle(RectangleF bounds)
     {
         PInvoke.GdipCreateSolidFill((uint)(A << 24 | R << 16 | G << 8 | B), out var hBrush);
         return new ColorSafeHandle(hBrush);
@@ -114,7 +114,7 @@ public readonly record struct SolidColor : IColorable
     /// <param name="hexString">The HEX color string in format #RRGGBB or #RRGGBBAA</param>
     /// <returns><see cref="SolidColor"/></returns>
     /// <exception cref="FormatException"></exception>
-    public static SolidColor FromHex(string hexString) => FromHex(hexString);
+    public static SolidColor FromHex(string hexString) => FromHex(hexString.AsSpan());
 
     /// <summary>
     /// Creates a <see cref="SolidColor"/> from a HEX color string in the format #RRGGBB or #RRGGBBAA

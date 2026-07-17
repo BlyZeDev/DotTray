@@ -151,4 +151,7 @@ internal static partial class PInvoke
 
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipCreateLineBrushFromRectWithAngle(ref RECTF rect, uint color1, uint color2, float angle, [MarshalAs(UnmanagedType.Bool)] bool isAngleScalable, int wrapMode, out nint lineGradient);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static unsafe partial int GdipSetLinePresetBlend(nint brush, uint* blend, float* positions, int count);
 }
