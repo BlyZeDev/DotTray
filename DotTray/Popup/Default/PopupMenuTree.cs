@@ -4,9 +4,9 @@ using DotTray;
 using DotTray.Internal;
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
+using DotTray.Primitives;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 
 /// <summary>
@@ -18,10 +18,14 @@ public sealed class PopupMenuTree : IDisposable
     private readonly nint _hHook;
 
     private readonly nint _rootHWnd;
+    private readonly Dictionary<nint, nint> _ownerByHWnd = [];
 
     private nint currentLeafHWnd;
+    private bool _disposed;
 
     internal NotifyIcon<DefaultPopupMenuHandler> Owner { get; }
+
+    internal event Action? Disposed;
 
     private PopupMenuTree(NotifyIcon<DefaultPopupMenuHandler> owner, bool destroyOnClickOutside)
     {
@@ -33,8 +37,9 @@ public sealed class PopupMenuTree : IDisposable
             _hHook = PInvoke.SetWindowsHookEx(PInvoke.WH_MOUSE_LL, Marshal.GetFunctionPointerForDelegate(_pHook), nint.Zero, 0);
         }
 
-        var root = new PopupMenu(this, nint.Zero);
+        var root = new PopupMenu(this, nint.Zero, owner.Handler.MenuItems, null);
         _rootHWnd = root.HWnd;
+        _ownerByHWnd[_rootHWnd] = nint.Zero;
         currentLeafHWnd = _rootHWnd;
     }
 
@@ -54,18 +59,6 @@ public sealed class PopupMenuTree : IDisposable
     }
 
     /// <summary>
-    /// Shows a popup
-    /// </summary>
-    /// <remarks>
-    /// The shown popup will be the new leaf popup and is owned by the previous leaf popup
-    /// </remarks>
-    public void Show()
-    {
-        var leaf = new PopupMenu(this, currentLeafHWnd);
-        currentLeafHWnd = leaf.HWnd;
-    }
-
-    /// <summary>
     /// Closes a popup
     /// </summary>
     /// <remarks>
@@ -74,26 +67,52 @@ public sealed class PopupMenuTree : IDisposable
     /// </remarks>
     public void Close()
     {
-        var newLeaf = PInvoke.GetWindow(currentLeafHWnd, PInvoke.GW_OWNER);
+        var newLeaf = _ownerByHWnd.GetValueOrDefault(currentLeafHWnd, nint.Zero);
         PInvoke.PostMessage(currentLeafHWnd, PInvoke.WM_CLOSE, nint.Zero, nint.Zero);
         currentLeafHWnd = newLeaf;
     }
 
     /// <inheritdoc/>
-    public void Dispose()
+    public void Dispose() => PInvoke.PostMessage(_rootHWnd, PInvoke.WM_CLOSE, nint.Zero, nint.Zero);
+
+    internal List<Rectangle> GetOpenWindowRects(nint excludeHWnd)
     {
-        if (_hHook != nint.Zero) PInvoke.UnhookWindowsHookEx(_hHook);
-        PInvoke.PostMessage(_rootHWnd, PInvoke.WM_CLOSE, nint.Zero, nint.Zero);
+        var rects = new List<Rectangle>(_ownerByHWnd.Count);
+
+        foreach (var hWnd in _ownerByHWnd.Keys)
+        {
+            if (hWnd == excludeHWnd) continue;
+            if (!PInvoke.GetWindowRect(hWnd, out var rect)) continue;
+
+            rects.Add(new Rectangle(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top));
+        }
+
+        return rects;
     }
 
-    /// <summary>
-    /// Creates a popup window tree and shows the root popup
-    /// </summary>
-    /// <param name="owner">The owner of this tree</param>
-    /// <param name="destroyOnClickOutside"><see langword="true"/> if this popup tree should be destroyed when clicked outside, otherwise <see langword="false"/></param>
-    /// <returns><see cref="PopupMenuTree"/></returns>
-    public static PopupMenuTree Show(NotifyIcon<DefaultPopupMenuHandler> owner, bool destroyOnClickOutside)
-        => new PopupMenuTree(owner, destroyOnClickOutside);
+    internal void OpenChild(nint ownerHWnd, MenuItemCollection items, Rectangle anchorScreenRect)
+    {
+        CloseChildrenOf(ownerHWnd);
+
+        var child = new PopupMenu(this, ownerHWnd, items, anchorScreenRect);
+        _ownerByHWnd[child.HWnd] = ownerHWnd;
+        currentLeafHWnd = child.HWnd;
+    }
+
+    internal void CloseChildrenOf(nint hWnd)
+    {
+        while (currentLeafHWnd != hWnd && currentLeafHWnd != nint.Zero && _ownerByHWnd.ContainsKey(currentLeafHWnd))
+        {
+            Close();
+        }
+    }
+
+    internal void UnregisterWindow(nint hWnd)
+    {
+        _ownerByHWnd.Remove(hWnd);
+
+        if (hWnd == _rootHWnd) DisposeCore();
+    }
 
     private nint LowLevelMouseProcFunc(int nCode, nint wParam, nint lParam)
     {
@@ -116,6 +135,24 @@ public sealed class PopupMenuTree : IDisposable
 
         return false;
     }
+
+    private void DisposeCore()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        if (_hHook != nint.Zero) PInvoke.UnhookWindowsHookEx(_hHook);
+        Disposed?.Invoke();
+    }
+
+    /// <summary>
+    /// Creates a popup window tree and shows the root popup
+    /// </summary>
+    /// <param name="owner">The owner of this tree</param>
+    /// <param name="destroyOnClickOutside"><see langword="true"/> if this popup tree should be destroyed when clicked outside, otherwise <see langword="false"/></param>
+    /// <returns><see cref="PopupMenuTree"/></returns>
+    public static PopupMenuTree Show(NotifyIcon<DefaultPopupMenuHandler> owner, bool destroyOnClickOutside)
+        => new PopupMenuTree(owner, destroyOnClickOutside);
 
     private static IEnumerable<nint> EnumerateOwnerWindows(nint leafWindow, bool includeLeafWindow = false)
     {

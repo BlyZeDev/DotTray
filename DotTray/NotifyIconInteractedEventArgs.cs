@@ -10,7 +10,7 @@ public sealed record NotifyIconInteractedEventArgs
     /// <summary>
     /// The specific type of interaction that triggered the event
     /// </summary>
-    public required InteractionType Type { get; init; }
+    public required IconInteractionType Type { get; init; }
     /// <summary>
     /// The coordinates of the cursor (in screen coordinates) at the exact moment the interaction occurred
     /// </summary>

@@ -5,9 +5,9 @@ using DotTray.Primitives;
 using System;
 
 /// <summary>
-/// Represents a basic popup menu item
+/// Represents a basic popup menu item that includes a submenu
 /// </summary>
-public class MenuItem : MenuItemBase
+public class SubmenuItem : SubmenuItemBase
 {
     /// <summary>
     /// The background color
@@ -70,27 +70,40 @@ public class MenuItem : MenuItemBase
     } = new FontInfo("Segoe UI Emoji", 20f);
 
     /// <summary>
-    /// Default configuration for <see cref="MenuItem"/>
+    /// Default configuration for <see cref="SubmenuItem"/>
     /// </summary>
-    public MenuItem() { }
+    public SubmenuItem() { }
 
     /// <inheritdoc/>
     internal protected override Size Measure(MeasuringContext context)
     {
         var text = context.MeasureText(Text, FontInfo);
-        return new Size((int)MathF.Ceiling(text.Width), (int)MathF.Ceiling(text.Height));
+        var arrow = context.MeasureText("\u276F", FontInfo);
+
+        var width = text.Width + arrow.Width + (12f * context.Scale);
+        var height = MathF.Max(text.Height, arrow.Height);
+
+        return new Size((int)MathF.Ceiling(width), (int)MathF.Ceiling(height));
     }
 
     /// <inheritdoc/>
     internal protected override void Draw(DrawingContext context)
     {
         context.Fill(Background);
-        context.Write(Text, FontInfo, Foreground);
+
+        var bounds = context.ItemBounds;
+        var arrowWidth = MathF.Ceiling(bounds.Height);
+
+        var textRect = new Rectangle(bounds.X, bounds.Y, bounds.Width - (int)arrowWidth, bounds.Height);
+        var arrowRect = new Rectangle(bounds.Right - (int)arrowWidth, bounds.Y, (int)arrowWidth, bounds.Height);
+
+        context.WriteRect(textRect, Text, FontInfo, Foreground);
+        context.WriteRect(arrowRect, "\u276F", FontInfo, Foreground);
     }
 
     /// <inheritdoc/>
     protected internal override void OnInteraction(ItemInteractedEventArgs args)
     {
-        Console.WriteLine("MENUITEM: " + args);
+        Console.WriteLine("SUBMENUITEM: " + args);
     }
 }

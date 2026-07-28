@@ -3,6 +3,7 @@
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using DotTray.Primitives;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 

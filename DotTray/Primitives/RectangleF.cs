@@ -3,7 +3,7 @@
 using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
-/// Represents a location and size
+/// Represents a location and size using floating point
 /// </summary>
 public readonly record struct RectangleF
 {

@@ -3,7 +3,7 @@
 using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
-/// Represents 2-dimensional coordinates
+/// Represents 2-dimensional coordinates using integer
 /// </summary>
 public readonly record struct Point
 {

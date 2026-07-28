@@ -1,6 +1,5 @@
 ﻿namespace DotTray;
 
-using DotTray.Abstract;
 using DotTray.Internal;
 using DotTray.Internal.Native;
 using DotTray.Popup.Default;

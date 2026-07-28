@@ -1,5 +1,4 @@
-﻿namespace DotTray.Abstract;
-
+﻿namespace DotTray;
 /// <summary>
 /// Defines a contract for handling a popup menu for a <see cref="NotifyIcon{THandler}"/>
 /// </summary>

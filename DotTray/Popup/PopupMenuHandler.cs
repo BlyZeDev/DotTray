@@ -1,6 +1,6 @@
 ﻿namespace DotTray.Popup;
 
-using DotTray.Abstract;
+using DotTray;
 using DotTray.Primitives;
 
 /// <summary>
@@ -13,10 +13,10 @@ public abstract class PopupMenuHandler : INotifyIconHandler
     {
         switch (args.Type)
         {
-            case InteractionType.Select: Show(owner, args.MousePosition); break;
-            case InteractionType.ContextMenu: ShowContext(owner, args.MousePosition); break;
-            case InteractionType.PopupOpen: ShowToolTip(owner, args.MousePosition); break;
-            case InteractionType.PopupClose: HideToolTip(owner, args.MousePosition); break;
+            case IconInteractionType.Select: Show(owner, args.MousePosition); break;
+            case IconInteractionType.ContextMenu: ShowContext(owner, args.MousePosition); break;
+            case IconInteractionType.PopupOpen: ShowToolTip(owner, args.MousePosition); break;
+            case IconInteractionType.PopupClose: HideToolTip(owner, args.MousePosition); break;
         }
     }
 

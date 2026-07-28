@@ -2,6 +2,7 @@
 
 using DotTray.Popup.Default.Coloring;
 using DotTray.Primitives;
+using System;
 
 /// <summary>
 /// Represents a basic popup separator item
@@ -18,5 +19,11 @@ public class SeparatorItem : MenuItemBase
     internal protected override void Draw(DrawingContext context)
     {
         context.Fill(SolidColor.Black);
+    }
+
+    /// <inheritdoc/>
+    protected internal override void OnInteraction(ItemInteractedEventArgs args)
+    {
+        Console.WriteLine("SEPARATORITEM: " + args);
     }
 }

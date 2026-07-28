@@ -28,4 +28,10 @@ public abstract class MenuItemBase
     /// </summary>
     /// <param name="context">Context for drawing this instance</param>
     internal protected abstract void Draw(DrawingContext context);
+
+    /// <summary>
+    /// Called when this instance is interacted with
+    /// </summary>
+    /// <param name="args">The interaction that occurred</param>
+    internal protected abstract void OnInteraction(ItemInteractedEventArgs args);
 }

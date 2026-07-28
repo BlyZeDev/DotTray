@@ -5,7 +5,7 @@ using DotTray.Internal.Native;
 /// <summary>
 /// Represents the type of interaction with the <see cref="NotifyIcon"/> or its associated balloon notifications.
 /// </summary>
-public enum InteractionType : uint
+public enum IconInteractionType : uint
 {
     /// <summary>
     /// Occurs when the mouse pointer is moved over the notification icon.

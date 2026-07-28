@@ -8,9 +8,9 @@ using System.Drawing;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
 
+[SupportedOSPlatform("windows")]
 sealed class Program
 {
-    [SupportedOSPlatform("windows")]
     static async Task Main()
     {
         var cts = new CancellationTokenSource();
@@ -18,16 +18,17 @@ sealed class Program
         var tempPath = CreateTestIcon(StockIconId.Error) ?? throw new InvalidOperationException("Icon could not be created");
         var tempPath2 = CreateTestIcon((StockIconId)Random.Shared.Next(0, 141)) ?? throw new InvalidOperationException("Icon could not be created");
         
-        var icon = await NotifyIcon.RunAsync(tempPath, cts.Token);
-        var icon2 = NotifyIcon.Run(tempPath2, cts.Token);
-        icon.SetToolTip("TEST");
-        icon2.SetToolTip("TEST2");
+        var freakyIcon = await NotifyIcon.RunAsync(tempPath, cts.Token);
+        var basicIcon = NotifyIcon.Run(tempPath2, cts.Token);
+
+        BuildFreakyMenu(freakyIcon);
+        BuildBasicMenu(basicIcon);
 
         PeriodicAction(() =>
         {
             tempPath = CreateTestIcon((StockIconId)Random.Shared.Next(0, 141)) ?? throw new InvalidOperationException("Icon could not be created");
 
-            icon.SetToolTip(Random.Shared.Next(0, 2) == 0 ? tempPath : null);
+            freakyIcon.SetToolTip(Random.Shared.Next(0, 2) == 0 ? tempPath : null);
         }, TimeSpan.FromSeconds(6)).SafeFireAndForget();
 
         /*
@@ -43,13 +44,68 @@ sealed class Program
         }, TimeSpan.FromSeconds(12)).SafeFireAndForget();
         */
 
-        icon.Handler.SetColor(new LinearGradientStopColor(90f,
-            new GradientStop(SolidColor.FromHex("#000000"), 0f),
-            new GradientStop(SolidColor.FromHex("#000000"), 0.33f),
-            new GradientStop(SolidColor.FromHex("#DD0000"), 0.33f),
-            new GradientStop(SolidColor.FromHex("#DD0000"), 0.66f),
-            new GradientStop(SolidColor.FromHex("#FFCC00"), 0.66f),
-            new GradientStop(SolidColor.FromHex("#FFCC00"), 1f)));
+        try
+        {
+            await Task.Delay(Timeout.Infinite, cts.Token);
+        }
+        catch (Exception) { }
+
+        try
+        {
+            File.Delete(tempPath ?? "");
+        }
+        catch (Exception) { }
+    }
+
+    private static void BuildBasicMenu(NotifyIcon<DefaultPopupMenuHandler> icon)
+    {
+        icon.SetToolTip("Basic");
+        icon.Handler.SetColor(new LinearGradientColor(new SolidColor(20, 20, 20), new SolidColor(40, 40, 40), 45f));
+
+        icon.Handler.MenuItems.Add<MenuItem>(x =>
+        {
+            x.Text = "Start Application";
+            x.FontInfo = x.FontInfo with { Size = 40f };
+            x.Background = SolidColor.Transparent;
+            x.Foreground = SolidColor.White;
+        });
+        icon.Handler.MenuItems.Add<SubmenuItem>(x =>
+        {
+            x.Text = "Actions";
+            x.FontInfo = x.FontInfo with { Size = 40f };
+            x.Background = SolidColor.Transparent;
+            x.Foreground = SolidColor.White;
+
+            x.Items.Add<MenuItem>(x =>
+            {
+                x.Text = "Do something cool";
+                x.FontInfo = x.FontInfo with { Size = 40f };
+                x.Background = SolidColor.Transparent;
+                x.Foreground = SolidColor.White;
+            });
+
+            x.Items.Add<MenuItem>(x =>
+            {
+                x.Text = "Do something even cooler";
+                x.FontInfo = x.FontInfo with { Size = 40f };
+                x.Background = SolidColor.Transparent;
+                x.Foreground = SolidColor.White;
+            });
+        });
+        icon.Handler.MenuItems.Add<SeparatorItem>();
+        icon.Handler.MenuItems.Add<MenuItem>(x =>
+        {
+            x.Text = "Exit";
+            x.FontInfo = x.FontInfo with { Size = 40f };
+            x.Background = SolidColor.Transparent;
+            x.Foreground = SolidColor.White;
+        });
+    }
+
+    private static void BuildFreakyMenu(NotifyIcon<DefaultPopupMenuHandler> icon)
+    {
+        icon.SetToolTip("Freaky");
+        icon.Handler.SetColor(LinearGradientColor.Random());
 
         icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
@@ -72,22 +128,57 @@ sealed class Program
             x.Text = "-♡👩🏼‍❤️‍👨🏻🐻💩-";
             x.FontInfo = x.FontInfo with { Size = 125f };
         });
-
-        icon2.Handler.MenuItems.Add<SeparatorItem>();
-        icon2.Handler.MenuItems.Add<SeparatorItem>();
-        icon2.Handler.MenuItems.Add<MenuItem>(x => x.Text = "Text");
-
-        try
+        icon.Handler.MenuItems.Add<SubmenuItem>(x =>
         {
-            await Task.Delay(Timeout.Infinite, cts.Token);
-        }
-        catch (Exception) { }
+            x.Text = "Submenu :)";
+            x.Background = SolidColor.Red;
+            x.Foreground = SolidColor.White;
+            x.FontInfo = x.FontInfo with { Size = 100f };
 
-        try
-        {
-            File.Delete(tempPath ?? "");
-        }
-        catch (Exception) { }
+            x.Items.Add<MenuItem>(x =>
+            {
+                x.Text = "Submenu Item 1";
+                x.Background = SolidColor.White;
+                x.Foreground = SolidColor.Black;
+                x.FontInfo = x.FontInfo with { Size = 50f };
+            });
+            x.Items.Add<SubmenuItem>(x =>
+            {
+                x.Text = "Submenu Item 2";
+                x.Background = SolidColor.White;
+                x.Foreground = SolidColor.Black;
+                x.FontInfo = x.FontInfo with { Size = 50f };
+
+                x.Items.Add<MenuItem>(x =>
+                {
+                    x.Text = ":o";
+                    x.Background = SolidColor.Black;
+                    x.Foreground = SolidColor.White;
+                    x.FontInfo = x.FontInfo with { Size = 250f };
+                });
+                x.Items.Add<MenuItem>(x =>
+                {
+                    x.Text = ":o";
+                    x.Background = SolidColor.Black;
+                    x.Foreground = SolidColor.White;
+                    x.FontInfo = x.FontInfo with { Size = 25f };
+                });
+            });
+            x.Items.Add<MenuItem>(x =>
+            {
+                x.Text = "Submenu Item 3";
+                x.Background = SolidColor.White;
+                x.Foreground = SolidColor.Black;
+                x.FontInfo = x.FontInfo with { Size = 50f };
+            });
+            x.Items.Add<MenuItem>(x =>
+            {
+                x.Text = "Submenu Item 4";
+                x.Background = SolidColor.White;
+                x.Foreground = SolidColor.Black;
+                x.FontInfo = x.FontInfo with { Size = 50f };
+            });
+        });
     }
 
     private static async Task PeriodicAction(Action action, TimeSpan period)

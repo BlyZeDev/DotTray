@@ -1,6 +1,5 @@
 ﻿namespace DotTray.Popup.Default;
 
-using DotTray.Abstract;
 using DotTray.Popup.Default.Coloring;
 using DotTray.Primitives;
 using System;
@@ -10,6 +9,8 @@ using System;
 /// </summary>
 public sealed class DefaultPopupMenuHandler : PopupMenuHandler
 {
+    private PopupMenuTree? _activeTree;
+
     /// <summary>
     /// The <see cref="MenuItemCollection"/> of this <see cref="DefaultPopupMenuHandler"/> instance
     /// </summary>
@@ -53,6 +54,9 @@ public sealed class DefaultPopupMenuHandler : PopupMenuHandler
         var nativeOwner = owner as NotifyIcon<DefaultPopupMenuHandler>
             ?? throw new InvalidOperationException($"Expected owner to be of type {typeof(NotifyIcon<DefaultPopupMenuHandler>)}");
 
-        var tree = PopupMenuTree.Show(nativeOwner, true);
+        var tree = _activeTree is not null ? _activeTree.Regrow(true) : PopupMenuTree.Show(nativeOwner, true);
+
+        tree.Disposed += () => _activeTree = null;
+        _activeTree = tree;
     }
 }

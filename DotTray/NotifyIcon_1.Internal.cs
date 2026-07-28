@@ -74,7 +74,8 @@ public sealed partial class NotifyIcon<THandler>
                 lpfnWndProc = Marshal.GetFunctionPointerForDelegate(popupWndProc),
                 hInstance = InstanceHandle,
                 lpszClassName = PopupWindowClassName,
-                hbrBackground = nint.Zero
+                hbrBackground = nint.Zero,
+                hCursor = PInvoke.LoadCursor(nint.Zero, PInvoke.IDC_ARROW)
             };
             atom = PInvoke.RegisterClass(ref popupWndClass);
             NotifyIconException.ThrowIfZero(atom, "Registering the window class failed");
@@ -170,7 +171,7 @@ public sealed partial class NotifyIcon<THandler>
     {
         var interaction = new NotifyIconInteractedEventArgs
         {
-            Type = (InteractionType)(uint)(lParam & 0xFFFF),
+            Type = (IconInteractionType)(uint)(lParam & 0xFFFF),
             MousePosition = new Point((short)(wParam & 0xFFFF), (short)((wParam >> 16) & 0xFFFF))
         };
 
