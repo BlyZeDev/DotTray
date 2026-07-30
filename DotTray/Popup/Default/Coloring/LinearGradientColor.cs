@@ -49,7 +49,7 @@ public readonly record struct LinearGradientColor : IColorable
     /// <inheritdoc/>
     public readonly bool Equals(IColorable? other) => other is LinearGradientColor gradient && Equals(gradient);
 
-    readonly SafeHandle IColorable.CreateNativeHandle(RectangleF bounds)
+    readonly SafeHandle IColorable.CreateGdipBrush(RectangleF bounds)
     {
         var rect = new RECTF
         {

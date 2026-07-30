@@ -13,6 +13,8 @@ sealed class Program
 {
     static async Task Main()
     {
+        Console.WriteLine(Thread.CurrentThread.Name ?? "MainThread");
+
         var cts = new CancellationTokenSource();
 
         var tempPath = CreateTestIcon(StockIconId.Error) ?? throw new InvalidOperationException("Icon could not be created");
@@ -23,6 +25,15 @@ sealed class Program
 
         BuildFreakyMenu(freakyIcon);
         BuildBasicMenu(basicIcon);
+
+        await Task.Delay(5000);
+
+        freakyIcon.Handler.MenuItems.Add<MenuItem>(x =>
+        {
+            x.Text = "Test";
+            x.FontInfo = x.FontInfo with { Size = x.FontInfo.Size * 2 };
+        });
+        //(freakyIcon.Handler.MenuItems[0] as MenuItem)!.Text = "Really long new text, lets see if the resize is correct ;'\"{}[]-_?!";
 
         PeriodicAction(() =>
         {
@@ -65,21 +76,21 @@ sealed class Program
         icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
             x.Text = "Start Application";
-            x.FontInfo = x.FontInfo with { Size = 40f };
+            x.FontInfo = x.FontInfo with { Size = 25f };
             x.Background = SolidColor.Transparent;
             x.Foreground = SolidColor.White;
         });
         icon.Handler.MenuItems.Add<SubmenuItem>(x =>
         {
             x.Text = "Actions";
-            x.FontInfo = x.FontInfo with { Size = 40f };
+            x.FontInfo = x.FontInfo with { Size = 25f };
             x.Background = SolidColor.Transparent;
             x.Foreground = SolidColor.White;
 
             x.Items.Add<MenuItem>(x =>
             {
                 x.Text = "Do something cool";
-                x.FontInfo = x.FontInfo with { Size = 40f };
+                x.FontInfo = x.FontInfo with { Size = 25f };
                 x.Background = SolidColor.Transparent;
                 x.Foreground = SolidColor.White;
             });
@@ -87,7 +98,7 @@ sealed class Program
             x.Items.Add<MenuItem>(x =>
             {
                 x.Text = "Do something even cooler";
-                x.FontInfo = x.FontInfo with { Size = 40f };
+                x.FontInfo = x.FontInfo with { Size = 25f };
                 x.Background = SolidColor.Transparent;
                 x.Foreground = SolidColor.White;
             });
@@ -96,7 +107,7 @@ sealed class Program
         icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
             x.Text = "Exit";
-            x.FontInfo = x.FontInfo with { Size = 40f };
+            x.FontInfo = x.FontInfo with { Size = 25f };
             x.Background = SolidColor.Transparent;
             x.Foreground = SolidColor.White;
         });
@@ -115,7 +126,12 @@ sealed class Program
             x.FontInfo = new FontInfo
             {
                 FontFamilyName = "Mistral",
-                Size = 200f
+                Size = 100f
+            };
+            x.Interacted = (args) =>
+            {
+                x.Text = $"Item No. {Random.Shared.Next(10000)}";
+                Console.WriteLine("TEXT IS UPDATED");
             };
         });
         icon.Handler.MenuItems.Add<SeparatorItem>();

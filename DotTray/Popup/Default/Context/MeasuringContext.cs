@@ -1,38 +1,15 @@
-﻿namespace DotTray.Popup.Default;
+﻿namespace DotTray.Popup.Default.Context;
 
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using DotTray.Primitives;
-using System;
-using System.ComponentModel;
 
 /// <summary>
 /// Includes data for measuring <see cref="MenuItemBase"/> instances
 /// </summary>
-public sealed class MeasuringContext : IDisposable
+public sealed class MeasuringContext : Context
 {
-    private readonly nint _gdip;
-
-    /// <summary>
-    /// The raw GDI+ graphics handle backing this context
-    /// </summary>
-    /// <remarks>
-    /// Use this if you want native control over the drawing process.<br/>
-    /// <b>Use with caution</b>
-    /// </remarks>
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public nint NativeGraphicsHandle => _gdip;
-
-    /// <summary>
-    /// The DPI scale factor of the monitor the menu is being shown on (1.0 = 96 DPI)
-    /// </summary>
-    public float Scale { get; }
-
-    internal MeasuringContext(nint gdip, float scale)
-    {
-        _gdip = gdip;
-        Scale = scale;
-    }
+    internal MeasuringContext(nint gdip, float scale) : base(gdip, scale) { }
 
     /// <summary>
     /// Measures the size, in pixels, required to render <paramref name="text"/> with <paramref name="font"/>
@@ -67,11 +44,4 @@ public sealed class MeasuringContext : IDisposable
 
         return new SizeF(measured.Width, measured.Height);
     }
-
-    void IDisposable.Dispose()
-    {
-
-    }
-
-    private static string SanitizeText(string text) => text.Replace("\uFE0F", "");
 }

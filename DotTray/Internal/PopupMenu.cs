@@ -3,6 +3,7 @@
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using DotTray.Popup.Default;
+using DotTray.Popup.Default.Context;
 using DotTray.Primitives;
 using System;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ using System.Runtime.InteropServices;
 using Hit = (Popup.Default.MenuItemBase Item, Primitives.Rectangle Bounds);
 using WindowArea = (int X, int Y, int Width, int Height);
 using ScreenPosition = (int X, int Y);
-using MonitorSize = (int Width, int Height);
+using MeasuredItem = (Popup.Default.MenuItemBase Item, Primitives.Size Size);
 
 internal sealed class PopupMenu
 {
@@ -22,13 +23,15 @@ internal sealed class PopupMenu
     private readonly PInvoke.WndProc _wndProc;
     private readonly PopupMenuTree _tree;
 
+    private readonly Rectangle _rootCursorAnchor;
     private readonly MenuItemCollection _items;
     private readonly Rectangle? _anchorScreenRect;
 
     private readonly List<Hit> _itemRects = [];
+    private readonly List<MeasuredItem> _measuredSizes = [];
 
     private MenuItemBase? _hotItem;
-    private SubmenuItemBase? _openSubmenuOwner;
+    private ISubmenu? _openSubmenuOwner;
     private bool _tracking;
     private POINT _lastPoint;
 
@@ -39,6 +42,7 @@ internal sealed class PopupMenu
         _tree = tree;
         _items = items;
         _anchorScreenRect = anchorScreenRect;
+        _rootCursorAnchor = anchorScreenRect ?? GetCursorAnchor();
 
         _items.Updated += RequestRedraw;
 
@@ -75,7 +79,6 @@ internal sealed class PopupMenu
         {
             case PInvoke.WM_NCACTIVATE: return 1;
             case WM_APP_POPUP_CALCWND: return HandleCalcWnd(hWnd);
-            case PInvoke.WM_SIZE: PInvoke.InvalidateRect(hWnd, nint.Zero, false); return 0;
             case PInvoke.WM_ERASEBKGND: return 1;
             case PInvoke.WM_PAINT: return HandlePaint(hWnd);
 
@@ -97,6 +100,8 @@ internal sealed class PopupMenu
     {
         var (x, y, width, height) = CalcWindowArea(_items);
         PInvoke.SetWindowPos(hWnd, nint.Zero, x, y, width, height, PInvoke.SWP_ZORDER | PInvoke.SWP_NOACTIVATE);
+
+        PInvoke.InvalidateRect(hWnd, nint.Zero, false);
 
         return nint.Zero;
     }
@@ -122,7 +127,7 @@ internal sealed class PopupMenu
 
             PInvoke.GdipCreateFromHDC(dc, out var gdip);
 
-            using (var hBackground = _tree.Owner.Handler.Color.CreateNativeHandle(bounds))
+            using (var hBackground = _tree.Owner.Handler.Color.CreateGdipBrush(bounds))
             {
                 PInvoke.GdipFillRectangleI(gdip, hBackground.DangerousGetHandle(), bounds.X, bounds.Y, bounds.Width, bounds.Height);
             }
@@ -209,7 +214,7 @@ internal sealed class PopupMenu
         };
         hit.Value.Item.OnInteraction(args);
 
-        if (hit.Value.Item is SubmenuItemBase submenu && submenu.ShouldOpen(args))
+        if (hit.Value.Item is ISubmenu submenu && submenu.ShouldOpen(args))
         {
             OpenSubmenu(submenu);
         }
@@ -248,19 +253,18 @@ internal sealed class PopupMenu
             };
             hit.Value.Item.OnInteraction(args);
 
-            if (hit.Value.Item is SubmenuItemBase submenu && submenu.ShouldOpen(args))
+            if (hit.Value.Item is ISubmenu submenu && submenu.ShouldOpen(args))
             {
                 OpenSubmenu(submenu);
             }
         }
     }
 
-    private void OpenSubmenu(SubmenuItemBase submenu)
+    private void OpenSubmenu(ISubmenu submenu)
     {
-        if (submenu.Items.IsEmpty) return;
         if (ReferenceEquals(_openSubmenuOwner, submenu)) return;
 
-        var localBounds = FindBounds(submenu);
+        var localBounds = FindBounds((MenuItemBase)submenu);
         if (localBounds is null) return;
 
         var screenRect = ToScreenRect(localBounds.Value);
@@ -328,34 +332,52 @@ internal sealed class PopupMenu
         var totalHeight = 0;
 
         _itemRects.Clear();
+        _measuredSizes.Clear();
 
         using (var measuring = new MeasuringContext(gdip, _scale))
         {
-            var itemTop = 0;
-
             foreach (var item in items)
             {
-                item.DrawBox = item.Measure(measuring);
-                _itemRects.Add((item, new Rectangle(0, itemTop, item.DrawBox.Width, item.DrawBox.Height)));
+                var desired = item.Measure(measuring);
+                _measuredSizes.Add((item, desired));
 
-                maxWidth = Math.Max(maxWidth, item.DrawBox.Width);
-                itemTop += item.DrawBox.Height;
-                totalHeight = itemTop;
+                maxWidth = Math.Max(maxWidth, desired.Width);
+                totalHeight += desired.Height;
+            }
+        }
+
+        using (var arranging = new ArrangingContext(gdip, _scale, new Size(maxWidth, totalHeight)))
+        {
+            var itemTop = 0;
+
+            foreach (var (item, desired) in _measuredSizes)
+            {
+                arranging.ItemBounds = new Rectangle(0, itemTop, maxWidth, desired.Height);
+                arranging.MeasuredItemBounds = new Rectangle(0, itemTop, desired.Width, desired.Height);
+
+                var requested = item.Arrange(arranging);
+
+                var width = Math.Clamp(requested.Width, 0, maxWidth);
+                var x = Math.Clamp(requested.X, 0, maxWidth - width);
+
+                item.DrawBox = new Size(width, desired.Height);
+                _itemRects.Add((item, new Rectangle(x, itemTop, width, desired.Height)));
+                itemTop += desired.Height;
             }
         }
 
         _ = PInvoke.GdipDeleteGraphics(gdip);
         _ = PInvoke.DeleteDC(hdc);
 
-        var anchor = _anchorScreenRect ?? GetCursorAnchor();
+        var anchor = _anchorScreenRect ?? _rootCursorAnchor;
         var hMonitor = PInvoke.MonitorFromPoint(new POINT { x = anchor.X, y = anchor.Y }, PInvoke.MONITOR_DEFAULTTONEAREST);
-        var (screenWidth, screenHeight) = GetMonitorWorkArea(hMonitor);
+        var workArea = GetMonitorWorkArea(hMonitor);
 
-        var (x, y) = _anchorScreenRect.HasValue
-            ? ResolveSubmenuPosition(anchor, maxWidth, totalHeight, screenWidth, screenHeight, _tree.GetOpenWindowRects(HWnd))
-            : ResolveRootPosition(anchor, maxWidth, totalHeight, screenWidth, screenHeight);
+        var (posX, posY) = _anchorScreenRect.HasValue
+            ? ResolveSubmenuPosition(anchor, maxWidth, totalHeight, workArea, _tree.GetOpenWindowRects(HWnd))
+            : ResolveRootPosition(anchor, maxWidth, totalHeight, workArea);
 
-        return (x, y, maxWidth, totalHeight);
+        return (posX, posY, maxWidth, totalHeight);
     }
 
     private static POINT DecodePoint(nint lParam)
@@ -374,28 +396,28 @@ internal sealed class PopupMenu
         return new Rectangle(pos.x, pos.y, 0, 0);
     }
 
-    private static ScreenPosition ResolveRootPosition(Rectangle anchor, int width, int height, int screenWidth, int screenHeight)
+    private static ScreenPosition ResolveRootPosition(Rectangle anchor, int width, int height, Rectangle workArea)
     {
         var x = anchor.X;
         var y = anchor.Y;
 
-        if (x + width > screenWidth) x = Math.Abs(x - width);
-        if (y + height > screenHeight) y = Math.Abs(y - height);
+        if (x + width > workArea.Right) x = anchor.X - width;
+        if (y + height > workArea.Bottom) y = anchor.Y - height;
 
-        return (x, y);
+        return ClampToWorkArea(x, y, width, height, workArea);
     }
 
-    private static ScreenPosition ResolveSubmenuPosition(Rectangle anchor, int width, int height, int screenWidth, int screenHeight, IReadOnlyCollection<Rectangle> obstacles)
+    private static ScreenPosition ResolveSubmenuPosition(Rectangle anchor, int width, int height, Rectangle workArea, List<Rectangle> obstacles)
     {
         var y = anchor.Top;
-        if (y + height > screenHeight) y = anchor.Bottom - height;
-        if (y < 0) y = 0;
+        if (y + height > workArea.Bottom) y = anchor.Bottom - height;
+        if (y < workArea.Top) y = workArea.Top;
 
         var rightX = anchor.Right;
         var leftX = anchor.Left - width;
 
-        var rightFits = rightX + width <= screenWidth;
-        var leftFits = leftX >= 0;
+        var rightFits = rightX + width <= workArea.Right;
+        var leftFits = leftX >= workArea.Left;
 
         var rightRect = new Rectangle(rightX, y, width, height);
         var leftRect = new Rectangle(leftX, y, width, height);
@@ -403,14 +425,15 @@ internal sealed class PopupMenu
         var rightOverlaps = rightFits ? CountOverlaps(rightRect, obstacles) : -1;
         var leftOverlaps = leftFits ? CountOverlaps(leftRect, obstacles) : -1;
 
-        if (rightFits && rightOverlaps == 0) return (rightX, y);
-        if (leftFits && leftOverlaps == 0) return (leftX, y);
+        int x;
+        if (rightFits && rightOverlaps == 0) x = rightX;
+        else if (leftFits && leftOverlaps == 0) x = leftX;
+        else if (rightFits && leftFits) x = rightOverlaps <= leftOverlaps ? rightX : leftX;
+        else if (rightFits) x = rightX;
+        else if (leftFits) x = leftX;
+        else x = rightX;
 
-        if (rightFits && leftFits) return rightOverlaps <= leftOverlaps ? (rightX, y) : (leftX, y);
-        if (rightFits) return (rightX, y);
-        if (leftFits) return (leftX, y);
-
-        return (Math.Clamp(rightX, 0, Math.Max(0, screenWidth - width)), y);
+        return ClampToWorkArea(x, y, width, height, workArea);
     }
 
     private static int CountOverlaps(Rectangle rect, IReadOnlyCollection<Rectangle> obstacles)
@@ -424,7 +447,7 @@ internal sealed class PopupMenu
         return count;
     }
 
-    private static MonitorSize GetMonitorWorkArea(nint monitorHandle)
+    private static Rectangle GetMonitorWorkArea(nint monitorHandle)
     {
         var monitorInfo = new MONITORINFO
         {
@@ -432,7 +455,19 @@ internal sealed class PopupMenu
         };
         PInvoke.GetMonitorInfo(monitorHandle, ref monitorInfo);
 
-        return (monitorInfo.rcWork.Right - monitorInfo.rcWork.Left, monitorInfo.rcWork.Bottom - monitorInfo.rcWork.Top);
+        return new Rectangle(
+            monitorInfo.rcWork.Left,
+            monitorInfo.rcWork.Top,
+            monitorInfo.rcWork.Right - monitorInfo.rcWork.Left,
+            monitorInfo.rcWork.Bottom - monitorInfo.rcWork.Top);
+    }
+
+    private static ScreenPosition ClampToWorkArea(int x, int y, int width, int height, Rectangle workArea)
+    {
+        x = Math.Clamp(x, workArea.Left, Math.Max(workArea.Left, workArea.Right - width));
+        y = Math.Clamp(y, workArea.Top, Math.Max(workArea.Top, workArea.Bottom - height));
+
+        return (x, y);
     }
 
     private static Point RelativePosition(Rectangle bounds, POINT point) => new Point(point.x - bounds.X, point.y - bounds.Y);

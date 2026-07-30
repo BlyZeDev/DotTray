@@ -1,6 +1,7 @@
 ﻿namespace DotTray.Popup.Default;
 
 using DotTray.Popup.Default.Coloring;
+using DotTray.Popup.Default.Context;
 using DotTray.Primitives;
 using System;
 
@@ -78,7 +79,7 @@ public class MenuItem : MenuItemBase
     internal protected override Size Measure(MeasuringContext context)
     {
         var text = context.MeasureText(Text, FontInfo);
-        return new Size((int)MathF.Ceiling(text.Width), (int)MathF.Ceiling(text.Height));
+        return new Size((int)MathF.Ceiling(text.Width * 1.05f), (int)MathF.Ceiling(text.Height * 1.05f));
     }
 
     /// <inheritdoc/>
@@ -86,11 +87,5 @@ public class MenuItem : MenuItemBase
     {
         context.Fill(Background);
         context.Write(Text, FontInfo, Foreground);
-    }
-
-    /// <inheritdoc/>
-    protected internal override void OnInteraction(ItemInteractedEventArgs args)
-    {
-        Console.WriteLine("MENUITEM: " + args);
     }
 }

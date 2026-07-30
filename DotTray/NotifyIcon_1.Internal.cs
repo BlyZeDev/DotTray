@@ -149,7 +149,7 @@ public sealed partial class NotifyIcon<THandler>
         _thread.Start();
     }
 
-    private unsafe nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
+    private nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
     {
         switch (msg)
         {

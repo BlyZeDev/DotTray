@@ -21,6 +21,9 @@ internal static partial class PInvoke
     public static partial int GdipSetSmoothingMode(nint graphics, int smoothingMode);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipSetPixelOffsetMode(nint graphics, int pixelOffsetMode);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipCreatePen1(uint color, float width, int unit, out nint pen);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
@@ -42,7 +45,13 @@ internal static partial class PInvoke
     public static partial int GdipFillRectangle(nint graphics, nint brush, float x, float y, float width, float height);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipFillEllipse(nint graphics, nint brush, float x, float y, float width, float height);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipFillRectangleI(nint graphics, nint brush, int x, int y, int width, int height);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipFillEllipseI(nint graphics, nint brush, int x, int y, int width, int height);
 
     [LibraryImport(GdiPlus, SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
     public static partial int GdipMeasureString(nint graphics, string text, int length, nint font, ref RECTF layoutRect, nint stringFormat, out RECTF boundingBox, out int codepointsFitted, out int linesFilled);
@@ -82,6 +91,9 @@ internal static partial class PInvoke
 
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static unsafe partial int GdipFillPolygon(nint graphics, nint brush, POINTF* points, int count, int fillMode);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static unsafe partial int GdipFillPolygonI(nint graphics, nint brush, POINT* points, int count, int fillMode);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipCreateBitmapFromScan0(int width, int height, int stride, int format, nint scan0, out nint bitmap);

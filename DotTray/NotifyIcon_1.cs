@@ -52,10 +52,10 @@ public sealed partial class NotifyIcon<THandler> : IDisposable where THandler : 
     public bool IsVisible { get; private set; }
 
     /// <summary>
-    /// Fires whenever the user interacts with the <see cref="NotifyIcon"/> or a <see cref="BalloonNotification"/>.
+    /// Fires whenever the user interacts with the <see cref="NotifyIcon"/> or a <see cref="BalloonNotification"/>
     /// </summary>
     /// <remarks>
-    /// Note: This event is raised on the <see cref="NotifyIcon"/>'s background STA thread.
+    /// <b>Note:</b> This event is raised on the <see cref="NotifyIcon"/>'s background STA thread
     /// </remarks>
     public event Action<NotifyIconInteractedEventArgs>? Interacted;
 

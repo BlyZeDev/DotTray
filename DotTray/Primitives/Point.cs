@@ -1,10 +1,12 @@
 ﻿namespace DotTray.Primitives;
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 
 /// <summary>
 /// Represents 2-dimensional coordinates using integer
 /// </summary>
+[StructLayout(LayoutKind.Sequential)]
 public readonly record struct Point
 {
     /// <summary>

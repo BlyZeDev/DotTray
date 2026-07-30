@@ -20,5 +20,5 @@ public interface IColorable : IEquatable<IColorable>
     /// <param name="bounds">The bounds to color</param>
     /// <returns><see cref="SafeHandle"/></returns>
     [EditorBrowsable(EditorBrowsableState.Never)]
-    internal protected SafeHandle CreateNativeHandle(RectangleF bounds);
+    SafeHandle CreateGdipBrush(RectangleF bounds);
 }

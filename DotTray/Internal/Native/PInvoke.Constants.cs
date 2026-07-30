@@ -116,6 +116,8 @@ internal static partial class PInvoke
 
     public const int CombineModeReplace = 0;
 
+    public const int FillModeAlternate = 0;
+
     public const int SmoothingModeDefault = 0;
     public const int SmoothingModeHighSpeed = 1;
     public const int SmoothingModeHighQuality = 2;
@@ -129,6 +131,8 @@ internal static partial class PInvoke
     public const int TextRenderingHintAntiAliasGridFit = 3;
     public const int TextRenderingHintAntiAlias = 4;
     public const int TextRenderingHintClearTypeGridFit = 5;
+
+    public const int PixelOffsetModeHalf = 4;
 
     public const int UnitPixel = 2;
 

@@ -1,29 +1,17 @@
-﻿namespace DotTray.Popup.Default;
+﻿namespace DotTray.Popup.Default.Context;
 
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
+using DotTray.Popup.Default;
 using DotTray.Popup.Default.Coloring;
 using DotTray.Primitives;
 using System;
-using System.ComponentModel;
 
 /// <summary>
 /// Includes data for drawing <see cref="MenuItemBase"/> instances
 /// </summary>
-public sealed class DrawingContext : IDisposable
+public sealed class DrawingContext : Context
 {
-    private readonly nint _gdip;
-
-    /// <summary>
-    /// The raw GDI+ graphics handle backing this context
-    /// </summary>
-    /// <remarks>
-    /// Use this if you want native control over the drawing process.<br/>
-    /// <b>Use with caution</b>
-    /// </remarks>
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public nint NativeGraphicsHandle => _gdip;
-
     /// <summary>
     /// The size of the window that contains this item
     /// </summary>
@@ -37,15 +25,8 @@ public sealed class DrawingContext : IDisposable
     /// </remarks>
     public Rectangle ItemBounds { get; internal set; }
 
-    /// <summary>
-    /// The DPI scale factor of the monitor the menu is being shown on (1.0 = 96 DPI)
-    /// </summary>
-    public float Scale { get; }
-
-    internal DrawingContext(nint gdip, float scale, Rectangle windowBounds)
+    internal DrawingContext(nint gdip, float scale, Rectangle windowBounds) : base(gdip, scale)
     {
-        _gdip = gdip;
-        Scale = scale;
         WindowSize = new Size(windowBounds.Right - windowBounds.Left, windowBounds.Bottom - windowBounds.Top);
     }
 
@@ -65,10 +46,57 @@ public sealed class DrawingContext : IDisposable
     /// <param name="color">The color to use</param>
     public void FillRect<TColor>(Rectangle rect, TColor color) where TColor : notnull, IColorable
     {
-        using (var hBrush = color.CreateNativeHandle(rect))
+        using (var hBrush = color.CreateGdipBrush(rect))
         {
             PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeHighSpeed);
             PInvoke.GdipFillRectangleI(_gdip, hBrush.DangerousGetHandle(), rect.X, rect.Y, rect.Width, rect.Height);
+        }
+    }
+
+    /// <summary>
+    /// Fills the an ellipse inside <paramref name="rect"/> with <paramref name="color"/>
+    /// </summary>
+    /// <typeparam name="TColor">The color type to use</typeparam>
+    /// <param name="rect">The rectangle to fill with an ellipse</param>
+    /// <param name="color">The color to use</param>
+    public void FillEllipse<TColor>(Rectangle rect, TColor color) where TColor : notnull, IColorable
+    {
+        using (var hBrush = color.CreateGdipBrush(rect))
+        {
+            PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeAntiAlias8x8);
+            PInvoke.GdipFillEllipseI(_gdip, hBrush.DangerousGetHandle(), rect.X, rect.Y, rect.Width, rect.Height);
+        }
+    }
+
+    /// <summary>
+    /// Fills a polygon defined by <paramref name="points"/> with <paramref name="color"/>
+    /// </summary>
+    /// <remarks>
+    /// A polygon requires at least 3 points
+    /// </remarks>
+    /// <typeparam name="TColor">The color type to use</typeparam>
+    /// <param name="color">The color to use</param>
+    /// <param name="points">The points defining the polygon</param>
+    public void FillPolygon<TColor>(TColor color, params ReadOnlySpan<Point> points) where TColor : notnull, IColorable
+    {
+        if (points.Length < 3)
+        {
+            return;
+        }
+
+        var bounds = GetBounds(points);
+
+        using (var hBrush = color.CreateGdipBrush(bounds))
+        {
+            PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeAntiAlias8x8);
+
+            unsafe
+            {
+                fixed (Point* hPoints = points)
+                {
+                    PInvoke.GdipFillPolygonI(_gdip, hBrush.DangerousGetHandle(), (POINT*)hPoints, points.Length, PInvoke.FillModeAlternate);
+                }
+            }
         }
     }
 
@@ -98,9 +126,9 @@ public sealed class DrawingContext : IDisposable
         PInvoke.GdipCreateStringFormat(0, 0, out var hFormat);
         PInvoke.GdipSetStringFormatFlags(hFormat, PInvoke.StringFormatFlagsNoWrap);
         PInvoke.GdipSetStringFormatAlign(hFormat, PInvoke.StringAlignmentNear);
-        PInvoke.GdipSetStringFormatLineAlign(hFormat, PInvoke.StringAlignmentCenter);
+        PInvoke.GdipSetStringFormatLineAlign(hFormat, PInvoke.StringAlignmentNear);
 
-        using (var hBrush = color.CreateNativeHandle(rect))
+        using (var hBrush = color.CreateGdipBrush(rect))
         {
             var layoutRect = new RECTF
             {
@@ -111,7 +139,9 @@ public sealed class DrawingContext : IDisposable
             };
             text = SanitizeText(text);
 
-            PInvoke.GdipSetTextRenderingHint(_gdip, PInvoke.TextRenderingHintAntiAliasGridFit);
+            PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeAntiAlias8x8);
+            PInvoke.GdipSetPixelOffsetMode(_gdip, PInvoke.PixelOffsetModeHalf);
+            PInvoke.GdipSetTextRenderingHint(_gdip, GetTextRenderingHint(fontInfo.Size));
             PInvoke.GdipDrawString(_gdip, text, text.Length, hFont, ref layoutRect, hFormat, hBrush.DangerousGetHandle());
         }
 
@@ -120,10 +150,28 @@ public sealed class DrawingContext : IDisposable
         PInvoke.GdipDeleteFontFamily(hFamily);
     }
 
-    void IDisposable.Dispose()
+    private static int GetTextRenderingHint(float fontSize)
     {
+        const float Threshold = 20f;
 
+        return fontSize <= Threshold ? PInvoke.TextRenderingHintClearTypeGridFit : PInvoke.TextRenderingHintAntiAlias;
     }
 
-    private static string SanitizeText(string text) => text.Replace("\uFE0F", "");
+    private static Rectangle GetBounds(ReadOnlySpan<Point> points)
+    {
+        var minX = points[0].X;
+        var minY = points[0].Y;
+        var maxX = points[0].X;
+        var maxY = points[0].Y;
+
+        for (var i = 1; i < points.Length; i++)
+        {
+            minX = Math.Min(minX, points[i].X);
+            minY = Math.Min(minY, points[i].Y);
+            maxX = Math.Max(maxX, points[i].X);
+            maxY = Math.Max(maxY, points[i].Y);
+        }
+
+        return new Rectangle(minX, minY, maxX - minX, maxY - minY);
+    }
 }

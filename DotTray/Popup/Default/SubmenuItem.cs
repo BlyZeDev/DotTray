@@ -1,109 +1,66 @@
 ﻿namespace DotTray.Popup.Default;
 
-using DotTray.Popup.Default.Coloring;
+using DotTray.Popup.Default.Context;
 using DotTray.Primitives;
 using System;
 
 /// <summary>
 /// Represents a basic popup menu item that includes a submenu
 /// </summary>
-public class SubmenuItem : SubmenuItemBase
+public class SubmenuItem : MenuItem, ISubmenu
 {
-    /// <summary>
-    /// The background color
-    /// </summary>
-    public IColorable Background
-    {
-        get;
-        set
-        {
-            if (field.Equals(value)) return;
-
-            field = value;
-            Update();
-        }
-    } = SolidColor.Transparent;
-
-    /// <summary>
-    /// The text color
-    /// </summary>
-    public IColorable Foreground
-    {
-        get;
-        set
-        {
-            if (field.Equals(value)) return;
-
-            field = value;
-            Update();
-        }
-    } = SolidColor.Black;
-
-    /// <summary>
-    /// The displayed text
-    /// </summary>
-    public string Text
-    {
-        get;
-        set
-        {
-            if (string.Equals(field, value, StringComparison.Ordinal)) return;
-
-            field = value;
-            Update();
-        }
-    } = "";
-
-    /// <summary>
-    /// The font info used to display the text
-    /// </summary>
-    public FontInfo FontInfo
-    {
-        get;
-        set
-        {
-            if (field.Equals(value)) return;
-
-            field = value;
-            Update();
-        }
-    } = new FontInfo("Segoe UI Emoji", 20f);
-
-    /// <summary>
-    /// Default configuration for <see cref="SubmenuItem"/>
-    /// </summary>
-    public SubmenuItem() { }
+    private const int ArrowHeightRatio = 3;
+    private const int ArrowGap = 8;
+    private const int ArrowRightPadding = 10;
 
     /// <inheritdoc/>
-    internal protected override Size Measure(MeasuringContext context)
+    public MenuItemCollection Items { get; } = [];
+
+    /// <inheritdoc/>
+    protected internal override Size Measure(MeasuringContext context)
     {
-        var text = context.MeasureText(Text, FontInfo);
-        var arrow = context.MeasureText("\u276F", FontInfo);
+        var baseSize = base.Measure(context);
 
-        var width = text.Width + arrow.Width + (12f * context.Scale);
-        var height = MathF.Max(text.Height, arrow.Height);
+        var arrowHeight = Math.Max(6, baseSize.Height / ArrowHeightRatio);
+        var arrowWidth = Math.Max(4, arrowHeight * 2 / 3);
 
-        return new Size((int)MathF.Ceiling(width), (int)MathF.Ceiling(height));
+        return new Size(baseSize.Width + ArrowGap + arrowWidth + ArrowRightPadding, baseSize.Height);
     }
 
     /// <inheritdoc/>
-    internal protected override void Draw(DrawingContext context)
+    protected internal override void Draw(DrawingContext context)
     {
-        context.Fill(Background);
-
         var bounds = context.ItemBounds;
-        var arrowWidth = MathF.Ceiling(bounds.Height);
 
-        var textRect = new Rectangle(bounds.X, bounds.Y, bounds.Width - (int)arrowWidth, bounds.Height);
-        var arrowRect = new Rectangle(bounds.Right - (int)arrowWidth, bounds.Y, (int)arrowWidth, bounds.Height);
+        var arrowHeight = Math.Max(6, bounds.Height / ArrowHeightRatio);
+        var arrowWidth = Math.Max(4, arrowHeight * 2 / 3);
 
-        context.WriteRect(textRect, Text, FontInfo, Foreground);
-        context.WriteRect(arrowRect, "\u276F", FontInfo, Foreground);
+        var arrowX = bounds.Right - ArrowRightPadding - arrowWidth;
+        var arrowY = bounds.Top + (bounds.Height - arrowHeight) / 2;
+
+        var thickness = Math.Max(1, arrowHeight / 5);
+
+        var centerY = arrowY + arrowHeight / 2;
+
+        ReadOnlySpan<Point> arrow =
+        [
+            new Point(arrowX, arrowY),
+            new Point(arrowX + thickness, arrowY),
+            new Point(arrowX + arrowWidth, centerY),
+            new Point(arrowX + thickness, arrowY + arrowHeight),
+            new Point(arrowX, arrowY + arrowHeight),
+            new Point(arrowX + arrowWidth - thickness, centerY)
+        ];
+
+        var textBounds = new Rectangle(bounds.X, bounds.Y, bounds.Width - arrowWidth - ArrowGap - ArrowRightPadding, bounds.Height);
+
+        context.Fill(Background);
+        context.WriteRect(textBounds, Text, FontInfo, Foreground);
+        context.FillPolygon(Foreground, arrow);
     }
 
-    /// <inheritdoc/>
-    protected internal override void OnInteraction(ItemInteractedEventArgs args)
-    {
-        Console.WriteLine("SUBMENUITEM: " + args);
-    }
+    /// <inheritdoc cref="ISubmenu.ShouldOpen(ItemInteractedEventArgs)"/>
+    protected virtual bool ShouldOpen(ItemInteractedEventArgs args) => !Items.IsEmpty && args.Type is ItemInteractionType.MouseEnter;
+
+    bool ISubmenu.ShouldOpen(ItemInteractedEventArgs args) => ShouldOpen(args);
 }
