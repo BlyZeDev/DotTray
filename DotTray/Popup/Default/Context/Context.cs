@@ -1,5 +1,6 @@
 ﻿namespace DotTray.Popup.Default.Context;
 
+using DotTray.Internal.Native;
 using System;
 using System.ComponentModel;
 
@@ -36,6 +37,13 @@ public abstract class Context : IDisposable
     {
         DisposeCore();
         GC.SuppressFinalize(this);
+    }
+
+    internal static int GetTextRenderingHint(float fontSize)
+    {
+        const float Threshold = 20f;
+
+        return fontSize <= Threshold ? PInvoke.TextRenderingHintClearTypeGridFit : PInvoke.TextRenderingHintAntiAlias;
     }
 
     internal static string SanitizeText(string text) => text.Replace("\uFE0F", "");

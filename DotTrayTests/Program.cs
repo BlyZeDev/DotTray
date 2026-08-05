@@ -138,18 +138,34 @@ sealed class Program
         icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
             x.Text = "Just some looooooooooooooooooooooooooong text :o";
+            x.Background = SolidColor.Red;
+            x.BackgroundHover = SolidColor.Blue;
+            x.BackgroundDisabled = SolidColor.Green;
+            x.Foreground = SolidColor.Green;
+            x.ForegroundHover = SolidColor.Red;
+            x.ForegroundDisabled = SolidColor.Blue;
         });
         icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
             x.Text = "-♡👩🏼‍❤️‍👨🏻🐻💩-";
             x.FontInfo = x.FontInfo with { Size = 125f };
         });
+        icon.Handler.MenuItems.Add<SubmenuItem>(x => x.Text = "Empty Submenu :,)");
         icon.Handler.MenuItems.Add<SubmenuItem>(x =>
         {
             x.Text = "Submenu :)";
             x.Background = SolidColor.Red;
             x.Foreground = SolidColor.White;
             x.FontInfo = x.FontInfo with { Size = 100f };
+            x.Background = SolidColor.Red;
+            x.BackgroundHover = SolidColor.Blue;
+            x.BackgroundDisabled = SolidColor.Green;
+            x.Interacted = (args) =>
+            {
+                if (args.Type is not ItemInteractionType.MouseLeftUp) return;
+
+                x.IsDisabled = true;
+            };
 
             x.Items.Add<MenuItem>(x =>
             {

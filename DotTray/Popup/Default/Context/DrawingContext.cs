@@ -126,7 +126,7 @@ public sealed class DrawingContext : Context
         PInvoke.GdipCreateStringFormat(0, 0, out var hFormat);
         PInvoke.GdipSetStringFormatFlags(hFormat, PInvoke.StringFormatFlagsNoWrap);
         PInvoke.GdipSetStringFormatAlign(hFormat, PInvoke.StringAlignmentNear);
-        PInvoke.GdipSetStringFormatLineAlign(hFormat, PInvoke.StringAlignmentNear);
+        PInvoke.GdipSetStringFormatLineAlign(hFormat, PInvoke.StringAlignmentCenter);
 
         using (var hBrush = color.CreateGdipBrush(rect))
         {
@@ -148,13 +148,6 @@ public sealed class DrawingContext : Context
         PInvoke.GdipDeleteStringFormat(hFormat);
         PInvoke.GdipDeleteFont(hFont);
         PInvoke.GdipDeleteFontFamily(hFamily);
-    }
-
-    private static int GetTextRenderingHint(float fontSize)
-    {
-        const float Threshold = 20f;
-
-        return fontSize <= Threshold ? PInvoke.TextRenderingHintClearTypeGridFit : PInvoke.TextRenderingHintAntiAlias;
     }
 
     private static Rectangle GetBounds(ReadOnlySpan<Point> points)

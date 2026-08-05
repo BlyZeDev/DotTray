@@ -12,15 +12,15 @@ public sealed class MeasuringContext : Context
     internal MeasuringContext(nint gdip, float scale) : base(gdip, scale) { }
 
     /// <summary>
-    /// Measures the size, in pixels, required to render <paramref name="text"/> with <paramref name="font"/>
+    /// Measures the size, in pixels, required to render <paramref name="text"/> with <paramref name="fontInfo"/>
     /// </summary>
     /// <param name="text">The text to measure</param>
-    /// <param name="font">The font to measure</param>
+    /// <param name="fontInfo">The font information to measure</param>
     /// <returns><see cref="SizeF"/></returns>
-    public SizeF MeasureText(string text, FontInfo font)
+    public SizeF MeasureText(string text, FontInfo fontInfo)
     {
-        PInvoke.GdipCreateFontFamilyFromName(font.FontFamilyName, nint.Zero, out var hFamily);
-        PInvoke.GdipCreateFont(hFamily, font.Size, 0, PInvoke.UnitPixel, out var hFont);
+        PInvoke.GdipCreateFontFamilyFromName(fontInfo.FontFamilyName, nint.Zero, out var hFamily);
+        PInvoke.GdipCreateFont(hFamily, fontInfo.Size, 0, PInvoke.UnitPixel, out var hFont);
 
         PInvoke.GdipCreateStringFormat(0, 0, out var hFormat);
         PInvoke.GdipSetStringFormatFlags(hFormat, PInvoke.StringFormatFlagsNoWrap);
@@ -36,6 +36,9 @@ public sealed class MeasuringContext : Context
         };
 
         text = SanitizeText(text);
+        PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeAntiAlias8x8);
+        PInvoke.GdipSetPixelOffsetMode(_gdip, PInvoke.PixelOffsetModeHalf);
+        PInvoke.GdipSetTextRenderingHint(_gdip, GetTextRenderingHint(fontInfo.Size));
         PInvoke.GdipMeasureString(_gdip, text, text.Length, hFont, ref layoutRect, hFormat, out var measured, out _, out _);
 
         PInvoke.GdipDeleteStringFormat(hFormat);

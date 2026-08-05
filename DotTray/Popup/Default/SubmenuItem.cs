@@ -9,6 +9,8 @@ using System;
 /// </summary>
 public class SubmenuItem : MenuItem, ISubmenu
 {
+    private bool isHovering;
+
     private const int ArrowHeightRatio = 3;
     private const int ArrowGap = 8;
     private const int ArrowRightPadding = 10;
@@ -20,6 +22,7 @@ public class SubmenuItem : MenuItem, ISubmenu
     protected internal override Size Measure(MeasuringContext context)
     {
         var baseSize = base.Measure(context);
+        if (Items.IsEmpty) return baseSize;
 
         var arrowHeight = Math.Max(6, baseSize.Height / ArrowHeightRatio);
         var arrowWidth = Math.Max(4, arrowHeight * 2 / 3);
@@ -30,6 +33,12 @@ public class SubmenuItem : MenuItem, ISubmenu
     /// <inheritdoc/>
     protected internal override void Draw(DrawingContext context)
     {
+        if (Items.IsEmpty)
+        {
+            base.Draw(context);
+            return;
+        }
+
         var bounds = context.ItemBounds;
 
         var arrowHeight = Math.Max(6, bounds.Height / ArrowHeightRatio);
@@ -54,13 +63,31 @@ public class SubmenuItem : MenuItem, ISubmenu
 
         var textBounds = new Rectangle(bounds.X, bounds.Y, bounds.Width - arrowWidth - ArrowGap - ArrowRightPadding, bounds.Height);
 
-        context.Fill(Background);
-        context.WriteRect(textBounds, Text, FontInfo, Foreground);
-        context.FillPolygon(Foreground, arrow);
+        var background = IsDisabled ? BackgroundDisabled : (isHovering ? BackgroundHover : Background);
+        var foreground = IsDisabled ? ForegroundDisabled : (isHovering ? ForegroundHover : Foreground);
+
+        context.Fill(background);
+        context.WriteRect(textBounds, Text, FontInfo, foreground);
+        context.FillPolygon(foreground, arrow);
+    }
+
+    /// <inheritdoc/>
+    internal protected override void OnInteraction(ItemInteractedEventArgs args)
+    {
+        switch (args.Type)
+        {
+            case ItemInteractionType.MouseEnter: isHovering = true; Update(); break;
+            case ItemInteractionType.MouseLeave: isHovering = false; Update(); break;
+        }
+
+        base.OnInteraction(args);
     }
 
     /// <inheritdoc cref="ISubmenu.ShouldOpen(ItemInteractedEventArgs)"/>
-    protected virtual bool ShouldOpen(ItemInteractedEventArgs args) => !Items.IsEmpty && args.Type is ItemInteractionType.MouseEnter;
+    protected virtual bool ShouldOpen(ItemInteractedEventArgs args)
+    {
+        return !IsDisabled && !Items.IsEmpty && args.Type is ItemInteractionType.MouseEnter;
+    }
 
     bool ISubmenu.ShouldOpen(ItemInteractedEventArgs args) => ShouldOpen(args);
 }

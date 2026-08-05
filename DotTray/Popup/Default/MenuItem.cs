@@ -10,6 +10,8 @@ using System;
 /// </summary>
 public class MenuItem : MenuItemBase
 {
+    private bool isHovering;
+
     /// <summary>
     /// The background color
     /// </summary>
@@ -39,6 +41,66 @@ public class MenuItem : MenuItemBase
             Update();
         }
     } = SolidColor.Black;
+
+    /// <summary>
+    /// The background hover color
+    /// </summary>
+    public IColorable BackgroundHover
+    {
+        get;
+        set
+        {
+            if (field.Equals(value)) return;
+
+            field = value;
+            Update();
+        }
+    } = SolidColor.Gray with { A = 127 };
+
+    /// <summary>
+    /// The foreground hover color
+    /// </summary>
+    public IColorable ForegroundHover
+    {
+        get;
+        set
+        {
+            if (field.Equals(value)) return;
+
+            field = value;
+            Update();
+        }
+    } = SolidColor.Black;
+
+    /// <summary>
+    /// The background disabled color
+    /// </summary>
+    public IColorable BackgroundDisabled
+    {
+        get;
+        set
+        {
+            if (field.Equals(value)) return;
+
+            field = value;
+            Update();
+        }
+    } = SolidColor.Transparent;
+
+    /// <summary>
+    /// The foreground disabled color
+    /// </summary>
+    public IColorable ForegroundDisabled
+    {
+        get;
+        set
+        {
+            if (field.Equals(value)) return;
+
+            field = value;
+            Update();
+        }
+    } = SolidColor.Gray;
 
     /// <summary>
     /// The displayed text
@@ -71,6 +133,21 @@ public class MenuItem : MenuItemBase
     } = new FontInfo("Segoe UI Emoji", 20f);
 
     /// <summary>
+    /// <see langword="true"/> to disable this instance, otherwise <see langword="false"/>
+    /// </summary>
+    public bool IsDisabled
+    {
+        get;
+        set
+        {
+            if (field.Equals(value)) return;
+
+            field = value;
+            Update();
+        }
+    } = false;
+
+    /// <summary>
     /// Default configuration for <see cref="MenuItem"/>
     /// </summary>
     public MenuItem() { }
@@ -85,7 +162,22 @@ public class MenuItem : MenuItemBase
     /// <inheritdoc/>
     internal protected override void Draw(DrawingContext context)
     {
-        context.Fill(Background);
-        context.Write(Text, FontInfo, Foreground);
+        var background = IsDisabled ? BackgroundDisabled : (isHovering ? BackgroundHover : Background);
+        var foreground = IsDisabled ? ForegroundDisabled : (isHovering ? ForegroundHover : Foreground);
+
+        context.Fill(background);
+        context.Write(Text, FontInfo, foreground);
+    }
+
+    /// <inheritdoc/>
+    internal protected override void OnInteraction(ItemInteractedEventArgs args)
+    {
+        switch (args.Type)
+        {
+            case ItemInteractionType.MouseEnter: isHovering = true; Update(); break;
+            case ItemInteractionType.MouseLeave: isHovering = false; Update(); break;
+        }
+
+        base.OnInteraction(args);
     }
 }
