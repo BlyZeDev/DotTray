@@ -166,4 +166,10 @@ internal static partial class PInvoke
 
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static unsafe partial int GdipSetLinePresetBlend(nint brush, uint* blend, float* positions, int count);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipResetWorldTransform(nint graphics);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipScaleWorldTransform(nint graphics, float sx, float sy, int order);
 }

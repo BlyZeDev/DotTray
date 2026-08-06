@@ -145,6 +145,8 @@ internal static partial class PInvoke
 
     public const int PixelOffsetModeHalf = 4;
 
+    public const int MatrixOrderPrepend = 0;
+
     public const int UnitPixel = 2;
 
     public const int StringFormatFlagsFitBlackBox = 0x00000004;

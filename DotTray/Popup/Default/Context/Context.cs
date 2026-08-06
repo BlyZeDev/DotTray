@@ -23,12 +23,18 @@ public abstract class Context : IDisposable
     /// <summary>
     /// The DPI scale factor of the monitor the menu is being shown on (1.0 = 96 DPI)
     /// </summary>
+    /// <remarks>
+    /// The scale is already accounted for so this value is mostly informational
+    /// </remarks>
     public float Scale { get; }
 
     internal Context(nint gdip, float scale)
     {
         _gdip = gdip;
         Scale = scale;
+
+        PInvoke.GdipResetWorldTransform(_gdip);
+        PInvoke.GdipScaleWorldTransform(_gdip, Scale, Scale, PInvoke.MatrixOrderPrepend);
     }
 
     internal virtual void DisposeCore() { }

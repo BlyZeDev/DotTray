@@ -144,7 +144,12 @@ internal sealed class PopupMenu
             {
                 foreach (var (item, itemBounds) in _itemRects)
                 {
-                    drawing.ItemBounds = itemBounds;
+                    drawing.ItemBounds = new Rectangle(
+                        (int)MathF.Round(itemBounds.X / _scale),
+                        (int)MathF.Round(itemBounds.Y / _scale),
+                        (int)MathF.Round(itemBounds.Width / _scale),
+                        (int)MathF.Round(itemBounds.Height / _scale));
+
                     item.Draw(drawing);
                 }
             }
@@ -428,8 +433,8 @@ internal sealed class PopupMenu
         var hdc = PInvoke.CreateCompatibleDC(nint.Zero);
         _ = PInvoke.GdipCreateFromHDC(hdc, out var gdip);
 
-        var maxWidth = 0;
-        var totalHeight = 0;
+        var maxWidthLogical = 0;
+        var totalHeightLogical = 0;
 
         _itemRects.Clear();
         _measuredSizes.Clear();
@@ -441,33 +446,36 @@ internal sealed class PopupMenu
                 var desired = item.Measure(measuring);
                 _measuredSizes.Add((item, desired));
 
-                maxWidth = Math.Max(maxWidth, desired.Width);
-                totalHeight += desired.Height;
+                maxWidthLogical = Math.Max(maxWidthLogical, desired.Width);
+                totalHeightLogical += desired.Height;
             }
         }
 
-        using (var arranging = new ArrangingContext(gdip, _scale, new Size(maxWidth, totalHeight)))
+        using (var arranging = new ArrangingContext(gdip, _scale, new Size(maxWidthLogical, totalHeightLogical)))
         {
             var itemTop = 0;
 
             foreach (var (item, desired) in _measuredSizes)
             {
-                arranging.ItemBounds = new Rectangle(0, itemTop, maxWidth, desired.Height);
+                arranging.ItemBounds = new Rectangle(0, itemTop, maxWidthLogical, desired.Height);
                 arranging.MeasuredItemBounds = new Rectangle(0, itemTop, desired.Width, desired.Height);
 
                 var requested = item.Arrange(arranging);
 
-                var width = Math.Clamp(requested.Width, 0, maxWidth);
-                var x = Math.Clamp(requested.X, 0, maxWidth - width);
+                var width = Math.Clamp(requested.Width, 0, maxWidthLogical);
+                var x = Math.Clamp(requested.X, 0, maxWidthLogical - width);
 
                 item.DrawBox = new Size(width, desired.Height);
-                _itemRects.Add((item, new Rectangle(x, itemTop, width, desired.Height)));
+                _itemRects.Add((item, new Rectangle((int)MathF.Round(x * _scale), (int)MathF.Round(itemTop * _scale), (int)MathF.Round(width * _scale), (int)MathF.Round(desired.Height * _scale))));
                 itemTop += desired.Height;
             }
         }
 
         _ = PInvoke.GdipDeleteGraphics(gdip);
         _ = PInvoke.DeleteDC(hdc);
+
+        var maxWidth = (int)MathF.Round(maxWidthLogical * _scale);
+        var totalHeight = (int)MathF.Round(totalHeightLogical * _scale);
 
         var anchor = _anchorScreenRect ?? _rootCursorAnchor;
         var hMonitor = PInvoke.MonitorFromPoint(new POINT { x = anchor.X, y = anchor.Y }, PInvoke.MONITOR_DEFAULTTONEAREST);
