@@ -15,7 +15,11 @@ using MeasuredItem = (Popup.Default.MenuItemBase Item, Primitives.Size Size);
 internal sealed class PopupMenu
 {
     private const float BaseDpi = 96f;
+    private const uint SubmenuHoverDelayMs = 350;
+    private const nint SubmenuTimerId = 1;
+
     public const uint WM_APP_POPUP_CALCWND = PInvoke.WM_APP + 0x2000;
+    public const uint WM_APP_POPUP_KEYDOWN = PInvoke.WM_APP + 0x2001;
 
     private readonly float _scale;
     private readonly PInvoke.WndProc _wndProc;
@@ -29,13 +33,14 @@ internal sealed class PopupMenu
     private readonly List<MeasuredItem> _measuredSizes = [];
 
     private MenuItemBase? hotItem;
-    private ISubmenu? openSubmenuOwner;
+    private MenuItemBase? openSubmenuOwner;
+    private bool submenuTimerActive;
     private bool tracking;
     private POINT lastPoint;
 
     public nint HWnd { get; }
 
-    public PopupMenu(PopupMenuTree tree, nint ownerHWnd, MenuItemCollection items, Rectangle? anchorScreenRect)
+    public PopupMenu(PopupMenuTree tree, nint ownerHWnd, MenuItemCollection items, Rectangle? anchorScreenRect, bool selectFirstItem = false)
     {
         _tree = tree;
         _items = items;
@@ -43,6 +48,8 @@ internal sealed class PopupMenu
         _rootCursorAnchor = anchorScreenRect ?? GetCursorAnchor();
 
         _items.Updated += RequestRedraw;
+
+        foreach (var item in _items) item.Initialize();
 
         HWnd = PInvoke.CreateWindowEx(
             PInvoke.WS_EX_NOACTIVATE | PInvoke.WS_EX_TOOLWINDOW | PInvoke.WS_EX_TOPMOST,
@@ -67,6 +74,8 @@ internal sealed class PopupMenu
 
         HandleCalcWnd(HWnd);
         PInvoke.ShowWindow(HWnd, PInvoke.SW_SHOWNOACTIVATE);
+
+        if (selectFirstItem) SelectFirstEnabledItem();
     }
 
     private void RequestRedraw() => PInvoke.PostMessage(HWnd, WM_APP_POPUP_CALCWND, nint.Zero, nint.Zero);
@@ -77,6 +86,8 @@ internal sealed class PopupMenu
         {
             case PInvoke.WM_NCACTIVATE: return 1;
             case WM_APP_POPUP_CALCWND: return HandleCalcWnd(hWnd);
+            case WM_APP_POPUP_KEYDOWN: return HandleKeyDown((int)wParam);
+            case PInvoke.WM_TIMER: return HandleTimer(wParam);
             case PInvoke.WM_ERASEBKGND: return 1;
             case PInvoke.WM_PAINT: return HandlePaint(hWnd);
 
@@ -98,25 +109,6 @@ internal sealed class PopupMenu
     {
         var rect = CalcWindowArea(_items);
         PInvoke.SetWindowPos(hWnd, nint.Zero, rect.X, rect.Y, rect.Width, rect.Height, PInvoke.SWP_ZORDER | PInvoke.SWP_NOACTIVATE);
-
-        if (hotItem is ISubmenu submenu)
-        {
-            var wouldOpen = submenu.ShouldOpen(new ItemInteractedEventArgs
-            {
-                Type = ItemInteractionType.MouseEnter,
-                Position = default
-            });
-
-            if (wouldOpen && !ReferenceEquals(openSubmenuOwner, submenu))
-            {
-                OpenSubmenu(submenu);
-            }
-            else if (!wouldOpen && ReferenceEquals(openSubmenuOwner, submenu))
-            {
-                CloseOpenSubmenu();
-            }
-        }
-
         PInvoke.InvalidateRect(hWnd, nint.Zero, false);
 
         return nint.Zero;
@@ -187,12 +179,10 @@ internal sealed class PopupMenu
             tracking = true;
         }
 
-        var point = DecodePoint(lParam);
-        var hit = HitTest(point);
+        lastPoint = DecodePoint(lParam);
+        var hit = HitTest(lastPoint);
 
-        UpdateHotItem(hit, lastPoint, point);
-
-        lastPoint = point;
+        SetHotItem(hit?.Item, b => RelativePosition(b, lastPoint), ItemInteractionType.MouseEnter, ItemInteractionType.MouseLeave);
 
         return 0;
     }
@@ -201,17 +191,9 @@ internal sealed class PopupMenu
     {
         tracking = false;
 
-        if (hotItem is not null)
-        {
-            var bounds = FindBounds(hotItem) ?? default;
-            hotItem.OnInteraction(new ItemInteractedEventArgs
-            {
-                Type = ItemInteractionType.MouseLeave,
-                Position = RelativePosition(bounds, lastPoint)
-            });
-        }
+        if (openSubmenuOwner is not null) return 0;
 
-        hotItem = null;
+        SetHotItem(null, b => RelativePosition(b, lastPoint), ItemInteractionType.MouseEnter, ItemInteractionType.MouseLeave);
 
         return 0;
     }
@@ -221,35 +203,53 @@ internal sealed class PopupMenu
         var point = DecodePoint(lParam);
         var hit = HitTest(point);
 
-        if (!hit.HasValue) return 0;
+        if (hit.HasValue) Interact(hit.Value.Item, RelativePosition(hit.Value.Bounds, point), type, selectFirstOnSubmenu: false);
 
-        var args = new ItemInteractedEventArgs
-        {
-            Type = type,
-            Position = RelativePosition(hit.Value.Bounds, point)
-        };
-        hit.Value.Item.OnInteraction(args);
+        return 0;
+    }
 
-        if (hit.Value.Item is ISubmenu submenu && submenu.ShouldOpen(args))
+    private nint HandleKeyDown(int vkCode)
+    {
+        switch (vkCode)
         {
-            OpenSubmenu(submenu);
+            case PInvoke.VK_DOWN: MoveHot(+1); break;
+            case PInvoke.VK_UP: MoveHot(-1); break;
+            case PInvoke.VK_RIGHT: OpenHotSubmenu(); break;
+            case PInvoke.VK_RETURN: ActivateHot(); break;
+            case PInvoke.VK_LEFT: _tree.NavigateBack(); break;
+            case PInvoke.VK_ESCAPE: _tree.CloseFromEscape(); break;
         }
 
         return 0;
     }
 
-    private void UpdateHotItem(HitItem? hit, POINT previousPoint, POINT currentPoint)
+    private nint HandleTimer(nint wParam)
     {
-        var newHot = hit?.Item;
+        if (wParam != SubmenuTimerId) return 0;
+
+        KillSubmenuTimer();
+
+        if (hotItem?.ShouldOpenSubmenu(ItemInteractionType.MouseEnter) ?? false)
+        {
+            OpenSubmenu(hotItem);
+        }
+
+        return 0;
+    }
+
+    private void SetHotItem(MenuItemBase? newHot, Func<Rectangle, Point> positionFor, ItemInteractionType enterType, ItemInteractionType leaveType)
+    {
         if (ReferenceEquals(newHot, hotItem)) return;
+
+        KillSubmenuTimer();
 
         if (hotItem is not null)
         {
             var oldBounds = FindBounds(hotItem) ?? default;
             hotItem.OnInteraction(new ItemInteractedEventArgs
             {
-                Type = ItemInteractionType.MouseLeave,
-                Position = RelativePosition(oldBounds, previousPoint)
+                Type = leaveType,
+                Position = positionFor(oldBounds)
             });
         }
 
@@ -260,32 +260,112 @@ internal sealed class PopupMenu
             CloseOpenSubmenu();
         }
 
-        if (hit.HasValue)
+        if (newHot is not null)
         {
+            var bounds = FindBounds(newHot) ?? default;
             var args = new ItemInteractedEventArgs
             {
-                Type = ItemInteractionType.MouseEnter,
-                Position = RelativePosition(hit.Value.Bounds, currentPoint)
+                Type = enterType,
+                Position = positionFor(bounds)
             };
-            hit.Value.Item.OnInteraction(args);
+            newHot.OnInteraction(args);
 
-            if (hit.Value.Item is ISubmenu submenu && submenu.ShouldOpen(args))
+            if (newHot.ShouldOpenSubmenu(enterType))
             {
-                OpenSubmenu(submenu);
+                StartSubmenuTimer();
+            }
+        }
+
+        PInvoke.InvalidateRect(HWnd, nint.Zero, false);
+    }
+
+    private void Interact(MenuItemBase item, Point position, ItemInteractionType type, bool selectFirstOnSubmenu)
+    {
+        var args = new ItemInteractedEventArgs { Type = type, Position = position };
+        item.OnInteraction(args);
+
+        if (item.ShouldOpenSubmenu(args.Type))
+        {
+            OpenSubmenu(item, selectFirstOnSubmenu);
+            return;
+        }
+
+        if (type is ItemInteractionType.MouseLeftUp or ItemInteractionType.KeyboardActivate)
+        {
+            _tree.Dispose();
+        }
+    }
+
+    private void MoveHot(int direction)
+    {
+        if (_itemRects.Count == 0) return;
+
+        var currentIndex = hotItem is null ? -1 : _itemRects.FindIndex(e => ReferenceEquals(e.Item, hotItem));
+        var count = _itemRects.Count;
+
+        for (var step = 1; step <= count; step++)
+        {
+            var index = (((currentIndex + direction * step) % count) + count) % count;
+            var candidate = _itemRects[index].Item;
+
+            if (!candidate.IgnoreHitTest)
+            {
+                SetHotItem(candidate, CenterOf, ItemInteractionType.KeyboardFocus, ItemInteractionType.KeyboardBlur);
+                return;
             }
         }
     }
 
-    private void OpenSubmenu(ISubmenu submenu)
+    private void OpenHotSubmenu()
+    {
+        if (hotItem is null) return;
+
+        KillSubmenuTimer();
+        OpenSubmenu(hotItem, selectFirstItem: true);
+    }
+
+    private void ActivateHot()
+    {
+        if (hotItem is null) return;
+
+        Interact(hotItem, CenterOf(FindBounds(hotItem) ?? default), ItemInteractionType.KeyboardActivate, selectFirstOnSubmenu: true);
+    }
+
+    private void SelectFirstEnabledItem()
+    {
+        foreach (var (item, _) in _itemRects)
+        {
+            if (item.IgnoreHitTest) continue;
+
+            SetHotItem(item, CenterOf, ItemInteractionType.KeyboardFocus, ItemInteractionType.KeyboardBlur);
+            return;
+        }
+    }
+
+    private void StartSubmenuTimer()
+    {
+        PInvoke.SetTimer(HWnd, SubmenuTimerId, SubmenuHoverDelayMs, nint.Zero);
+        submenuTimerActive = true;
+    }
+
+    private void KillSubmenuTimer()
+    {
+        if (!submenuTimerActive) return;
+
+        PInvoke.KillTimer(HWnd, SubmenuTimerId);
+        submenuTimerActive = false;
+    }
+
+    private void OpenSubmenu(MenuItemBase submenu, bool selectFirstItem = false)
     {
         if (ReferenceEquals(openSubmenuOwner, submenu)) return;
 
-        var localBounds = FindBounds((MenuItemBase)submenu);
+        var localBounds = FindBounds(submenu);
         if (localBounds is null) return;
 
         var screenRect = ToScreenRect(localBounds.Value);
 
-        _tree.OpenChild(HWnd, submenu.Items, screenRect);
+        _tree.OpenChild(HWnd, submenu.SubmenuItems, screenRect, selectFirstItem);
         openSubmenuOwner = submenu;
     }
 
@@ -301,7 +381,7 @@ internal sealed class PopupMenu
     {
         foreach (var entry in _itemRects)
         {
-            if (entry.Item.IsDisabled) continue;
+            if (entry.Item.IgnoreHitTest) continue;
 
             var bounds = entry.Bounds;
             if (point.x >= bounds.Left && point.x < bounds.Right && point.y >= bounds.Top && point.y < bounds.Bottom)
@@ -336,7 +416,9 @@ internal sealed class PopupMenu
 
     private nint HandleDestroy()
     {
+        KillSubmenuTimer();
         _items.Updated -= RequestRedraw;
+
         _tree.UnregisterWindow(HWnd);
         return nint.Zero;
     }
@@ -488,5 +570,7 @@ internal sealed class PopupMenu
         return new Point(x, y);
     }
 
-    private static Point RelativePosition(Rectangle bounds, POINT point) => new Point(point.x - bounds.X, point.y - bounds.Y);
+    private static Point RelativePosition(Rectangle bounds, POINT point) => new(point.x - bounds.X, point.y - bounds.Y);
+
+    private static Point CenterOf(Rectangle bounds) => new(bounds.Width / 2, bounds.Height / 2);
 }

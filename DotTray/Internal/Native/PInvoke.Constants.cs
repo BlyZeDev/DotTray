@@ -23,6 +23,7 @@ internal static partial class PInvoke
     public const uint WS_POPUP = 0x80000000;
     public const uint WS_BORDER = 0x00800000;
 
+    public const int WH_KEYBOARD_LL = 13;
     public const int WH_MOUSE_LL = 14;
 
     public const int IDC_ARROW = 32512;
@@ -43,6 +44,9 @@ internal static partial class PInvoke
 
     public const int WM_APP = 0x8000;
 
+    public const int WM_KEYDOWN = 0x0100;
+    public const int WM_SYSKEYDOWN = 0x0104;
+    public const int WM_TIMER = 0x0113;
     public const int WM_MOUSEMOVE = 0x0200;
     public const int WM_LBUTTONDOWN = 0x0201;
     public const int WM_LBUTTONUP = 0x0202;
@@ -53,6 +57,13 @@ internal static partial class PInvoke
     public const int WM_MBUTTONUP = 0x0208;
     public const int WM_MOUSELEAVE = 0x02A3;
     public const int WM_CONTEXTMENU = 0x007B;
+
+    public const int VK_LEFT = 0x25;
+    public const int VK_UP = 0x26;
+    public const int VK_RIGHT = 0x27;
+    public const int VK_DOWN = 0x28;
+    public const int VK_RETURN = 0x0D;
+    public const int VK_ESCAPE = 0x1B;
 
     public const int NIN_SELECT = 0x0400;
     public const int NIN_KEYSELECT = 0x0401;

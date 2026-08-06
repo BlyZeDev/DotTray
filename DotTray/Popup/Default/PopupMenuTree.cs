@@ -14,8 +14,11 @@ using System.Runtime.InteropServices;
 /// </summary>
 public sealed class PopupMenuTree : IDisposable
 {
-    private readonly PInvoke.LowLevelMouseProc? _pHook;
-    private readonly nint _hHook;
+    private readonly PInvoke.LowLevelMouseProc? _pMouseHook;
+    private readonly nint _hMouseHook;
+
+    private readonly PInvoke.LowLevelKeyboardProc _pKeyHook;
+    private readonly nint _hKeyHook;
 
     private readonly nint _rootHWnd;
     private readonly Dictionary<nint, nint> _ownerByHWnd = [];
@@ -33,9 +36,12 @@ public sealed class PopupMenuTree : IDisposable
 
         if (destroyOnClickOutside)
         {
-            _pHook = new PInvoke.LowLevelMouseProc(LowLevelMouseProcFunc);
-            _hHook = PInvoke.SetWindowsHookEx(PInvoke.WH_MOUSE_LL, Marshal.GetFunctionPointerForDelegate(_pHook), nint.Zero, 0);
+            _pMouseHook = LowLevelMouseProcFunc;
+            _hMouseHook = PInvoke.SetWindowsHookEx(PInvoke.WH_MOUSE_LL, Marshal.GetFunctionPointerForDelegate(_pMouseHook), nint.Zero, 0);
         }
+
+        _pKeyHook = LowLevelKeyboardProcFunc;
+        _hKeyHook = PInvoke.SetWindowsHookEx(PInvoke.WH_KEYBOARD_LL, Marshal.GetFunctionPointerForDelegate(_pKeyHook), nint.Zero, 0);
 
         var root = new PopupMenu(this, nint.Zero, owner.Handler.MenuItems, null);
         _rootHWnd = root.HWnd;
@@ -90,11 +96,11 @@ public sealed class PopupMenuTree : IDisposable
         return rects;
     }
 
-    internal void OpenChild(nint ownerHWnd, MenuItemCollection items, Rectangle anchorScreenRect)
+    internal void OpenChild(nint ownerHWnd, MenuItemCollection items, Rectangle anchorScreenRect, bool selectFirstItem)
     {
         CloseChildrenOf(ownerHWnd);
 
-        var child = new PopupMenu(this, ownerHWnd, items, anchorScreenRect);
+        var child = new PopupMenu(this, ownerHWnd, items, anchorScreenRect, selectFirstItem);
         _ownerByHWnd[child.HWnd] = ownerHWnd;
         currentLeafHWnd = child.HWnd;
     }
@@ -107,6 +113,18 @@ public sealed class PopupMenuTree : IDisposable
         }
     }
 
+    internal void NavigateBack()
+    {
+        if (currentLeafHWnd == _rootHWnd) return;
+        Close();
+    }
+
+    internal void CloseFromEscape()
+    {
+        if (currentLeafHWnd == _rootHWnd) Dispose();
+        else Close();
+    }
+
     internal void UnregisterWindow(nint hWnd)
     {
         _ownerByHWnd.Remove(hWnd);
@@ -116,13 +134,33 @@ public sealed class PopupMenuTree : IDisposable
 
     private nint LowLevelMouseProcFunc(int nCode, nint wParam, nint lParam)
     {
-        if (nCode >= 0 && wParam is PInvoke.WM_LBUTTONUP or PInvoke.WM_RBUTTONUP or PInvoke.WM_MBUTTONUP)
+        if (nCode >= 0 && wParam is PInvoke.WM_LBUTTONDOWN or PInvoke.WM_RBUTTONDOWN or PInvoke.WM_MBUTTONDOWN)
         {
             if (!IsInHierarchy()) Dispose();
         }
 
-        return PInvoke.CallNextHookEx(_hHook, nCode, wParam, lParam);
+        return PInvoke.CallNextHookEx(_hMouseHook, nCode, wParam, lParam);
     }
+
+    private nint LowLevelKeyboardProcFunc(int nCode, nint wParam, nint lParam)
+    {
+        if (nCode >= 0 && wParam is PInvoke.WM_KEYDOWN or PInvoke.WM_SYSKEYDOWN)
+        {
+            var vkCode = Marshal.ReadInt32(lParam);
+
+            if (IsNavigationKey(vkCode))
+            {
+                PInvoke.PostMessage(currentLeafHWnd, PopupMenu.WM_APP_POPUP_KEYDOWN, vkCode, nint.Zero);
+                return 1;
+            }
+        }
+
+        return PInvoke.CallNextHookEx(_hKeyHook, nCode, wParam, lParam);
+    }
+
+    private static bool IsNavigationKey(int vkCode) => vkCode is
+        PInvoke.VK_UP or PInvoke.VK_DOWN or PInvoke.VK_LEFT or PInvoke.VK_RIGHT or
+        PInvoke.VK_RETURN or PInvoke.VK_ESCAPE;
 
     private bool IsInHierarchy()
     {
@@ -141,7 +179,9 @@ public sealed class PopupMenuTree : IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        if (_hHook != nint.Zero) PInvoke.UnhookWindowsHookEx(_hHook);
+        if (_hMouseHook != nint.Zero) PInvoke.UnhookWindowsHookEx(_hMouseHook);
+        PInvoke.UnhookWindowsHookEx(_hKeyHook);
+
         Disposed?.Invoke();
     }
 

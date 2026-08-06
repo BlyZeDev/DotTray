@@ -13,19 +13,14 @@ public abstract class MenuItemBase
     internal event Action? Updated;
 
     /// <summary>
-    /// <see langword="true"/> to disable this instance, otherwise <see langword="false"/>
+    /// The items of the submenu opened by this instance
     /// </summary>
-    public bool IsDisabled
-    {
-        get;
-        set
-        {
-            if (field.Equals(value)) return;
+    internal protected virtual MenuItemCollection SubmenuItems { get; } = [];
 
-            field = value;
-            Update();
-        }
-    } = false;
+    /// <summary>
+    /// <see langword="true"/> if this instance is purely visual and therefore should not be included in any hittesting, otherwise <see langword="false"/>
+    /// </summary>
+    internal protected virtual bool IgnoreHitTest { get; } = false;
 
     /// <summary>
     /// Fires whenever the user interacts with the <see cref="MenuItemBase"/>
@@ -39,6 +34,14 @@ public abstract class MenuItemBase
     /// Invokes redrawing this instance when called
     /// </summary>
     protected void Update() => Updated?.Invoke();
+
+    /// <summary>
+    /// Called when the popup window hosting this item is created and about to be shown
+    /// </summary>
+    /// <remarks>
+    /// Since items are created once and reused across popup menu instances, this can be used to reset the items state
+    /// </remarks>
+    internal protected virtual void Initialize() { }
 
     /// <summary>
     /// Called when this instance needs to be measured
@@ -76,8 +79,10 @@ public abstract class MenuItemBase
     /// <param name="args">The interaction that occurred</param>
     internal protected virtual void OnInteraction(ItemInteractedEventArgs args)
     {
-        if (IsDisabled) return;
+        if (IgnoreHitTest) return;
 
         Interacted?.Invoke(args);
     }
+
+    internal bool ShouldOpenSubmenu(ItemInteractionType type) => !IgnoreHitTest && !SubmenuItems.IsEmpty && type is ItemInteractionType.MouseEnter or ItemInteractionType.KeyboardActivate;
 }

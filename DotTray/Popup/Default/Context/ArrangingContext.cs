@@ -22,7 +22,7 @@ public sealed class ArrangingContext : Context
     public Rectangle MeasuredItemBounds { get; internal set; }
 
     /// <summary>
-    /// The bounds, in window client coordinates, assigned to the item currently being drawn
+    /// The bounds, in window client coordinates, assigned to the item thats about to be drawn
     /// </summary>
     /// <remarks>
     /// This is set immediately before each item's <see cref="MenuItemBase.Arrange(ArrangingContext)"/> is called

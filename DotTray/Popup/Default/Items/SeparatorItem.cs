@@ -1,4 +1,4 @@
-﻿namespace DotTray.Popup.Default;
+﻿namespace DotTray.Popup.Default.Items;
 
 using DotTray.Popup.Default.Coloring;
 using DotTray.Popup.Default.Context;
@@ -10,6 +10,9 @@ using System;
 /// </summary>
 public class SeparatorItem : MenuItemBase
 {
+    /// <inheritdoc/>
+    internal protected sealed override bool IgnoreHitTest => true;
+
     /// <summary>
     /// The line color
     /// </summary>
@@ -69,7 +72,4 @@ public class SeparatorItem : MenuItemBase
             Height = LineHeight
         }, LineColor);
     }
-
-    /// <inheritdoc/>
-    protected internal override void OnInteraction(ItemInteractedEventArgs args) { }
 }

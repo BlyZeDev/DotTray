@@ -157,4 +157,11 @@ internal static partial class PInvoke
 
     [LibraryImport(User32, SetLastError = true)]
     public static partial int AdjustWindowRectEx(ref RECT lpRect, uint dwStyle, [MarshalAs(UnmanagedType.Bool)] bool bMenu, uint dwExStyle);
+
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial nint SetTimer(nint hWnd, nint nIDEvent, uint uElapse, nint lpTimerFunc);
+
+    [LibraryImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool KillTimer(nint hWnd, nint nIDEvent);
 }

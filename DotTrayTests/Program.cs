@@ -4,6 +4,7 @@ using AsyncAwaitBestPractices;
 using DotTray;
 using DotTray.Popup.Default;
 using DotTray.Popup.Default.Coloring;
+using DotTray.Popup.Default.Items;
 using System.Drawing;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
@@ -28,7 +29,7 @@ sealed class Program
 
         await Task.Delay(5000);
 
-        freakyIcon.Handler.MenuItems.Add<MenuItem>(x =>
+        freakyIcon.Handler.MenuItems.Add<CheckItem>(x =>
         {
             x.Text = "Test";
             x.FontInfo = x.FontInfo with { Size = x.FontInfo.Size * 2 };
@@ -71,45 +72,33 @@ sealed class Program
     private static void BuildBasicMenu(NotifyIcon<DefaultPopupMenuHandler> icon)
     {
         icon.SetToolTip("Basic");
-        icon.Handler.SetColor(new LinearGradientColor(new SolidColor(20, 20, 20), new SolidColor(40, 40, 40), 45f));
 
         icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
             x.Text = "Start Application";
-            x.FontInfo = x.FontInfo with { Size = 25f };
-            x.Background = SolidColor.Transparent;
-            x.Foreground = SolidColor.White;
         });
-        icon.Handler.MenuItems.Add<SubmenuItem>(x =>
+        icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
             x.Text = "Actions";
-            x.FontInfo = x.FontInfo with { Size = 25f };
-            x.Background = SolidColor.Transparent;
-            x.Foreground = SolidColor.White;
 
             x.Items.Add<MenuItem>(x =>
             {
                 x.Text = "Do something cool";
-                x.FontInfo = x.FontInfo with { Size = 25f };
-                x.Background = SolidColor.Transparent;
-                x.Foreground = SolidColor.White;
             });
 
             x.Items.Add<MenuItem>(x =>
             {
                 x.Text = "Do something even cooler";
-                x.FontInfo = x.FontInfo with { Size = 25f };
-                x.Background = SolidColor.Transparent;
-                x.Foreground = SolidColor.White;
             });
+        });
+        icon.Handler.MenuItems.Add<CheckItem>(x =>
+        {
+            x.Text = "I'm checkable";
         });
         icon.Handler.MenuItems.Add<SeparatorItem>();
         icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
             x.Text = "Exit";
-            x.FontInfo = x.FontInfo with { Size = 25f };
-            x.Background = SolidColor.Transparent;
-            x.Foreground = SolidColor.White;
         });
     }
 
@@ -150,8 +139,8 @@ sealed class Program
             x.Text = "-♡👩🏼‍❤️‍👨🏻🐻💩-";
             x.FontInfo = x.FontInfo with { Size = 125f };
         });
-        icon.Handler.MenuItems.Add<SubmenuItem>(x => x.Text = "Empty Submenu :,)");
-        icon.Handler.MenuItems.Add<SubmenuItem>(x =>
+        icon.Handler.MenuItems.Add<MenuItem>(x => x.Text = "Empty Submenu :,)");
+        icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
             x.Text = "Submenu :)";
             x.Background = SolidColor.Red;
@@ -176,7 +165,7 @@ sealed class Program
                 x.Foreground = SolidColor.Black;
                 x.FontInfo = x.FontInfo with { Size = 50f };
             });
-            x.Items.Add<SubmenuItem>(x =>
+            x.Items.Add<MenuItem>(x =>
             {
                 x.Text = "Submenu Item 2";
                 x.Background = SolidColor.White;
