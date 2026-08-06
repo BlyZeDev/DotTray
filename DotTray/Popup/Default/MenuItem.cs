@@ -133,21 +133,6 @@ public class MenuItem : MenuItemBase
     } = new FontInfo("Segoe UI Emoji", 20f);
 
     /// <summary>
-    /// <see langword="true"/> to disable this instance, otherwise <see langword="false"/>
-    /// </summary>
-    public bool IsDisabled
-    {
-        get;
-        set
-        {
-            if (field.Equals(value)) return;
-
-            field = value;
-            Update();
-        }
-    } = false;
-
-    /// <summary>
     /// Default configuration for <see cref="MenuItem"/>
     /// </summary>
     public MenuItem() { }

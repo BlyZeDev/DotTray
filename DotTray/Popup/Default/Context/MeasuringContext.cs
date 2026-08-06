@@ -23,8 +23,8 @@ public sealed class MeasuringContext : Context
         PInvoke.GdipCreateFont(hFamily, fontInfo.Size, 0, PInvoke.UnitPixel, out var hFont);
 
         PInvoke.GdipCreateStringFormat(0, 0, out var hFormat);
-        PInvoke.GdipSetStringFormatFlags(hFormat, PInvoke.StringFormatFlagsNoWrap);
-        PInvoke.GdipSetStringFormatAlign(hFormat, PInvoke.StringAlignmentNear);
+        PInvoke.GdipSetStringFormatFlags(hFormat, PInvoke.StringFormatFlagsFitBlackBox | PInvoke.StringFormatFlagsNoWrap);
+        PInvoke.GdipSetStringFormatAlign(hFormat, (int)fontInfo.Alignment);
         PInvoke.GdipSetStringFormatLineAlign(hFormat, PInvoke.StringAlignmentCenter);
 
         var layoutRect = new RECTF

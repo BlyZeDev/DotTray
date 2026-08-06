@@ -13,6 +13,21 @@ public abstract class MenuItemBase
     internal event Action? Updated;
 
     /// <summary>
+    /// <see langword="true"/> to disable this instance, otherwise <see langword="false"/>
+    /// </summary>
+    public bool IsDisabled
+    {
+        get;
+        set
+        {
+            if (field.Equals(value)) return;
+
+            field = value;
+            Update();
+        }
+    } = false;
+
+    /// <summary>
     /// Fires whenever the user interacts with the <see cref="MenuItemBase"/>
     /// </summary>
     /// <remarks>
@@ -59,5 +74,10 @@ public abstract class MenuItemBase
     /// To ignore interaction, override <see cref="OnInteraction(ItemInteractedEventArgs)"/> without calling the <see langword="base"/> implementation
     /// </remarks>
     /// <param name="args">The interaction that occurred</param>
-    internal protected virtual void OnInteraction(ItemInteractedEventArgs args) => Interacted?.Invoke(args);
+    internal protected virtual void OnInteraction(ItemInteractedEventArgs args)
+    {
+        if (IsDisabled) return;
+
+        Interacted?.Invoke(args);
+    }
 }

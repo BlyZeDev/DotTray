@@ -23,14 +23,24 @@ public readonly record struct FontInfo
     public required readonly float Size { get; init; }
 
     /// <summary>
+    /// The alignment of the font
+    /// </summary>
+    /// <remarks>
+    /// For example <i><see cref="FontAlignment.Near"/></i>
+    /// </remarks>
+    public readonly FontAlignment Alignment { get; init; }
+
+    /// <summary>
     /// Initializes a new <see cref="FontInfo"/>
     /// </summary>
     /// <param name="fontFamilyName">The font family name</param>
     /// <param name="size">The font size</param>
+    /// <param name="alignment">The alignment of the font</param>
     [SetsRequiredMembers]
-    public FontInfo(string fontFamilyName, float size)
+    public FontInfo(string fontFamilyName, float size, FontAlignment alignment = FontAlignment.Near)
     {
         FontFamilyName = fontFamilyName;
         Size = size;
+        Alignment = alignment;
     }
 }

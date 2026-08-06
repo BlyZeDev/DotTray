@@ -24,10 +24,7 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// </summary>
     public event Action? Updated;
 
-    internal MenuItemCollection()
-    {
-        _items = [];
-    }
+    internal MenuItemCollection() => _items = [];
 
     /// <inheritdoc/>
     public MenuItemBase this[int index] => _items[index];
@@ -39,7 +36,7 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// <param name="index">The zero-based index of the element to get</param>
     /// <returns>Anything that derives from <see cref="MenuItemBase"/></returns>
     /// <exception cref="InvalidCastException"></exception>
-    public TItem GetAt<TItem>(int index) where TItem : MenuItemBase => (TItem)this[index];
+    public TItem GetAs<TItem>(int index) where TItem : MenuItemBase => (TItem)this[index];
 
     /// <summary>
     /// Adds a new item to the collection

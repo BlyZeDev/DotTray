@@ -160,11 +160,13 @@ sealed class Program
             x.Background = SolidColor.Red;
             x.BackgroundHover = SolidColor.Blue;
             x.BackgroundDisabled = SolidColor.Green;
-            x.Interacted = (args) =>
+            x.Interacted = async (args) =>
             {
                 if (args.Type is not ItemInteractionType.MouseLeftUp) return;
 
                 x.IsDisabled = true;
+                await Task.Delay(2000);
+                x.IsDisabled = false;
             };
 
             x.Items.Add<MenuItem>(x =>

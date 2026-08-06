@@ -11,10 +11,10 @@ using System.Runtime.InteropServices;
 /// </remarks>
 public sealed class ColorSafeHandle : SafeHandle
 {
-    internal ColorSafeHandle(nint handle) : base(nint.Zero, true) => this.handle = handle;
-
     /// <inheritdoc/>
     public override bool IsInvalid => handle == nint.Zero;
+
+    internal ColorSafeHandle(nint handle) : base(nint.Zero, true) => this.handle = handle;
 
     /// <inheritdoc/>
     protected override bool ReleaseHandle() => PInvoke.GdipDeleteBrush(handle) == 0;
