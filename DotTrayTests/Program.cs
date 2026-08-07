@@ -34,7 +34,7 @@ sealed class Program
             x.Text = "Test";
             x.FontInfo = x.FontInfo with { Size = x.FontInfo.Size * 2 };
         });
-        //(freakyIcon.Handler.MenuItems[0] as MenuItem)!.Text = "Really long new text, lets see if the resize is correct ;'\"{}[]-_?!";
+        (freakyIcon.Handler.MenuItems[0] as MenuItem)!.Text = "Really long new text, lets see if the resize is correct ;'\"{}[]-_?!";
 
         PeriodicAction(() =>
         {
@@ -93,7 +93,12 @@ sealed class Program
         });
         icon.Handler.MenuItems.Add<CheckItem>(x =>
         {
-            x.Text = "I'm checkable";
+            x.Text = "I'm checkable and also very long for testing purpose";
+            x.Items.Add<MenuItem>(x => x.Text = "Hello");
+            x.Items.Add<SeparatorItem>();
+            x.Items.Add<SeparatorItem>();
+            x.Items.Add<SeparatorItem>();
+            x.Items.Add<MenuItem>(x => x.Text = "Hello");
         });
         icon.Handler.MenuItems.Add<SeparatorItem>();
         icon.Handler.MenuItems.Add<MenuItem>(x =>
@@ -119,6 +124,7 @@ sealed class Program
             };
             x.Interacted = (args) =>
             {
+                if (args.Type is not (ItemInteractionType.MouseLeftUp or ItemInteractionType.KeyboardActivate)) return;
                 x.Text = $"Item No. {Random.Shared.Next(10000)}";
                 Console.WriteLine("TEXT IS UPDATED");
             };

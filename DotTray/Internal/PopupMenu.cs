@@ -9,9 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
-using HitItem = (Popup.Default.MenuItemBase Item, Primitives.Rectangle Bounds);
-using MeasuredItem = (Popup.Default.MenuItemBase Item, Primitives.Size Size);
-
 internal sealed class PopupMenu
 {
     private const float BaseDpi = 96f;
@@ -28,9 +25,6 @@ internal sealed class PopupMenu
     private readonly Rectangle _rootCursorAnchor;
     private readonly MenuItemCollection _items;
     private readonly Rectangle? _anchorScreenRect;
-
-    private readonly List<HitItem> _itemRects = [];
-    private readonly List<MeasuredItem> _measuredSizes = [];
 
     private MenuItemBase? hotItem;
     private MenuItemBase? openSubmenuOwner;
@@ -134,6 +128,7 @@ internal sealed class PopupMenu
             var hOldBitmap = PInvoke.SelectObject(dc, hBitmap);
 
             PInvoke.GdipCreateFromHDC(dc, out var gdip);
+            PInvoke.GdipScaleWorldTransform(gdip, _scale, _scale, PInvoke.MatrixOrderPrepend);
 
             using (var hBackground = _tree.Owner.Handler.Color.CreateGdipBrush(bounds))
             {
@@ -142,18 +137,17 @@ internal sealed class PopupMenu
 
             using (var drawing = new DrawingContext(gdip, _scale, bounds))
             {
-                foreach (var (item, itemBounds) in _itemRects)
+                foreach (var item in _items)
                 {
-                    drawing.ItemBounds = new Rectangle(
-                        (int)MathF.Round(itemBounds.X / _scale),
-                        (int)MathF.Round(itemBounds.Y / _scale),
-                        (int)MathF.Round(itemBounds.Width / _scale),
-                        (int)MathF.Round(itemBounds.Height / _scale));
+                    var hit = UnscaleRect(item.HitBounds, _scale);
+                    PInvoke.GdipSetClipRectI(gdip, hit.X, hit.Y, hit.Width, hit.Height, PInvoke.CombineModeReplace);
 
+                    drawing.ItemBounds = UnscaleRect(item.ContentBounds, _scale);
                     item.Draw(drawing);
                 }
             }
 
+            PInvoke.GdipResetClip(gdip);
             PInvoke.GdipDeleteGraphics(gdip);
 
             PInvoke.BitBlt(hPaint, 0, 0, bounds.Width, bounds.Height, dc, 0, 0, PInvoke.SRCCOPY);
@@ -185,9 +179,8 @@ internal sealed class PopupMenu
         }
 
         lastPoint = DecodePoint(lParam);
-        var hit = HitTest(lastPoint);
 
-        SetHotItem(hit?.Item, b => RelativePosition(b, lastPoint), ItemInteractionType.MouseEnter, ItemInteractionType.MouseLeave);
+        SetHotItem(HitTest(lastPoint), b => RelativePosition(b, lastPoint), ItemInteractionType.MouseEnter, ItemInteractionType.MouseLeave);
 
         return 0;
     }
@@ -208,7 +201,7 @@ internal sealed class PopupMenu
         var point = DecodePoint(lParam);
         var hit = HitTest(point);
 
-        if (hit.HasValue) Interact(hit.Value.Item, RelativePosition(hit.Value.Bounds, point), type, selectFirstOnSubmenu: false);
+        if (hit is not null) Interact(hit, RelativePosition(hit.HitBounds, point), type, selectFirstOnSubmenu: false);
 
         return 0;
     }
@@ -236,7 +229,7 @@ internal sealed class PopupMenu
 
         if (hotItem?.ShouldOpenSubmenu(ItemInteractionType.MouseEnter) ?? false)
         {
-            OpenSubmenu(hotItem);
+            OpenSubmenu(hotItem, false);
         }
 
         return 0;
@@ -248,15 +241,11 @@ internal sealed class PopupMenu
 
         KillSubmenuTimer();
 
-        if (hotItem is not null)
+        hotItem?.OnInteraction(new ItemInteractedEventArgs
         {
-            var oldBounds = FindBounds(hotItem) ?? default;
-            hotItem.OnInteraction(new ItemInteractedEventArgs
-            {
-                Type = leaveType,
-                Position = positionFor(oldBounds)
-            });
-        }
+            Type = leaveType,
+            Position = positionFor(hotItem.HitBounds)
+        });
 
         hotItem = newHot;
 
@@ -267,11 +256,10 @@ internal sealed class PopupMenu
 
         if (newHot is not null)
         {
-            var bounds = FindBounds(newHot) ?? default;
             var args = new ItemInteractedEventArgs
             {
                 Type = enterType,
-                Position = positionFor(bounds)
+                Position = positionFor(newHot.HitBounds)
             };
             newHot.OnInteraction(args);
 
@@ -286,7 +274,11 @@ internal sealed class PopupMenu
 
     private void Interact(MenuItemBase item, Point position, ItemInteractionType type, bool selectFirstOnSubmenu)
     {
-        var args = new ItemInteractedEventArgs { Type = type, Position = position };
+        var args = new ItemInteractedEventArgs
+        {
+            Type = type,
+            Position = position
+        };
         item.OnInteraction(args);
 
         if (item.ShouldOpenSubmenu(args.Type))
@@ -303,15 +295,15 @@ internal sealed class PopupMenu
 
     private void MoveHot(int direction)
     {
-        if (_itemRects.Count == 0) return;
+        if (_items.IsEmpty) return;
 
-        var currentIndex = hotItem is null ? -1 : _itemRects.FindIndex(e => ReferenceEquals(e.Item, hotItem));
-        var count = _itemRects.Count;
+        var currentIndex = hotItem is null ? -1 : _items.IndexOf(hotItem);
+        var count = _items.Count;
 
         for (var step = 1; step <= count; step++)
         {
             var index = (((currentIndex + direction * step) % count) + count) % count;
-            var candidate = _itemRects[index].Item;
+            var candidate = _items[index];
 
             if (!candidate.IgnoreHitTest)
             {
@@ -326,19 +318,19 @@ internal sealed class PopupMenu
         if (hotItem is null) return;
 
         KillSubmenuTimer();
-        OpenSubmenu(hotItem, selectFirstItem: true);
+        OpenSubmenu(hotItem, true);
     }
 
     private void ActivateHot()
     {
         if (hotItem is null) return;
 
-        Interact(hotItem, CenterOf(FindBounds(hotItem) ?? default), ItemInteractionType.KeyboardActivate, selectFirstOnSubmenu: true);
+        Interact(hotItem, CenterOf(hotItem.HitBounds), ItemInteractionType.KeyboardActivate, true);
     }
 
     private void SelectFirstEnabledItem()
     {
-        foreach (var (item, _) in _itemRects)
+        foreach (var item in _items)
         {
             if (item.IgnoreHitTest) continue;
 
@@ -361,14 +353,11 @@ internal sealed class PopupMenu
         submenuTimerActive = false;
     }
 
-    private void OpenSubmenu(MenuItemBase submenu, bool selectFirstItem = false)
+    private void OpenSubmenu(MenuItemBase submenu, bool selectFirstItem)
     {
         if (ReferenceEquals(openSubmenuOwner, submenu)) return;
 
-        var localBounds = FindBounds(submenu);
-        if (localBounds is null) return;
-
-        var screenRect = ToScreenRect(localBounds.Value);
+        var screenRect = ToScreenRect(submenu.HitBounds);
 
         _tree.OpenChild(HWnd, submenu.SubmenuItems, screenRect, selectFirstItem);
         openSubmenuOwner = submenu;
@@ -382,27 +371,17 @@ internal sealed class PopupMenu
         openSubmenuOwner = null;
     }
 
-    private HitItem? HitTest(POINT point)
+    private MenuItemBase? HitTest(POINT point)
     {
-        foreach (var entry in _itemRects)
+        foreach (var item in _items)
         {
-            if (entry.Item.IgnoreHitTest) continue;
+            if (item.IgnoreHitTest) continue;
 
-            var bounds = entry.Bounds;
+            var bounds = item.HitBounds;
             if (point.x >= bounds.Left && point.x < bounds.Right && point.y >= bounds.Top && point.y < bounds.Bottom)
             {
-                return entry;
+                return item;
             }
-        }
-
-        return null;
-    }
-
-    private Rectangle? FindBounds(MenuItemBase item)
-    {
-        foreach (var (candidate, bounds) in _itemRects)
-        {
-            if (ReferenceEquals(candidate, item)) return bounds;
         }
 
         return null;
@@ -410,8 +389,16 @@ internal sealed class PopupMenu
 
     private Rectangle ToScreenRect(Rectangle localRect)
     {
-        var topLeft = new POINT { x = localRect.Left, y = localRect.Top };
-        var bottomRight = new POINT { x = localRect.Right, y = localRect.Bottom };
+        var topLeft = new POINT
+        {
+            x = localRect.Left,
+            y = localRect.Top
+        };
+        var bottomRight = new POINT
+        {
+            x = localRect.Right,
+            y = localRect.Bottom
+        };
 
         PInvoke.ClientToScreen(HWnd, ref topLeft);
         PInvoke.ClientToScreen(HWnd, ref bottomRight);
@@ -433,21 +420,20 @@ internal sealed class PopupMenu
         var hdc = PInvoke.CreateCompatibleDC(nint.Zero);
         _ = PInvoke.GdipCreateFromHDC(hdc, out var gdip);
 
+        PInvoke.GdipScaleWorldTransform(gdip, _scale, _scale, PInvoke.MatrixOrderPrepend);
+
         var maxWidthLogical = 0;
         var totalHeightLogical = 0;
 
-        _itemRects.Clear();
-        _measuredSizes.Clear();
+        var measuredSizes = new Size[items.Count];
 
         using (var measuring = new MeasuringContext(gdip, _scale))
         {
-            foreach (var item in items)
+            for (var i = 0; i < items.Count; i++)
             {
-                var desired = item.Measure(measuring);
-                _measuredSizes.Add((item, desired));
-
-                maxWidthLogical = Math.Max(maxWidthLogical, desired.Width);
-                totalHeightLogical += desired.Height;
+                measuredSizes[i] = items[i].Measure(measuring);
+                maxWidthLogical = Math.Max(maxWidthLogical, measuredSizes[i].Width);
+                totalHeightLogical += measuredSizes[i].Height;
             }
         }
 
@@ -455,18 +441,24 @@ internal sealed class PopupMenu
         {
             var itemTop = 0;
 
-            foreach (var (item, desired) in _measuredSizes)
+            for (var i = 0; i < items.Count; i++)
             {
-                arranging.ItemBounds = new Rectangle(0, itemTop, maxWidthLogical, desired.Height);
+                var item = items[i];
+                var desired = measuredSizes[i];
+                var fullRect = new Rectangle(0, itemTop, maxWidthLogical, desired.Height);
+
+                arranging.ItemBounds = fullRect;
                 arranging.MeasuredItemBounds = new Rectangle(0, itemTop, desired.Width, desired.Height);
 
-                var requested = item.Arrange(arranging);
+                var content = item.Arrange(arranging);
 
-                var width = Math.Clamp(requested.Width, 0, maxWidthLogical);
-                var x = Math.Clamp(requested.X, 0, maxWidthLogical - width);
+                var contentWidth = Math.Clamp(content.Width, 0, maxWidthLogical);
+                var contentX = Math.Clamp(content.X, 0, maxWidthLogical - contentWidth);
+                var contentRect = new Rectangle(contentX, itemTop, contentWidth, desired.Height);
 
-                item.DrawBox = new Size(width, desired.Height);
-                _itemRects.Add((item, new Rectangle((int)MathF.Round(x * _scale), (int)MathF.Round(itemTop * _scale), (int)MathF.Round(width * _scale), (int)MathF.Round(desired.Height * _scale))));
+                item.HitBounds = ScaleRect(fullRect, _scale);
+                item.ContentBounds = ScaleRect(contentRect, _scale);
+
                 itemTop += desired.Height;
             }
         }
@@ -581,4 +573,16 @@ internal sealed class PopupMenu
     private static Point RelativePosition(Rectangle bounds, POINT point) => new(point.x - bounds.X, point.y - bounds.Y);
 
     private static Point CenterOf(Rectangle bounds) => new(bounds.Width / 2, bounds.Height / 2);
+
+    private static Rectangle ScaleRect(Rectangle rect, float scale) => new(
+        (int)MathF.Ceiling(rect.X * scale),
+        (int)MathF.Ceiling(rect.Y * scale),
+        (int)MathF.Ceiling(rect.Width * scale),
+        (int)MathF.Ceiling(rect.Height * scale));
+
+    private static Rectangle UnscaleRect(Rectangle rect, float scale) => new(
+        (int)MathF.Ceiling(rect.X / scale),
+        (int)MathF.Ceiling(rect.Y / scale),
+        (int)MathF.Ceiling(rect.Width / scale),
+        (int)MathF.Ceiling(rect.Height / scale));
 }

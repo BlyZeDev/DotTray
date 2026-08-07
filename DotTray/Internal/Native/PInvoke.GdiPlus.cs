@@ -172,4 +172,7 @@ internal static partial class PInvoke
 
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipScaleWorldTransform(nint graphics, float sx, float sy, int order);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipSetClipRectI(nint graphics, int x, int y, int width, int height, int combineMode);
 }

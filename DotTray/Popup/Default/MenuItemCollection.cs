@@ -39,6 +39,13 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     public TItem GetAs<TItem>(int index) where TItem : MenuItemBase => (TItem)this[index];
 
     /// <summary>
+    /// Searches for the specified item and returns the zero-based index of the first occurrence within the entire collection
+    /// </summary>
+    /// <param name="item">The item to look for</param>
+    /// <returns><see cref="int"/></returns>
+    public int IndexOf(MenuItemBase item) => _items.IndexOf(item);
+
+    /// <summary>
     /// Adds a new item to the collection
     /// </summary>
     /// <typeparam name="TItem">The type of the item</typeparam>

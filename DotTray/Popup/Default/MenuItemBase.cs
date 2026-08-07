@@ -9,7 +9,9 @@ using System;
 /// </summary>
 public abstract class MenuItemBase
 {
-    internal Size DrawBox { get; set; }
+    internal Rectangle HitBounds { get; set; }
+    internal Rectangle ContentBounds { get; set; }
+
     internal event Action? Updated;
 
     /// <summary>
@@ -51,14 +53,13 @@ public abstract class MenuItemBase
     internal protected abstract Size Measure(MeasuringContext context);
 
     /// <summary>
-    /// Called after every item in the popup has been measured, to determine this item's final position and width
-    /// within the row it was offered
+    /// Called after every item in the popup has been measured, to determine the bounds this item
+    /// should draw its content into
     /// </summary>
     /// <remarks>
-    /// <b>Important:</b> Only <see cref="Rectangle.X"/> and <see cref="Rectangle.Width"/> of the returned <see cref="Rectangle"/> are respected.<br/><br/>
-    /// The default implementation returns <see cref="ArrangingContext.ItemBounds"/> unchanged, so items fill the
-    /// full width of the popup by default.<br/>
-    /// Override <see cref="Arrange(ArrangingContext)"/> and return <see cref="ArrangingContext.MeasuredItemBounds"/> instead to opt this item out of arranging entirely
+    /// The default implementation returns <see cref="ArrangingContext.ItemBounds"/> unchanged, so items
+    /// draw across the full width of the popup by default.<br/>
+    /// Override to return a narrower <see cref="Rectangle"/> and reserve space for extra content
     /// </remarks>
     /// <param name="context">Context for arranging this instance</param>
     /// <returns><see cref="Rectangle"/></returns>

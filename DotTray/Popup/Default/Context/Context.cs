@@ -32,9 +32,6 @@ public abstract class Context : IDisposable
     {
         _gdip = gdip;
         Scale = scale;
-
-        PInvoke.GdipResetWorldTransform(_gdip);
-        PInvoke.GdipScaleWorldTransform(_gdip, Scale, Scale, PInvoke.MatrixOrderPrepend);
     }
 
     internal virtual void DisposeCore() { }

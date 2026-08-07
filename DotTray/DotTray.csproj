@@ -24,7 +24,7 @@
 - Aligned the API in some cases to be consistent</PackageReleaseNotes>
   </PropertyGroup>
 
-  <ItemGroup>
+	<ItemGroup>
     <Content Include="icon.ico" />
   </ItemGroup>
 
