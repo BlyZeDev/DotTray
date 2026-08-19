@@ -32,9 +32,9 @@ sealed class Program
         freakyIcon.Handler.MenuItems.Add<CheckItem>(x =>
         {
             x.Text = "Test";
+            x.Foreground = SolidColor.Random();
             x.FontInfo = x.FontInfo with { Size = x.FontInfo.Size * 2 };
         });
-        (freakyIcon.Handler.MenuItems[0] as MenuItem)!.Text = "Really long new text, lets see if the resize is correct ;'\"{}[]-_?!";
 
         PeriodicAction(() =>
         {

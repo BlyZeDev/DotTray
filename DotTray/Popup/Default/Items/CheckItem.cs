@@ -33,7 +33,7 @@ public class CheckItem : MenuItem
     internal protected override Size Measure(MeasuringContext context)
     {
         var baseSize = base.Measure(context);
-        var checkSize = Math.Max(8, baseSize.Height * 2 / 5);
+        var checkSize = Math.Max(10, baseSize.Height / 2);
 
         return baseSize with { Width = baseSize.Width + CheckLeftPadding + checkSize + CheckGap };
     }
@@ -43,7 +43,7 @@ public class CheckItem : MenuItem
     {
         var itemBounds = context.ItemBounds;
 
-        var checkSize = Math.Max(8, itemBounds.Height * 2 / 5);
+        var checkSize = Math.Max(10, itemBounds.Height / 2);
         var checkAreaWidth = CheckLeftPadding + checkSize + CheckGap;
 
         checkBounds = new Rectangle(itemBounds.X + CheckLeftPadding, itemBounds.Y + (itemBounds.Height - checkSize) / 2, checkSize, checkSize);
@@ -65,16 +65,35 @@ public class CheckItem : MenuItem
         if (!IsChecked) return;
 
         var (checkX, checkY, checkWidth, checkHeight) = (checkBounds.X, checkBounds.Y, checkBounds.Width, checkBounds.Height);
-        var thickness = Math.Max(2, checkHeight / 4);
+
+        var tVert = Math.Max(2, checkHeight / 4);
+        tVert += tVert % 2;
+        var tVertHalf = tVert / 2;
+
+        var shortArm = Math.Max(tVertHalf + 2, checkWidth * 35 / 100);
+        var longArm = Math.Max(tVertHalf + 5, checkWidth * 64 / 100);
+
+        if (shortArm + longArm > checkWidth) longArm = checkWidth - shortArm;
+
+        var left = checkX + (checkWidth - (shortArm + longArm)) / 2;
+        var top = checkY + tVertHalf + (checkHeight - (longArm + tVertHalf)) / 2;
+
+        var p0X = left;
+        var p0Y = top + longArm - shortArm;
+
+        var p1X = left + shortArm;
+        var p1Y = top + longArm;
+
+        var p2X = left + shortArm + longArm;
 
         ReadOnlySpan<Point> checkmark =
         [
-            new Point(checkX, checkY + checkHeight * 45 / 100),
-            new Point(checkX + checkWidth * 35 / 100, checkY + checkHeight * 85 / 100),
-            new Point(checkX + checkWidth, checkY + checkHeight * 20 / 100),
-            new Point(checkX + checkWidth - thickness, checkY + checkHeight * 20 / 100),
-            new Point(checkX + checkWidth * 35 / 100, checkY + checkHeight * 85 / 100 - thickness),
-            new Point(checkX, checkY + checkHeight * 45 / 100 + thickness)
+            new Point(p0X, p0Y),
+            new Point(p1X, p1Y),
+            new Point(p2X, top),
+            new Point(p2X - tVertHalf, top - tVertHalf),
+            new Point(p1X, p1Y - tVert),
+            new Point(p0X + tVertHalf, p0Y - tVertHalf)
         ];
 
         context.FillPolygon(foreground, checkmark);
