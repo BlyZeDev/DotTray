@@ -64,19 +64,17 @@ public class CheckItem : MenuItem
 
         if (!IsChecked) return;
 
-        var (checkX, checkY, checkWidth, checkHeight) = (checkBounds.X, checkBounds.Y, checkBounds.Width, checkBounds.Height);
-
-        var tVert = Math.Max(2, checkHeight / 4);
+        var tVert = Math.Max(2, checkBounds.Height / 4);
         tVert += tVert % 2;
         var tVertHalf = tVert / 2;
 
-        var shortArm = Math.Max(tVertHalf + 2, checkWidth * 35 / 100);
-        var longArm = Math.Max(tVertHalf + 5, checkWidth * 64 / 100);
+        var shortArm = Math.Max(tVertHalf + 2, checkBounds.Width * 35 / 100);
+        var longArm = Math.Max(tVertHalf + 5, checkBounds.Width * 64 / 100);
 
-        if (shortArm + longArm > checkWidth) longArm = checkWidth - shortArm;
+        if (shortArm + longArm > checkBounds.Width) longArm = checkBounds.Width - shortArm;
 
-        var left = checkX + (checkWidth - (shortArm + longArm)) / 2;
-        var top = checkY + tVertHalf + (checkHeight - (longArm + tVertHalf)) / 2;
+        var left = checkBounds.X + (checkBounds.Width - (shortArm + longArm)) / 2;
+        var top = checkBounds.Y + tVertHalf + (checkBounds.Height - (longArm + tVertHalf)) / 2;
 
         var p0X = left;
         var p0Y = top + longArm - shortArm;

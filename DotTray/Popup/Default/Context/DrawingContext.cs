@@ -150,6 +150,11 @@ public sealed class DrawingContext : Context
         PInvoke.GdipDeleteFontFamily(hFamily);
     }
 
+    public void DrawImage(Rectangle rect, ImageSource image)
+    {
+        PInvoke.GdipDrawImageRectI(_gdip, image.Handle, rect.X, rect.Y, rect.Width, rect.Height);
+    }
+
     private static Rectangle GetBounds(ReadOnlySpan<Point> points)
     {
         var minX = points[0].X;

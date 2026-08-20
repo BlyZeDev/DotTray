@@ -1,15 +1,19 @@
-﻿namespace DotTrayTests;
+﻿using System.Runtime.Versioning;
+
+[assembly: SupportedOSPlatform("windows")]
+
+namespace DotTrayTests;
 
 using AsyncAwaitBestPractices;
 using DotTray;
 using DotTray.Popup.Default;
 using DotTray.Popup.Default.Coloring;
+using DotTray.Popup.Default.Context;
 using DotTray.Popup.Default.Items;
+using System.Diagnostics;
 using System.Drawing;
-using System.Runtime.Versioning;
 using System.Threading.Tasks;
 
-[SupportedOSPlatform("windows")]
 sealed class Program
 {
     static async Task Main()
@@ -112,6 +116,7 @@ sealed class Program
         icon.SetToolTip("Freaky");
         icon.Handler.SetColor(LinearGradientColor.Random());
 
+        icon.Handler.MenuItems.Add<TestItem>();
         icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
             x.Background = SolidColor.Transparent;
@@ -225,7 +230,6 @@ sealed class Program
         }
     }
 
-    [SupportedOSPlatform("windows")]
     private static string? CreateTestIcon(StockIconId id, StockIconOptions options = StockIconOptions.ShellIconSize)
     {
         var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.CreateVersion7()}.ico");
@@ -242,5 +246,38 @@ sealed class Program
         }
 
         return tempPath;
+    }
+}
+
+file sealed class TestItem : MenuItemBase
+{
+    private readonly ImageSource _image;
+
+    protected override bool IgnoreHitTest => true;
+
+    public TestItem()
+    {
+        var sw = Stopwatch.StartNew();
+        _image = ImageSource.FromHBitmap(SystemIcons.GetStockIcon(StockIconId.Folder, 256).ToBitmap().GetHbitmap());
+        sw.Stop();
+        Console.WriteLine("Init: " + sw.ElapsedMilliseconds + "ms");
+    }
+
+    protected override DotTray.Primitives.Size Measure(MeasuringContext context)
+    {
+        return new DotTray.Primitives.Size(_image.Size.Width / 4, _image.Size.Height / 4);
+    }
+
+    protected override void Draw(DrawingContext context)
+    {
+        var sw = Stopwatch.StartNew();
+        context.DrawImage(context.ItemBounds with
+        {
+            X = context.ItemBounds.Width / 2 - _image.Size.Width / 4 / 2,
+            Width = _image.Size.Width / 4,
+            Height = _image.Size.Height / 4
+        }, _image);
+        sw.Stop();
+        Console.WriteLine("Draw: " + sw.ElapsedMilliseconds + "ms");
     }
 }

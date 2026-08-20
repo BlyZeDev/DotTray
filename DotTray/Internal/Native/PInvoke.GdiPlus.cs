@@ -111,7 +111,7 @@ internal static partial class PInvoke
     public static partial int GdipGetImageGraphicsContext(nint image, out nint graphics);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
-    public static partial int GdipDrawImageRect(nint graphics, nint image, float x, float y, float width, float height);
+    public static partial int GdipDrawImageRectI(nint graphics, nint image, int x, int y, int width, int height);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipCreatePath(int brushMode, out nint path);
@@ -175,4 +175,19 @@ internal static partial class PInvoke
 
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipSetClipRectI(nint graphics, int x, int y, int width, int height, int combineMode);
+
+    [LibraryImport(GdiPlus, SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int GdipLoadImageFromFile(string filename, out nint image);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipGetImageWidth(nint image, out uint width);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipGetImageHeight(nint image, out uint height);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipSetInterpolationMode(nint graphics, int interpolationMode);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipSetCompositingQuality(nint graphics, int compositingQuality);
 }
