@@ -3,13 +3,19 @@
 using DotTray.Internal.Native;
 using DotTray.Primitives;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using CacheImage = (ImageSource Image, int Width, int Height);
 
 /// <summary>
 /// Represents an GDI+ image source
 /// </summary>
 public sealed class ImageSource : IDisposable
 {
+    private const int MaxCachedScales = 4;
+
+    private readonly LinkedList<CacheImage> _scaledCache;
+
     private bool disposed;
     internal nint Handle { get; }
 
@@ -20,6 +26,8 @@ public sealed class ImageSource : IDisposable
 
     private ImageSource(nint handle, Size size)
     {
+        _scaledCache = new LinkedList<CacheImage>();
+
         Handle = handle;
         Size = size;
     }
@@ -29,9 +37,40 @@ public sealed class ImageSource : IDisposable
     {
         if (disposed) return;
 
+        foreach (var (image, _, _) in _scaledCache) image.Dispose();
+        _scaledCache.Clear();
+
         PInvoke.GdipDisposeImage(Handle);
         disposed = true;
         GC.SuppressFinalize(this);
+    }
+
+    internal ImageSource GetScaled(int width, int height)
+    {
+        if (width <= 0 || height <= 0) return this;
+        if (width == Size.Width && height == Size.Height) return this;
+
+        for (var node = _scaledCache.First; node is not null; node = node.Next)
+        {
+            if (node.Value.Width == width && node.Value.Height == height)
+            {
+                _scaledCache.Remove(node);
+                _scaledCache.AddFirst(node);
+                return node.Value.Image;
+            }
+        }
+
+        var scaled = new ImageSource(RenderScaled(Handle, width, height), new Size(width, height));
+        _scaledCache.AddFirst((scaled, width, height));
+        
+        if (_scaledCache.Count > MaxCachedScales)
+        {
+            var evicted = _scaledCache.Last!.Value.Image;
+            _scaledCache.RemoveLast();
+            evicted.Dispose();
+        }
+
+        return scaled;
     }
 
     /// <summary>
@@ -81,13 +120,13 @@ public sealed class ImageSource : IDisposable
             throw new InvalidOperationException("Failed to read the image dimensions");
         }
 
-        var materialized = Materialize(hImage, (int)width, (int)height);
+        var materialized = RenderScaled(hImage, (int)width, (int)height);
         PInvoke.GdipDisposeImage(hImage);
 
         return new ImageSource(materialized, new Size((int)width, (int)height));
     }
 
-    private static nint Materialize(nint source, int width, int height)
+    private static nint RenderScaled(nint source, int width, int height)
     {
         var status = PInvoke.GdipCreateBitmapFromScan0(width, height, 0, PInvoke.PixelFormat32bppPARGB, nint.Zero, out var hDest);
         if (status is not (int)PInvoke.GdiPlusStatus.Ok)
@@ -104,6 +143,9 @@ public sealed class ImageSource : IDisposable
 
         try
         {
+            PInvoke.GdipSetInterpolationMode(hGraphics, PInvoke.InterpolationModeHighQuality);
+            PInvoke.GdipSetSmoothingMode(hGraphics, PInvoke.SmoothingModeAntiAlias8x8);
+            PInvoke.GdipSetPixelOffsetMode(hGraphics, PInvoke.PixelOffsetModeHalf);
             PInvoke.GdipDrawImageRectI(hGraphics, source, 0, 0, width, height);
         }
         finally

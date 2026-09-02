@@ -150,17 +150,29 @@ public sealed class DrawingContext : Context
         PInvoke.GdipDeleteFontFamily(hFamily);
     }
 
-    public void DrawImage(Rectangle rect, ImageSource image)
+    /// <summary>
+    /// Fills the whole <see cref="ItemBounds"/> with <paramref name="image"/>
+    /// </summary>
+    /// <param name="image">The image to draw</param>
+    public void DrawImage(ImageSource image) => DrawImageRect(ItemBounds, image);
+
+    /// <summary>
+    /// Fills the whole <paramref name="rect"/> with <paramref name="image"/>
+    /// </summary>
+    /// <param name="rect">The rectangle to fill</param>
+    /// <param name="image">The image to draw</param>
+    public void DrawImageRect(Rectangle rect, ImageSource image)
     {
-        PInvoke.GdipDrawImageRectI(_gdip, image.Handle, rect.X, rect.Y, rect.Width, rect.Height);
+        var scaled = image.GetScaled(rect.Width, rect.Height);
+        PInvoke.GdipDrawImageRectI(_gdip, scaled.Handle, rect.X, rect.Y, rect.Width, rect.Height);
     }
 
     private static Rectangle GetBounds(ReadOnlySpan<Point> points)
     {
         var minX = points[0].X;
         var minY = points[0].Y;
-        var maxX = points[0].X;
-        var maxY = points[0].Y;
+        var maxX = minX;
+        var maxY = minY;
 
         for (var i = 1; i < points.Length; i++)
         {

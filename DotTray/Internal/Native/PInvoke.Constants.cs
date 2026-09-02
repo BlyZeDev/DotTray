@@ -158,6 +158,6 @@ internal static partial class PInvoke
 
     public const int PixelFormat32bppPARGB = 0x0E200B;
 
-    internal const int InterpolationModeLowQuality = 3;
-    internal const int CompositingQualityHighSpeed = 1;
+    public const int InterpolationModeLowQuality = 3;
+    public const int InterpolationModeHighQuality = 4;
 }

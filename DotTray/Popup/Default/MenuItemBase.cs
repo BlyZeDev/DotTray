@@ -41,7 +41,7 @@ public abstract class MenuItemBase
     /// Called when the popup window hosting this item is created and about to be shown
     /// </summary>
     /// <remarks>
-    /// Since items are created once and reused across popup menu instances, this can be used to reset the items state
+    /// Since items are created once and reused across popup menu instances, this could be used to reset the items state for example
     /// </remarks>
     internal protected virtual void Initialize() { }
 

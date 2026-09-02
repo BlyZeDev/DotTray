@@ -11,6 +11,7 @@ using DotTray.Popup.Default.Coloring;
 using DotTray.Popup.Default.Context;
 using DotTray.Popup.Default.Items;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Threading.Tasks;
 
@@ -116,7 +117,7 @@ sealed class Program
         icon.SetToolTip("Freaky");
         icon.Handler.SetColor(LinearGradientColor.Random());
 
-        icon.Handler.MenuItems.Add<TestItem>();
+        icon.Handler.MenuItems.Add<ImageItem>();
         icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
             x.Background = SolidColor.Transparent;
@@ -249,33 +250,34 @@ sealed class Program
     }
 }
 
-file sealed class TestItem : MenuItemBase
+file sealed class ImageItem : MenuItemBase
 {
     private readonly ImageSource _image;
 
     protected override bool IgnoreHitTest => true;
 
-    public TestItem()
+    public ImageItem()
     {
         var sw = Stopwatch.StartNew();
-        _image = ImageSource.FromHBitmap(SystemIcons.GetStockIcon(StockIconId.Folder, 256).ToBitmap().GetHbitmap());
+        _image = ImageSource.FromHBitmap(SystemIcons.GetStockIcon((StockIconId)Random.Shared.Next(141), 256).ToBitmap().GetHbitmap());
         sw.Stop();
         Console.WriteLine("Init: " + sw.ElapsedMilliseconds + "ms");
     }
 
     protected override DotTray.Primitives.Size Measure(MeasuringContext context)
     {
-        return new DotTray.Primitives.Size(_image.Size.Width / 4, _image.Size.Height / 4);
+        return new DotTray.Primitives.Size(_image.Size.Width, _image.Size.Height);
     }
 
     protected override void Draw(DrawingContext context)
     {
         var sw = Stopwatch.StartNew();
-        context.DrawImage(context.ItemBounds with
+        context.DrawImage(_image);
+        context.DrawImageRect(context.ItemBounds with
         {
-            X = context.ItemBounds.Width / 2 - _image.Size.Width / 4 / 2,
-            Width = _image.Size.Width / 4,
-            Height = _image.Size.Height / 4
+            X = context.ItemBounds.Width / 2 - _image.Size.Width / 2,
+            Width = _image.Size.Width,
+            Height = _image.Size.Height
         }, _image);
         sw.Stop();
         Console.WriteLine("Draw: " + sw.ElapsedMilliseconds + "ms");
