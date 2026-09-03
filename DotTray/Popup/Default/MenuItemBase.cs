@@ -20,9 +20,9 @@ public abstract class MenuItemBase
     internal protected virtual MenuItemCollection SubmenuItems { get; } = [];
 
     /// <summary>
-    /// <see langword="true"/> if this instance is purely visual and therefore should not be included in any hittesting, otherwise <see langword="false"/>
+    /// <see langword="true"/> if this instance is purely visual and therefore should not be included in any interactions, otherwise <see langword="false"/>
     /// </summary>
-    internal protected virtual bool IgnoreHitTest { get; } = false;
+    internal protected virtual bool IgnoreInteraction { get; } = false;
 
     /// <summary>
     /// Fires whenever the user interacts with the <see cref="MenuItemBase"/>
@@ -36,6 +36,14 @@ public abstract class MenuItemBase
     /// Invokes redrawing this instance when called
     /// </summary>
     protected void Update() => Updated?.Invoke();
+
+    internal void RaiseInteraction(ItemInteractedEventArgs args)
+    {
+        if (IgnoreInteraction) return;
+
+        OnInteraction(args);
+        Interacted?.Invoke(args);
+    }
 
     /// <summary>
     /// Called when the popup window hosting this item is created and about to be shown
@@ -72,18 +80,21 @@ public abstract class MenuItemBase
     internal protected abstract void Draw(DrawingContext context);
 
     /// <summary>
-    /// Called when this instance is interacted and calls <see cref="Interacted"/>
+    /// Called when this instance is interacted with
     /// </summary>
     /// <remarks>
-    /// To ignore interaction, override <see cref="OnInteraction(ItemInteractedEventArgs)"/> without calling the <see langword="base"/> implementation
+    /// This will not be called if <see cref="IgnoreInteraction"/> is <see langword="true"/>
     /// </remarks>
     /// <param name="args">The interaction that occurred</param>
-    internal protected virtual void OnInteraction(ItemInteractedEventArgs args)
-    {
-        if (IgnoreHitTest) return;
+    internal protected virtual void OnInteraction(ItemInteractedEventArgs args) { }
 
-        Interacted?.Invoke(args);
-    }
+    /// <summary>
+    /// Called when the popup window hosting this item is being torn down
+    /// </summary>
+    /// <remarks>
+    /// Since items are created once and reused across popup menu instances, this could be used to clean up resources for example
+    /// </remarks>
+    internal protected virtual void Cleanup() { }
 
-    internal bool ShouldOpenSubmenu(ItemInteractionType type) => !IgnoreHitTest && !SubmenuItems.IsEmpty && type is ItemInteractionType.MouseEnter or ItemInteractionType.KeyboardActivate;
+    internal bool CanOpenSubmenu(ItemInteractionType type) => !IgnoreInteraction && !SubmenuItems.IsEmpty && type is ItemInteractionType.MouseEnter or ItemInteractionType.KeyboardActivate;
 }

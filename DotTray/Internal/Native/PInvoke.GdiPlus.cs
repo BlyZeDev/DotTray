@@ -102,6 +102,9 @@ internal static partial class PInvoke
     public static partial int GdipCreateBitmapFromHBITMAP(nint hbm, nint hpal, out nint bitmap);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipCreateBitmapFromHICON(nint hIcon, out nint bitmap);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipCreateHBITMAPFromBitmap(nint bitmap, out nint hbmReturn, uint background);
 
     [LibraryImport(GdiPlus, SetLastError = true)]

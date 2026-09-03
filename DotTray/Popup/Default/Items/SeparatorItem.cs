@@ -11,7 +11,7 @@ using System;
 public class SeparatorItem : MenuItemBase
 {
     /// <inheritdoc/>
-    internal protected sealed override bool IgnoreHitTest => true;
+    internal protected sealed override bool IgnoreInteraction => true;
 
     /// <summary>
     /// The line color

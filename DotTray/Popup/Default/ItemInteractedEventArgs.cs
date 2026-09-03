@@ -19,4 +19,11 @@ public sealed record ItemInteractedEventArgs
     /// For <see cref="ItemInteractionType.MouseLeave"/>, this is the last recorded position inside the item
     /// </remarks>
     public required Point Position { get; init; }
+
+    /// <summary>
+    /// Set to <see langword="true"/> to keep the popup menu open after this interaction,
+    /// overriding the default close behaviour of <see cref="ItemInteractionType.MouseLeftUp"/>
+    /// and <see cref="ItemInteractionType.KeyboardActivate"/>
+    /// </summary>
+    public bool KeepMenuOpen { get; set; }
 }

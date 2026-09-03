@@ -84,17 +84,105 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     {
         foreach (var configuration in configurations)
         {
-            Add(configuration);
+            var item = new TItem();
+            configuration(item);
+
+            item.Updated += OnUpdate;
+
+            _items.Add(item);
         }
+
+        OnUpdate();
     }
 
     /// <summary>
-    /// Removes the element at the specified index
+    /// Inserts an element into the collection at the specified index
+    /// </summary>
+    /// <typeparam name="TItem">The type of the item</typeparam>
+    /// <param name="index">The zero-based index of the position to insert the item into</param>
+    /// <param name="configuration">The configuration of the item</param>
+    public void Insert<TItem>(int index, Action<TItem>? configuration = null) where TItem : MenuItemBase, new()
+    {
+        var item = new TItem();
+        configuration?.Invoke(item);
+
+        item.Updated += OnUpdate;
+
+        _items.Insert(index, item);
+        OnUpdate();
+    }
+
+    /// <summary>
+    /// Moves the element at <paramref name="fromIndex"/> to <paramref name="toIndex"/>
+    /// </summary>
+    /// <param name="fromIndex">The index of the item to move</param>
+    /// <param name="toIndex">The index to move the item to</param>
+    public void Move(int fromIndex, int toIndex)
+    {
+        var item = _items[fromIndex];
+        _items.RemoveAt(fromIndex);
+        _items.Insert(toIndex, item);
+        OnUpdate();
+    }
+
+    /// <summary>
+    /// Removes the specified element from the collection
+    /// </summary>
+    /// <param name="item">The item to remove</param>
+    /// <returns><see cref="bool"/></returns>
+    public bool Remove(MenuItemBase item)
+    {
+        if (!_items.Remove(item)) return false;
+
+        item.Updated -= OnUpdate;
+
+        OnUpdate();
+        return true;
+    }
+
+    /// <summary>
+    /// Removes the element at the specified index from the collection
     /// </summary>
     /// <param name="index">The zero-based index of the element to remove</param>
     public void RemoveAt(int index)
     {
+        var item = _items[index];
+
+        item.Updated -= OnUpdate;
+        
         _items.RemoveAt(index);
+        OnUpdate();
+    }
+
+    /// <summary>
+    /// Removes all elements that match the condition from the collection
+    /// </summary>
+    /// <param name="predicate">The condition to match</param>
+    /// <returns><see cref="int"/></returns>
+    public int RemoveAll(Predicate<MenuItemBase> predicate)
+    {
+        var toRemove = _items.FindAll(predicate);
+        foreach (var item in toRemove)
+        {
+            item.Updated -= OnUpdate;
+            _items.Remove(item);
+        }
+        if (toRemove.Count > 0) OnUpdate();
+
+        return toRemove.Count;
+    }
+
+    /// <summary>
+    /// Removes all elements from the collection
+    /// </summary>
+    public void Clear()
+    {
+        foreach (var item in _items)
+        {
+            item.Updated -= OnUpdate;
+        }
+
+        _items.Clear();
         OnUpdate();
     }
 

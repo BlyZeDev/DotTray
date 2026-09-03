@@ -104,6 +104,20 @@ public sealed class ImageSource : IDisposable
         return FromHandle(hImage);
     }
 
+    /// <summary>
+    /// Wraps an existing HIcon as a <see cref="ImageSource"/>
+    /// </summary>
+    /// <param name="hIcon">The handle to a GDI bitmap</param>
+    /// <returns><see cref="ImageSource"/></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    public static ImageSource FromHIcon(nint hIcon)
+    {
+        var status = PInvoke.GdipCreateBitmapFromHICON(hIcon, out var hImage);
+        if (status is not (int)PInvoke.GdiPlusStatus.Ok) throw new InvalidOperationException("Failed to create image from HICON");
+
+        return FromHandle(hImage);
+    }
+
     private static ImageSource FromHandle(nint hImage)
     {
         var status = PInvoke.GdipGetImageWidth(hImage, out var width);

@@ -227,7 +227,7 @@ internal sealed class PopupMenu
 
         KillSubmenuTimer();
 
-        if (hotItem?.ShouldOpenSubmenu(ItemInteractionType.MouseEnter) ?? false)
+        if (hotItem?.CanOpenSubmenu(ItemInteractionType.MouseEnter) ?? false)
         {
             OpenSubmenu(hotItem, false);
         }
@@ -241,7 +241,7 @@ internal sealed class PopupMenu
 
         KillSubmenuTimer();
 
-        hotItem?.OnInteraction(new ItemInteractedEventArgs
+        hotItem?.RaiseInteraction(new ItemInteractedEventArgs
         {
             Type = leaveType,
             Position = positionFor(hotItem.HitBounds)
@@ -261,9 +261,9 @@ internal sealed class PopupMenu
                 Type = enterType,
                 Position = positionFor(newHot.HitBounds)
             };
-            newHot.OnInteraction(args);
+            newHot.RaiseInteraction(args);
 
-            if (newHot.ShouldOpenSubmenu(enterType))
+            if (newHot.CanOpenSubmenu(enterType))
             {
                 StartSubmenuTimer();
             }
@@ -279,15 +279,15 @@ internal sealed class PopupMenu
             Type = type,
             Position = position
         };
-        item.OnInteraction(args);
+        item.RaiseInteraction(args);
 
-        if (item.ShouldOpenSubmenu(args.Type))
+        if (item.CanOpenSubmenu(args.Type))
         {
             OpenSubmenu(item, selectFirstOnSubmenu);
             return;
         }
 
-        if (type is ItemInteractionType.MouseLeftUp or ItemInteractionType.KeyboardActivate)
+        if (!args.KeepMenuOpen && type is ItemInteractionType.MouseLeftUp or ItemInteractionType.KeyboardActivate)
         {
             _tree.Dispose();
         }
@@ -305,7 +305,7 @@ internal sealed class PopupMenu
             var index = (((currentIndex + direction * step) % count) + count) % count;
             var candidate = _items[index];
 
-            if (!candidate.IgnoreHitTest)
+            if (!candidate.IgnoreInteraction)
             {
                 SetHotItem(candidate, CenterOf, ItemInteractionType.KeyboardFocus, ItemInteractionType.KeyboardBlur);
                 return;
@@ -332,7 +332,7 @@ internal sealed class PopupMenu
     {
         foreach (var item in _items)
         {
-            if (item.IgnoreHitTest) continue;
+            if (item.IgnoreInteraction) continue;
 
             SetHotItem(item, CenterOf, ItemInteractionType.KeyboardFocus, ItemInteractionType.KeyboardBlur);
             return;
@@ -375,7 +375,7 @@ internal sealed class PopupMenu
     {
         foreach (var item in _items)
         {
-            if (item.IgnoreHitTest) continue;
+            if (item.IgnoreInteraction) continue;
 
             var bounds = item.HitBounds;
             if (point.x >= bounds.Left && point.x < bounds.Right && point.y >= bounds.Top && point.y < bounds.Bottom)
@@ -410,6 +410,8 @@ internal sealed class PopupMenu
     {
         KillSubmenuTimer();
         _items.Updated -= RequestRedraw;
+
+        foreach (var item in _items) item.Cleanup();
 
         _tree.UnregisterWindow(HWnd);
         return nint.Zero;

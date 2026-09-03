@@ -26,7 +26,7 @@ public class MenuItem : MenuItemBase
     /// <remarks>
     /// This is the same value as <see cref="IsDisabled"/> and therefore can be ignored
     /// </remarks>
-    internal protected sealed override bool IgnoreHitTest => IsDisabled;
+    internal protected sealed override bool IgnoreInteraction => IsDisabled;
     /// <summary>
     /// <inheritdoc/>
     /// </summary>
