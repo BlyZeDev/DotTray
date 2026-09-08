@@ -67,6 +67,9 @@ internal static partial class PInvoke
     [LibraryImport(User32, EntryPoint = "DefWindowProcW", SetLastError = true)]
     public static partial nint DefWindowProc(nint hWnd, uint msg, nint wParam, nint lParam);
 
+    [LibraryImport(User32, EntryPoint = "RegisterWindowMessageW", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
+    public static partial uint RegisterWindowMessage(string lpString);
+
     [LibraryImport(User32, EntryPoint = "GetMessageW", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool GetMessage(out MSG lpMsg, nint hWnd, uint wMsgFilterMin, uint wMsgFilterMax);

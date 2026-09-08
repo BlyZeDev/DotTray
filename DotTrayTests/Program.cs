@@ -1,6 +1,4 @@
-﻿using System.Runtime.Versioning;
-
-[assembly: SupportedOSPlatform("windows")]
+﻿[assembly: System.Runtime.Versioning.SupportedOSPlatform("windows")]
 
 namespace DotTrayTests;
 
@@ -316,7 +314,7 @@ file sealed class ImageItem : MenuItemBase
 
 file sealed class SearchBarItem : MenuItemBase
 {
-    private const char Caret = '▎';
+    private const char Caret = '▏';
     private const int Padding = 8;
     private const int CaretBlinkMs = 500;
 

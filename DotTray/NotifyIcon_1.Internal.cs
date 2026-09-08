@@ -15,6 +15,8 @@ public sealed partial class NotifyIcon<THandler>
     private const uint WM_APP_TRAYICON_VISIBILITY = PInvoke.WM_APP + 3;
     private const uint WM_APP_TRAYICON_BALLOON = PInvoke.WM_APP + 4;
 
+    private static readonly uint WM_TASKBARCREATED = PInvoke.RegisterWindowMessage("TaskbarCreated");
+
     private readonly nint _icoHandle;
     private readonly Thread _thread;
 
@@ -151,20 +153,52 @@ public sealed partial class NotifyIcon<THandler>
 
     private nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
     {
+        if (msg == WM_TASKBARCREATED)
+        {
+            HandleRestore(hWnd);
+            return PInvoke.DefWindowProc(hWnd, msg, wParam, lParam);
+        }
+
         switch (msg)
         {
-            case WM_APP_TRAYICON_CALLBACK: HandleCallback(wParam, lParam); break;
+            case PInvoke.WM_POWERBROADCAST when wParam is PInvoke.PBT_APMRESUMEAUTOMATIC or PInvoke.PBT_APMRESUMESUSPEND:
+                HandleRestore(hWnd);
+                return 1;
 
-            case WM_APP_TRAYICON_TOOLTIP: HandleToolTip(hWnd); break;
+            case WM_APP_TRAYICON_CALLBACK: HandleCallback(wParam, lParam); return 0;
 
-            case WM_APP_TRAYICON_VISIBILITY: HandleVisibility(hWnd); break;
+            case WM_APP_TRAYICON_TOOLTIP: HandleToolTip(hWnd); return 0;
 
-            case WM_APP_TRAYICON_BALLOON: HandleBalloon(hWnd); break;
+            case WM_APP_TRAYICON_VISIBILITY: HandleVisibility(hWnd); return 0;
+
+            case WM_APP_TRAYICON_BALLOON: HandleBalloon(hWnd); return 0;
 
             case PInvoke.WM_DESTROY: PInvoke.PostQuitMessage(0); return 0;
         }
 
         return PInvoke.DefWindowProc(hWnd, msg, wParam, lParam);
+    }
+
+    private void HandleRestore(nint hWnd)
+    {
+        var iconData = new NOTIFYICONDATA
+        {
+            cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATA>(),
+            hWnd = hWnd,
+            guidItem = Id,
+            uFlags = PInvoke.NIF_MESSAGE | PInvoke.NIF_ICON | PInvoke.NIF_GUID,
+            uCallbackMessage = WM_APP_TRAYICON_CALLBACK,
+            hIcon = _icoHandle
+        };
+
+        var success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_ADD, ref iconData);
+        if (!success) PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
+
+        iconData.uTimeoutOrVersion = 4;
+        PInvoke.Shell_NotifyIcon(PInvoke.NIM_SETVERSION, ref iconData);
+
+        PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_TOOLTIP, 0, 0);
+        PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_VISIBILITY, 0, 0);
     }
 
     private void HandleCallback(nint wParam, nint lParam)

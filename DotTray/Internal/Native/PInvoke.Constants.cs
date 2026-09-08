@@ -58,6 +58,10 @@ internal static partial class PInvoke
     public const int WM_MOUSELEAVE = 0x02A3;
     public const int WM_CONTEXTMENU = 0x007B;
 
+    public const uint WM_POWERBROADCAST = 0x0218;
+    public const nint PBT_APMRESUMESUSPEND = 0x0007;
+    public const nint PBT_APMRESUMEAUTOMATIC = 0x0012;
+
     public const int VK_LEFT = 0x25;
     public const int VK_UP = 0x26;
     public const int VK_RIGHT = 0x27;
