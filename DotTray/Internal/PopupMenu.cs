@@ -26,6 +26,7 @@ internal sealed class PopupMenu
     private readonly MenuItemCollection _items;
     private readonly Rectangle? _anchorScreenRect;
 
+    private MenuItemBase[] itemsSnapshot;
     private MenuItemBase? hotItem;
     private MenuItemBase? openSubmenuOwner;
     private bool submenuTimerActive;
@@ -43,7 +44,10 @@ internal sealed class PopupMenu
 
         _items.Updated += RequestRedraw;
 
-        foreach (var item in _items) item.Initialize();
+        itemsSnapshot = [];
+        RefreshSnapshot();
+
+        foreach (var item in itemsSnapshot) item.Initialize();
 
         HWnd = PInvoke.CreateWindowEx(
             PInvoke.WS_EX_NOACTIVATE | PInvoke.WS_EX_TOOLWINDOW | PInvoke.WS_EX_TOPMOST,
@@ -70,6 +74,20 @@ internal sealed class PopupMenu
         PInvoke.ShowWindow(HWnd, PInvoke.SW_SHOWNOACTIVATE);
 
         if (selectFirstItem) SelectFirstEnabledItem();
+    }
+
+    private void RefreshSnapshot()
+    {
+        lock (_items)
+        {
+            itemsSnapshot = [.. _items];
+        }
+
+        if (hotItem is not null && Array.IndexOf(itemsSnapshot, hotItem) < 0)
+        {
+            CloseOpenSubmenu();
+            hotItem = null;
+        }
     }
 
     private void RequestRedraw() => PInvoke.PostMessage(HWnd, WM_APP_POPUP_CALCWND, nint.Zero, nint.Zero);
@@ -101,7 +119,9 @@ internal sealed class PopupMenu
 
     private nint HandleCalcWnd(nint hWnd)
     {
-        var rect = CalcWindowArea(_items);
+        RefreshSnapshot();
+
+        var rect = CalcWindowArea(itemsSnapshot);
         PInvoke.SetWindowPos(hWnd, nint.Zero, rect.X, rect.Y, rect.Width, rect.Height, PInvoke.SWP_ZORDER | PInvoke.SWP_NOACTIVATE);
         PInvoke.InvalidateRect(hWnd, nint.Zero, false);
 
@@ -137,7 +157,7 @@ internal sealed class PopupMenu
 
             using (var drawing = new DrawingContext(gdip, _scale, bounds))
             {
-                foreach (var item in _items)
+                foreach (var item in itemsSnapshot)
                 {
                     var hit = UnscaleRect(item.HitBounds, _scale);
                     PInvoke.GdipSetClipRectI(gdip, hit.X, hit.Y, hit.Width, hit.Height, PInvoke.CombineModeReplace);
@@ -295,15 +315,15 @@ internal sealed class PopupMenu
 
     private void MoveHot(int direction)
     {
-        if (_items.IsEmpty) return;
+        if (itemsSnapshot.Length == 0) return;
 
-        var currentIndex = hotItem is null ? -1 : _items.IndexOf(hotItem);
-        var count = _items.Count;
+        var currentIndex = hotItem is null ? -1 : Array.IndexOf(itemsSnapshot, hotItem);
+        var length = itemsSnapshot.Length;
 
-        for (var step = 1; step <= count; step++)
+        for (var step = 1; step <= length; step++)
         {
-            var index = (((currentIndex + direction * step) % count) + count) % count;
-            var candidate = _items[index];
+            var index = (((currentIndex + direction * step) % length) + length) % length;
+            var candidate = itemsSnapshot[index];
 
             if (!candidate.IgnoreInteraction)
             {
@@ -330,7 +350,7 @@ internal sealed class PopupMenu
 
     private void SelectFirstEnabledItem()
     {
-        foreach (var item in _items)
+        foreach (var item in itemsSnapshot)
         {
             if (item.IgnoreInteraction) continue;
 
@@ -373,7 +393,7 @@ internal sealed class PopupMenu
 
     private MenuItemBase? HitTest(POINT point)
     {
-        foreach (var item in _items)
+        foreach (var item in itemsSnapshot)
         {
             if (item.IgnoreInteraction) continue;
 
@@ -417,7 +437,7 @@ internal sealed class PopupMenu
         return nint.Zero;
     }
 
-    private Rectangle CalcWindowArea(MenuItemCollection items)
+    private Rectangle CalcWindowArea(MenuItemBase[] items)
     {
         var hdc = PInvoke.CreateCompatibleDC(nint.Zero);
         _ = PInvoke.GdipCreateFromHDC(hdc, out var gdip);
@@ -427,11 +447,11 @@ internal sealed class PopupMenu
         var maxWidthLogical = 0;
         var totalHeightLogical = 0;
 
-        var measuredSizes = new Size[items.Count];
+        var measuredSizes = new Size[items.Length];
 
         using (var measuring = new MeasuringContext(gdip, _scale))
         {
-            for (var i = 0; i < items.Count; i++)
+            for (var i = 0; i < items.Length; i++)
             {
                 measuredSizes[i] = items[i].Measure(measuring);
                 maxWidthLogical = Math.Max(maxWidthLogical, measuredSizes[i].Width);
@@ -443,7 +463,7 @@ internal sealed class PopupMenu
         {
             var itemTop = 0;
 
-            for (var i = 0; i < items.Count; i++)
+            for (var i = 0; i < items.Length; i++)
             {
                 var item = items[i];
                 var desired = measuredSizes[i];
