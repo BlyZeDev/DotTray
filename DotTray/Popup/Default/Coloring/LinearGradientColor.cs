@@ -61,7 +61,7 @@ public readonly record struct LinearGradientColor : IColorable
 
         PInvoke.GdipCreateLineBrushFromRectWithAngle(ref rect, ToGdip(Start), ToGdip(End), Angle, true, 0, out var hBrush);
 
-        return new ColorSafeHandle(hBrush);
+        return new BrushSafeHandle(hBrush);
     }
 
     /// <summary>

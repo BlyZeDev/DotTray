@@ -1,5 +1,6 @@
 ﻿namespace DotTray.Popup.Default.Coloring;
 
+using DotTray.Internal.Native;
 using DotTray.Primitives;
 using System;
 using System.ComponentModel;
@@ -11,7 +12,7 @@ using System.Runtime.InteropServices;
 public interface IColorable : IEquatable<IColorable>
 {
     /// <summary>
-    /// Creates a native GDI+ handle for coloring purpose
+    /// Creates a native GDI+ brush handle
     /// </summary>
     /// <remarks>
     /// Implementing this requires working with native GDI+ handles.<br/>
@@ -21,4 +22,20 @@ public interface IColorable : IEquatable<IColorable>
     /// <returns><see cref="SafeHandle"/></returns>
     [EditorBrowsable(EditorBrowsableState.Never)]
     SafeHandle CreateGdipBrush(RectangleF bounds);
+
+    /// <summary>
+    /// Creates a native GDI+ pen handle
+    /// </summary>
+    /// <param name="bounds">The bounds to apply layout or gradient coordinates</param>
+    /// <param name="width">The stroke widht of the pen in pixels</param>
+    /// <returns><see cref="SafeHandle"/></returns>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    SafeHandle CreateGdipPen(RectangleF bounds, float width = 1f)
+    {
+        using (var hBrush = CreateGdipBrush(bounds))
+        {
+            PInvoke.GdipCreatePen2(hBrush.DangerousGetHandle(), width, PInvoke.UnitPixel, out var hPen);
+            return new PenSafeHandle(hPen);
+        }
+    }
 }

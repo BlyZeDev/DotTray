@@ -105,7 +105,13 @@ public readonly record struct SolidColor : IColorable
     readonly SafeHandle IColorable.CreateGdipBrush(RectangleF bounds)
     {
         PInvoke.GdipCreateSolidFill((uint)(A << 24 | R << 16 | G << 8 | B), out var hBrush);
-        return new ColorSafeHandle(hBrush);
+        return new BrushSafeHandle(hBrush);
+    }
+
+    readonly SafeHandle IColorable.CreateGdipPen(RectangleF bounds, float width)
+    {
+        PInvoke.GdipCreatePen1((uint)(A << 24 | R << 16 | G << 8 | B), width, PInvoke.UnitPixel, out var hPen);
+        return new PenSafeHandle(hPen);
     }
 
     /// <summary>

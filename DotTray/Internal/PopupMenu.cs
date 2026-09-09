@@ -78,10 +78,7 @@ internal sealed class PopupMenu
 
     private void RefreshSnapshot()
     {
-        lock (_items)
-        {
-            itemsSnapshot = [.. _items];
-        }
+        itemsSnapshot = _items.GetSnapshot();
 
         if (hotItem is not null && Array.IndexOf(itemsSnapshot, hotItem) < 0)
         {

@@ -127,20 +127,13 @@ public sealed partial class NotifyIcon<THandler>
                 success = PInvoke.DestroyIcon(_icoHandle);
                 NotifyIconException.ThrowIfFalse(success, "Destroying the icon failed");
 
-                if (hWnd != nint.Zero)
-                {
-                    success = PInvoke.DestroyWindow(hWnd);
-                    NotifyIconException.ThrowIfFalse(success, "Destroying the window failed");
-                    hWnd = nint.Zero;
+                success = PInvoke.UnregisterClass(PopupWindowClassName, InstanceHandle);
+                NotifyIconException.ThrowIfFalse(success, "Unregistering a class failed");
+                success = PInvoke.UnregisterClass(windowClassName, InstanceHandle);
+                NotifyIconException.ThrowIfFalse(success, "Unregistering a class failed");
 
-                    success = PInvoke.UnregisterClass(PopupWindowClassName, InstanceHandle);
-                    NotifyIconException.ThrowIfFalse(success, "Unregistering a class failed");
-                    success = PInvoke.UnregisterClass(windowClassName, InstanceHandle);
-                    NotifyIconException.ThrowIfFalse(success, "Unregistering a class failed");
-
-                    Marshal.FreeHGlobal(windowClassName);
-                    Marshal.FreeHGlobal(PopupWindowClassName);
-                }
+                Marshal.FreeHGlobal(windowClassName);
+                Marshal.FreeHGlobal(PopupWindowClassName);
             }
 
             GC.KeepAlive(wndProc);
@@ -173,7 +166,12 @@ public sealed partial class NotifyIcon<THandler>
 
             case WM_APP_TRAYICON_BALLOON: HandleBalloon(hWnd); return 0;
 
-            case PInvoke.WM_DESTROY: PInvoke.PostQuitMessage(0); return 0;
+            case PInvoke.WM_CLOSE: PInvoke.DestroyWindow(hWnd); return 0;
+
+            case PInvoke.WM_DESTROY:
+                this.hWnd = nint.Zero;
+                PInvoke.PostQuitMessage(0);
+                return 0;
         }
 
         return PInvoke.DefWindowProc(hWnd, msg, wParam, lParam);

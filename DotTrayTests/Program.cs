@@ -29,7 +29,7 @@ sealed class Program
         using var basicIcon = NotifyIcon.Run(tempPath2, cts.Token);
 
         BuildFreakyMenu(freakyIcon);
-        BuildBasicMenu(basicIcon);
+        BuildBasicMenu(basicIcon, cts);
 
         using var icon = await NotifyIcon.RunAsync(CreateTestIcon(StockIconId.Find), cts.Token);
 
@@ -59,6 +59,22 @@ sealed class Program
         icon.Handler.MenuItems.Add<MenuItem>(x => x.Text = "Overwatch");
         icon.Handler.MenuItems.Add<MenuItem>(x => x.Text = "Minecraft");
         icon.Handler.MenuItems.Add<MenuItem>(x => x.Text = "Cuphead");
+
+        _ = Task.Run(async () =>
+        {
+            while (true)
+            {
+                icon.Handler.MenuItems.RemoveAll(x => x is MenuItem item && !item.Text.Contains('0'));
+
+                icon.Handler.MenuItems.Add<MenuItem>(x => x.Text = Random.Shared.Next().ToString());
+                icon.Handler.MenuItems.RemoveAt(0);
+                icon.Handler.MenuItems.Add<MenuItem>(x => x.Text = Random.Shared.Next().ToString());
+
+                if (icon.Handler.MenuItems.Count > 1) icon.Handler.MenuItems.Move(0, 1);
+
+                await Task.Delay(Random.Shared.Next(1, 50));
+            }
+        });
 
         await Task.Delay(5000);
 
@@ -95,14 +111,10 @@ sealed class Program
         }
         catch (Exception) { }
 
-        try
-        {
-            File.Delete(tempPath ?? "");
-        }
-        catch (Exception) { }
+        Console.WriteLine("KILLED");
     }
 
-    private static void BuildBasicMenu(NotifyIcon<DefaultPopupMenuHandler> icon)
+    private static void BuildBasicMenu(NotifyIcon<DefaultPopupMenuHandler> icon, CancellationTokenSource cts)
     {
         icon.SetToolTip("Basic");
 
@@ -124,9 +136,18 @@ sealed class Program
                 x.Text = "Do something even cooler";
             });
         });
+        icon.Handler.MenuItems.Add<StayOpenCheckItem>(x =>
+        {
+            x.Text = "I'm checkable and will stay open";
+            x.Items.Add<MenuItem>(x => x.Text = "Hello");
+            x.Items.Add<SeparatorItem>();
+            x.Items.Add<SeparatorItem>();
+            x.Items.Add<SeparatorItem>();
+            x.Items.Add<MenuItem>(x => x.Text = "Hello");
+        });
         icon.Handler.MenuItems.Add<CheckItem>(x =>
         {
-            x.Text = "I'm checkable and also very long for testing purpose";
+            x.Text = "I'm checkable and will close";
             x.Items.Add<MenuItem>(x => x.Text = "Hello");
             x.Items.Add<SeparatorItem>();
             x.Items.Add<SeparatorItem>();
@@ -137,6 +158,12 @@ sealed class Program
         icon.Handler.MenuItems.Add<MenuItem>(x =>
         {
             x.Text = "Exit";
+            x.Interacted = args =>
+            {
+                if (args.Type is not ItemInteractionType.MouseLeftUp) return;
+
+                cts.Cancel();
+            };
         });
     }
 
@@ -275,6 +302,15 @@ sealed class Program
         }
 
         return tempPath;
+    }
+}
+
+file sealed class StayOpenCheckItem : CheckItem
+{
+    protected override void OnInteraction(ItemInteractedEventArgs args)
+    {
+        base.OnInteraction(args);
+        args.KeepMenuOpen = true;
     }
 }
 

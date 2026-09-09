@@ -26,12 +26,12 @@ public abstract class Context : IDisposable
     /// <remarks>
     /// The scale is already accounted for so this value is mostly informational
     /// </remarks>
-    public float Scale { get; }
+    public float DpiScale { get; }
 
     internal Context(nint gdip, float scale)
     {
         _gdip = gdip;
-        Scale = scale;
+        DpiScale = scale;
     }
 
     internal virtual void DisposeCore() { }

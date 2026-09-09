@@ -3,31 +3,64 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 
 /// <summary>
 /// Represents a collection of menu items
 /// </summary>
 public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
 {
+    private readonly Lock _syncRoot;
     private readonly List<MenuItemBase> _items;
 
     /// <inheritdoc/>
-    public int Count => _items.Count;
+    public int Count
+    {
+        get
+        {
+            lock (_syncRoot)
+            {
+                return _items.Count;
+            }
+        }
+    }
 
     /// <summary>
     /// Returns <see langword="true"/> if the collection is empty, otherwise <see langword="false"/>
     /// </summary>
-    public bool IsEmpty => _items.Count == 0;
+    public bool IsEmpty
+    {
+        get
+        {
+            lock (_syncRoot)
+            {
+                return _items.Count == 0;
+            }
+        }
+    }
 
     /// <summary>
     /// Fired if this collection or an item is updated
     /// </summary>
     public event Action? Updated;
 
-    internal MenuItemCollection() => _items = [];
+    internal MenuItemCollection()
+    {
+        _syncRoot = new Lock();
+        _items = [];
+    }
 
     /// <inheritdoc/>
-    public MenuItemBase this[int index] => _items[index];
+    public MenuItemBase this[int index]
+    {
+        get
+        {
+            lock (_syncRoot)
+            {
+                return _items[index];
+            }
+        }
+    }
 
     /// <summary>
     /// Gets the item at the specified index cast to the specified type
@@ -43,7 +76,13 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// </summary>
     /// <param name="item">The item to look for</param>
     /// <returns><see cref="int"/></returns>
-    public int IndexOf(MenuItemBase item) => _items.IndexOf(item);
+    public int IndexOf(MenuItemBase item)
+    {
+        lock (_syncRoot)
+        {
+            return _items.IndexOf(item);
+        }
+    }
 
     /// <summary>
     /// Adds a new item to the collection
@@ -55,7 +94,11 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
 
         item.Updated += OnUpdate;
 
-        _items.Add(item);
+        lock (_syncRoot)
+        {
+            _items.Add(item);
+        }
+
         OnUpdate();
     }
 
@@ -71,24 +114,8 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
 
         item.Updated += OnUpdate;
 
-        _items.Add(item);
-        OnUpdate();
-    }
-
-    /// <summary>
-    /// Adds multiple new items with the specified configurations to the collection
-    /// </summary>
-    /// <typeparam name="TItem">The type of the item</typeparam>
-    /// <param name="configurations">The configurations of the items</param>
-    public void AddRange<TItem>(params ReadOnlySpan<Action<TItem>> configurations) where TItem : MenuItemBase, new()
-    {
-        foreach (var configuration in configurations)
+        lock (_syncRoot)
         {
-            var item = new TItem();
-            configuration(item);
-
-            item.Updated += OnUpdate;
-
             _items.Add(item);
         }
 
@@ -108,7 +135,11 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
 
         item.Updated += OnUpdate;
 
-        _items.Insert(index, item);
+        lock (_syncRoot)
+        {
+            _items.Insert(index, item);
+        }
+
         OnUpdate();
     }
 
@@ -119,9 +150,13 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// <param name="toIndex">The index to move the item to</param>
     public void Move(int fromIndex, int toIndex)
     {
-        var item = _items[fromIndex];
-        _items.RemoveAt(fromIndex);
-        _items.Insert(toIndex, item);
+        lock (_syncRoot)
+        {
+            var item = _items[fromIndex];
+            _items.RemoveAt(fromIndex);
+            _items.Insert(toIndex, item);
+        }
+        
         OnUpdate();
     }
 
@@ -132,7 +167,14 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// <returns><see cref="bool"/></returns>
     public bool Remove(MenuItemBase item)
     {
-        if (!_items.Remove(item)) return false;
+        bool removed;
+
+        lock (_syncRoot)
+        {
+            removed = _items.Remove(item);
+        }
+
+        if (!removed) return false;
 
         item.Updated -= OnUpdate;
 
@@ -146,11 +188,16 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// <param name="index">The zero-based index of the element to remove</param>
     public void RemoveAt(int index)
     {
-        var item = _items[index];
+        MenuItemBase item;
+
+        lock (_syncRoot)
+        {
+            item = _items[index];
+            _items.RemoveAt(index);
+        }
 
         item.Updated -= OnUpdate;
-        
-        _items.RemoveAt(index);
+
         OnUpdate();
     }
 
@@ -161,12 +208,15 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// <returns><see cref="int"/></returns>
     public int RemoveAll(Predicate<MenuItemBase> predicate)
     {
-        var toRemove = _items.FindAll(predicate);
-        foreach (var item in toRemove)
+        List<MenuItemBase> toRemove;
+
+        lock (_syncRoot)
         {
-            item.Updated -= OnUpdate;
-            _items.Remove(item);
+            toRemove = _items.FindAll(predicate);
+            foreach (var item in toRemove) _items.Remove(item);
         }
+
+        foreach (var item in toRemove) item.Updated -= OnUpdate;
         if (toRemove.Count > 0) OnUpdate();
 
         return toRemove.Count;
@@ -177,17 +227,39 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// </summary>
     public void Clear()
     {
-        foreach (var item in _items)
+        List<MenuItemBase> removed;
+
+        lock (_syncRoot)
         {
-            item.Updated -= OnUpdate;
+            removed = [.. _items];
+            _items.Clear();
         }
 
-        _items.Clear();
+        foreach (var item in removed) item.Updated -= OnUpdate;
+
         OnUpdate();
     }
 
     /// <inheritdoc/>
-    public IEnumerator<MenuItemBase> GetEnumerator() => _items.GetEnumerator();
+    public IEnumerator<MenuItemBase> GetEnumerator()
+    {
+        List<MenuItemBase> snapshot;
+
+        lock (_syncRoot)
+        {
+            snapshot = [.. _items];
+        }
+
+        return snapshot.GetEnumerator();
+    }
+
+    internal MenuItemBase[] GetSnapshot()
+    {
+        lock (_syncRoot)
+        {
+            return [.. _items];
+        }
+    }
 
     private void OnUpdate() => Updated?.Invoke();
 

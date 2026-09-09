@@ -27,6 +27,9 @@ internal static partial class PInvoke
     public static partial int GdipCreatePen1(uint color, float width, int unit, out nint pen);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipCreatePen2(nint brush, float width, int unit, out nint pen);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipDeletePen(nint pen);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
@@ -34,6 +37,9 @@ internal static partial class PInvoke
 
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static unsafe partial int GdipDrawLines(nint graphics, nint pen, POINTF* points, int count);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static unsafe partial int GdipDrawLinesI(nint graphics, nint pen, POINT* points, int count);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipCreateSolidFill(uint color, out nint brush);

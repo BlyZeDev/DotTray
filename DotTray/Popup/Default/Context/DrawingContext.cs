@@ -54,7 +54,7 @@ public sealed class DrawingContext : Context
     }
 
     /// <summary>
-    /// Fills the an ellipse inside <paramref name="rect"/> with <paramref name="color"/>
+    /// Fills the ellipse inside <paramref name="rect"/> with <paramref name="color"/>
     /// </summary>
     /// <typeparam name="TColor">The color type to use</typeparam>
     /// <param name="rect">The rectangle to fill with an ellipse</param>
@@ -95,6 +95,36 @@ public sealed class DrawingContext : Context
                 fixed (Point* hPoints = points)
                 {
                     PInvoke.GdipFillPolygonI(_gdip, hBrush.DangerousGetHandle(), (POINT*)hPoints, points.Length, PInvoke.FillModeAlternate);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Draws a checkmark inside <paramref name="bounds"/> with <paramref name="color"/>
+    /// </summary>
+    /// <typeparam name="TColor">The color type to use</typeparam>
+    /// <param name="bounds">The bounds to draw inside</param>
+    /// <param name="color">The color to use</param>
+    /// <param name="strokeWidth">The width of the pen in pixels</param>
+    public void DrawCheckmark<TColor>(Rectangle bounds, TColor color, float strokeWidth = 2f) where TColor : notnull, IColorable
+    {
+        ReadOnlySpan<Point> points =
+        [
+            new(bounds.X + (int)(bounds.Width * 0.25f), bounds.Y + (int)(bounds.Height * 0.5f)),
+            new(bounds.X + (int)(bounds.Width * 0.45f), bounds.Y + (int)(bounds.Height * 0.7f)),
+            new(bounds.X + (int)(bounds.Width * 0.75f), bounds.Y + (int)(bounds.Height * 0.3f))
+        ];
+
+        using (var hPen = color.CreateGdipPen(bounds, strokeWidth))
+        {
+            PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeAntiAlias8x8);
+
+            unsafe
+            {
+                fixed (Point* hPoints = points)
+                {
+                    PInvoke.GdipDrawLinesI(_gdip, hPen.DangerousGetHandle(), (POINT*)hPoints, points.Length);
                 }
             }
         }
