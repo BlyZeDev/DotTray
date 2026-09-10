@@ -31,12 +31,21 @@ public sealed class DrawingContext : Context
     }
 
     /// <summary>
-    /// Fills the whole <see cref="ItemBounds"/> with <paramref name="color"/>
+    /// Draws the border of <paramref name="rect"/> with <paramref name="color"/>
     /// </summary>
     /// <typeparam name="TColor">The color type to use</typeparam>
+    /// <param name="rect">The rectangle to outline</param>
     /// <param name="color">The color to use</param>
-    public void Fill<TColor>(TColor color) where TColor : notnull, IColorable
-        => FillRect(ItemBounds, color);
+    /// <param name="strokeWidth">The stroke width to use</param>
+    public void DrawRect<TColor>(Rectangle rect, TColor color, float strokeWidth = 2f) where TColor : notnull, IColorable
+    {
+        using (var hPen = color.CreateGdipPen(rect, strokeWidth))
+        {
+            PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeHighSpeed);
+            PInvoke.GdipSetPenMode(hPen.DangerousGetHandle(), PInvoke.PenAlignmentInset);
+            PInvoke.GdipDrawRectangleI(_gdip, hPen.DangerousGetHandle(), rect.X, rect.Y, rect.Width, rect.Height);
+        }
+    }
 
     /// <summary>
     /// Fills the whole <paramref name="rect"/> with <paramref name="color"/>
@@ -50,6 +59,23 @@ public sealed class DrawingContext : Context
         {
             PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeHighSpeed);
             PInvoke.GdipFillRectangleI(_gdip, hBrush.DangerousGetHandle(), rect.X, rect.Y, rect.Width, rect.Height);
+        }
+    }
+
+    /// <summary>
+    /// Draws the ellipse inside <paramref name="rect"/> with <paramref name="color"/>
+    /// </summary>
+    /// <typeparam name="TColor">The color type to use</typeparam>
+    /// <param name="rect">The ellipse to outline</param>
+    /// <param name="color">The color to use</param>
+    /// <param name="strokeWidth">The stroke width to use</param>
+    public void DrawEllipse<TColor>(Rectangle rect, TColor color, float strokeWidth = 2f) where TColor : notnull, IColorable
+    {
+        using (var hPen = color.CreateGdipPen(rect, strokeWidth))
+        {
+            PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeAntiAlias8x8);
+            PInvoke.GdipSetPenMode(hPen.DangerousGetHandle(), PInvoke.PenAlignmentInset);
+            PInvoke.GdipDrawEllipseI(_gdip, hPen.DangerousGetHandle(), rect.X, rect.Y, rect.Width, rect.Height);
         }
     }
 
@@ -106,28 +132,66 @@ public sealed class DrawingContext : Context
     /// <typeparam name="TColor">The color type to use</typeparam>
     /// <param name="bounds">The bounds to draw inside</param>
     /// <param name="color">The color to use</param>
-    /// <param name="strokeWidth">The width of the pen in pixels</param>
-    public void DrawCheckmark<TColor>(Rectangle bounds, TColor color, float strokeWidth = 2f) where TColor : notnull, IColorable
+    public void DrawCheckmark<TColor>(Rectangle bounds, TColor color) where TColor : notnull, IColorable
     {
-        ReadOnlySpan<Point> points =
+        var tVert = Math.Max(2, bounds.Height / 4);
+        tVert += tVert % 2;
+        var tVertHalf = tVert / 2;
+
+        var shortArm = Math.Max(tVertHalf + 2, bounds.Width * 35 / 100);
+        var longArm = Math.Max(tVertHalf + 5, bounds.Width * 64 / 100);
+
+        if (shortArm + longArm > bounds.Width)
+        {
+            longArm = bounds.Width - shortArm;
+        }
+
+        var left = bounds.X + (bounds.Width - (shortArm + longArm)) / 2;
+        var top = bounds.Y + tVertHalf + (bounds.Height - (longArm + tVertHalf)) / 2;
+
+        var p0X = left;
+        var p0Y = top + longArm - shortArm;
+
+        var p1X = left + shortArm;
+        var p1Y = top + longArm;
+
+        var p2X = left + shortArm + longArm;
+
+        ReadOnlySpan<Point> checkmark =
         [
-            new(bounds.X + (int)(bounds.Width * 0.25f), bounds.Y + (int)(bounds.Height * 0.5f)),
-            new(bounds.X + (int)(bounds.Width * 0.45f), bounds.Y + (int)(bounds.Height * 0.7f)),
-            new(bounds.X + (int)(bounds.Width * 0.75f), bounds.Y + (int)(bounds.Height * 0.3f))
+            new Point(p0X, p0Y),
+            new Point(p1X, p1Y),
+            new Point(p2X, top),
+            new Point(p2X - tVertHalf, top - tVertHalf),
+            new Point(p1X, p1Y - tVert),
+            new Point(p0X + tVertHalf, p0Y - tVertHalf)
         ];
 
-        using (var hPen = color.CreateGdipPen(bounds, strokeWidth))
-        {
-            PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeAntiAlias8x8);
+        FillPolygon(color, checkmark);
+    }
 
-            unsafe
-            {
-                fixed (Point* hPoints = points)
-                {
-                    PInvoke.GdipDrawLinesI(_gdip, hPen.DangerousGetHandle(), (POINT*)hPoints, points.Length);
-                }
-            }
-        }
+    /// <summary>
+    /// Draws a chevron arrow inside <paramref name="bounds"/> with <paramref name="color"/>
+    /// </summary>
+    /// <typeparam name="TColor">The color type to use</typeparam>
+    /// <param name="bounds">The bounds to draw inside</param>
+    /// <param name="color">The color to use</param>
+    public void DrawChevron<TColor>(Rectangle bounds, TColor color) where TColor : notnull, IColorable
+    {
+        var thickness = Math.Max(1, bounds.Height / 5);
+        var centerY = bounds.Y + bounds.Height / 2;
+
+        ReadOnlySpan<Point> arrow =
+        [
+            new Point(bounds.X, bounds.Y),
+            new Point(bounds.X + thickness, bounds.Y),
+            new Point(bounds.X + bounds.Width, centerY),
+            new Point(bounds.X + thickness, bounds.Y + bounds.Height),
+            new Point(bounds.X, bounds.Y + bounds.Height),
+            new Point(bounds.X + bounds.Width - thickness, centerY)
+        ];
+
+        FillPolygon(color, arrow);
     }
 
     /// <summary>

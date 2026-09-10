@@ -2,7 +2,6 @@
 
 using DotTray.Internal;
 using DotTray.Internal.Native;
-using DotTray.Popup.Default;
 using System;
 using System.IO;
 using System.Threading;
@@ -17,16 +16,20 @@ public static class NotifyIcon
     internal static nint GdipToken;
 
     /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance synchronously using <see cref="DefaultPopupMenuHandler"/>
+    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance synchronously
     /// </summary>
+    /// /// <remarks>
+    /// This will block until the <see cref="NotifyIcon{THandler}"/> instance is ready or an <see cref="Exception"/> occurs.<br/>
+    /// When using an icon handle as <paramref name="source"/> it will not be destroyed, the responsibility lies with the caller
+    /// </remarks>
     /// <param name="source">The source of the icon to display</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon{THandler}"/> instance</param>
     /// <returns><see cref="NotifyIcon{THandler}"/></returns>
     /// <exception cref="ArgumentException"></exception>
     /// <exception cref="FileNotFoundException"></exception>
     /// <exception cref="NotifyIconException"></exception>
-    public static NotifyIcon<DefaultPopupMenuHandler> Run(IconSource source, CancellationToken cancellationToken)
-        => RunInternal(PrepareIconHandle(source), new DefaultPopupMenuHandler(), cancellationToken);
+    public static NotifyIcon<NotifyIconNullHandler> Run(IconSource source, CancellationToken cancellationToken)
+        => RunInternal(PrepareIconHandle(source), NotifyIconNullHandler.Instance, cancellationToken);
 
     /// <summary>
     /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance synchronously
@@ -47,27 +50,29 @@ public static class NotifyIcon
         => RunInternal(PrepareIconHandle(source), handler, cancellationToken);
 
     /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance asynchronously using <see cref="DefaultPopupMenuHandler"/>
+    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance asynchronously
     /// </summary>
+    /// <remarks>
+    /// When using an icon handle as <paramref name="source"/> it will not be destroyed, the responsibility lies with the caller
+    /// </remarks>
     /// <param name="source">The source of the icon to display</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon{THandler}"/> instance</param>
     /// <returns><see cref="NotifyIcon{THandler}"/></returns>
     /// <exception cref="ArgumentException"></exception>
     /// <exception cref="FileNotFoundException"></exception>
     /// <exception cref="NotifyIconException"></exception>
-    public static Task<NotifyIcon<DefaultPopupMenuHandler>> RunAsync(IconSource source, CancellationToken cancellationToken)
-        => RunInternalAsync(PrepareIconHandle(source), new DefaultPopupMenuHandler(), cancellationToken);
+    public static Task<NotifyIcon<NotifyIconNullHandler>> RunAsync(IconSource source, CancellationToken cancellationToken)
+        => RunInternalAsync(PrepareIconHandle(source), NotifyIconNullHandler.Instance, cancellationToken);
 
     /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance synchronously
+    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance asynchronously
     /// </summary>
     /// <remarks>
-    /// This will block until the <see cref="NotifyIcon{THandler}"/> instance is ready or an <see cref="Exception"/> occurs.<br/>
     /// When using an icon handle as <paramref name="source"/> it will not be destroyed, the responsibility lies with the caller
     /// </remarks>
     /// <param name="source">The source of the icon to display</param>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon{THandler}"/> instance</param>
     /// <param name="handler">The handler to use for interaction with this <see cref="NotifyIcon{THandler}"/> instance</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon{THandler}"/> instance</param>
     /// <returns><see cref="NotifyIcon{THandler}"/></returns>
     /// <exception cref="ArgumentException"></exception>
     /// <exception cref="FileNotFoundException"></exception>

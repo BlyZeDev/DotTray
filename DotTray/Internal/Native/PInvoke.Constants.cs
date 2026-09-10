@@ -126,6 +126,7 @@ internal static partial class PInvoke
     public const uint SWP_NOACTIVATE = 0x0010;
     public const uint SWP_ZORDER = 0x0004;
     public const uint SWP_NOREDRAW = 0x0008;
+    public const uint SWP_NOCOPYBITS = 0x0100;
 
     public const nint DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4;
 
@@ -164,4 +165,6 @@ internal static partial class PInvoke
 
     public const int InterpolationModeLowQuality = 3;
     public const int InterpolationModeHighQuality = 4;
+
+    public const int PenAlignmentInset = 1;
 }

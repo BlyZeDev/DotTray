@@ -2,6 +2,7 @@
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
   </Folder>
+  <Project Path="DotTray.Drawing/DotTray.Drawing.csproj" Id="72e65069-e2f1-430a-a718-0e295ebebb99" />
   <Project Path="DotTray/DotTray.csproj" />
   <Project Path="DotTrayTests/DotTrayTests.csproj" />
 </Solution>

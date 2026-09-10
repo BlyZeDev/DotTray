@@ -1,5 +1,6 @@
 ﻿namespace DotTray.Popup.Default.Items;
 
+using DotTray.Internal.Native;
 using DotTray.Popup.Default;
 using DotTray.Popup.Default.Coloring;
 using DotTray.Popup.Default.Context;
@@ -206,14 +207,14 @@ public class MenuItem : MenuItemBase
         var background = IsDisabled ? BackgroundDisabled : (isHovering ? BackgroundHover : Background);
         var foreground = IsDisabled ? ForegroundDisabled : (isHovering ? ForegroundHover : Foreground);
 
+        var bounds = context.ItemBounds;
+
         if (SubmenuItems.IsEmpty)
         {
-            context.Fill(background);
+            context.FillRect(bounds, background);
             context.Write(Text, FontInfo, foreground);
             return;
         }
-
-        var bounds = context.ItemBounds;
 
         var arrowHeight = Math.Max(6, bounds.Height / ArrowHeightRatio);
         var arrowWidth = Math.Max(4, arrowHeight * 2 / 3);
@@ -221,25 +222,12 @@ public class MenuItem : MenuItemBase
         var arrowX = bounds.Right - ArrowRightPadding - arrowWidth;
         var arrowY = bounds.Top + (bounds.Height - arrowHeight) / 2;
 
-        var thickness = Math.Max(1, arrowHeight / 5);
-
-        var centerY = arrowY + arrowHeight / 2;
-
-        ReadOnlySpan<Point> arrow =
-        [
-            new Point(arrowX, arrowY),
-            new Point(arrowX + thickness, arrowY),
-            new Point(arrowX + arrowWidth, centerY),
-            new Point(arrowX + thickness, arrowY + arrowHeight),
-            new Point(arrowX, arrowY + arrowHeight),
-            new Point(arrowX + arrowWidth - thickness, centerY)
-        ];
-
         var textBounds = new Rectangle(bounds.X, bounds.Y, bounds.Width - arrowWidth - ArrowGap - ArrowRightPadding, bounds.Height);
+        var arrowBounds = new Rectangle(arrowX, arrowY, arrowWidth, arrowHeight);
 
-        context.Fill(background);
+        context.FillRect(bounds, background);
         context.WriteRect(textBounds, Text, FontInfo, foreground);
-        context.FillPolygon(foreground, arrow);
+        context.DrawChevron(arrowBounds, foreground);
     }
 
     /// <inheritdoc/>

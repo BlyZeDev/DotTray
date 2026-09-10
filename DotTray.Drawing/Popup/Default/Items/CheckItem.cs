@@ -64,37 +64,7 @@ public class CheckItem : MenuItem
 
         if (!IsChecked) return;
 
-        var tVert = Math.Max(2, checkBounds.Height / 4);
-        tVert += tVert % 2;
-        var tVertHalf = tVert / 2;
-
-        var shortArm = Math.Max(tVertHalf + 2, checkBounds.Width * 35 / 100);
-        var longArm = Math.Max(tVertHalf + 5, checkBounds.Width * 64 / 100);
-
-        if (shortArm + longArm > checkBounds.Width) longArm = checkBounds.Width - shortArm;
-
-        var left = checkBounds.X + (checkBounds.Width - (shortArm + longArm)) / 2;
-        var top = checkBounds.Y + tVertHalf + (checkBounds.Height - (longArm + tVertHalf)) / 2;
-
-        var p0X = left;
-        var p0Y = top + longArm - shortArm;
-
-        var p1X = left + shortArm;
-        var p1Y = top + longArm;
-
-        var p2X = left + shortArm + longArm;
-
-        ReadOnlySpan<Point> checkmark =
-        [
-            new Point(p0X, p0Y),
-            new Point(p1X, p1Y),
-            new Point(p2X, top),
-            new Point(p2X - tVertHalf, top - tVertHalf),
-            new Point(p1X, p1Y - tVert),
-            new Point(p0X + tVertHalf, p0Y - tVertHalf)
-        ];
-
-        context.FillPolygon(foreground, checkmark);
+        context.DrawCheckmark(checkBounds, foreground);
     }
 
     /// <inheritdoc/>

@@ -1,4 +1,4 @@
-﻿namespace DotTray.Internal;
+﻿namespace DotTray.Drawing.Internal;
 
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
@@ -119,8 +119,8 @@ internal sealed class PopupMenu
         RefreshSnapshot();
 
         var rect = CalcWindowArea(itemsSnapshot);
-        PInvoke.SetWindowPos(hWnd, nint.Zero, rect.X, rect.Y, rect.Width, rect.Height, PInvoke.SWP_ZORDER | PInvoke.SWP_NOACTIVATE);
-        PInvoke.InvalidateRect(hWnd, nint.Zero, false);
+        PInvoke.SetWindowPos(hWnd, nint.Zero, rect.X, rect.Y, rect.Width, rect.Height, PInvoke.SWP_ZORDER | PInvoke.SWP_NOACTIVATE | PInvoke.SWP_NOCOPYBITS);
+        PInvoke.InvalidateRect(hWnd, nint.Zero, true);
 
         return nint.Zero;
     }
@@ -145,21 +145,24 @@ internal sealed class PopupMenu
             var hOldBitmap = PInvoke.SelectObject(dc, hBitmap);
 
             PInvoke.GdipCreateFromHDC(dc, out var gdip);
-            PInvoke.GdipScaleWorldTransform(gdip, _scale, _scale, PInvoke.MatrixOrderPrepend);
 
             using (var hBackground = _tree.Owner.Handler.Color.CreateGdipBrush(bounds))
             {
-                PInvoke.GdipFillRectangleI(gdip, hBackground.DangerousGetHandle(), bounds.X, bounds.Y, bounds.Width, bounds.Height);
+                PInvoke.GdipFillRectangleI(
+                    gdip,
+                    hBackground.DangerousGetHandle(),
+                    bounds.X, bounds.Y,
+                    bounds.Width, bounds.Height);
             }
 
             using (var drawing = new DrawingContext(gdip, _scale, bounds))
             {
                 foreach (var item in itemsSnapshot)
                 {
-                    var hit = UnscaleRect(item.HitBounds, _scale);
+                    var hit = item.HitBounds;
                     PInvoke.GdipSetClipRectI(gdip, hit.X, hit.Y, hit.Width, hit.Height, PInvoke.CombineModeReplace);
 
-                    drawing.ItemBounds = UnscaleRect(item.ContentBounds, _scale);
+                    drawing.ItemBounds = item.ContentBounds;
                     item.Draw(drawing);
                 }
             }
@@ -439,10 +442,8 @@ internal sealed class PopupMenu
         var hdc = PInvoke.CreateCompatibleDC(nint.Zero);
         _ = PInvoke.GdipCreateFromHDC(hdc, out var gdip);
 
-        PInvoke.GdipScaleWorldTransform(gdip, _scale, _scale, PInvoke.MatrixOrderPrepend);
-
-        var maxWidthLogical = 0;
-        var totalHeightLogical = 0;
+        var maxWidth = 0;
+        var totalHeight = 0;
 
         var measuredSizes = new Size[items.Length];
 
@@ -451,12 +452,12 @@ internal sealed class PopupMenu
             for (var i = 0; i < items.Length; i++)
             {
                 measuredSizes[i] = items[i].Measure(measuring);
-                maxWidthLogical = Math.Max(maxWidthLogical, measuredSizes[i].Width);
-                totalHeightLogical += measuredSizes[i].Height;
+                maxWidth = Math.Max(maxWidth, measuredSizes[i].Width);
+                totalHeight += measuredSizes[i].Height;
             }
         }
 
-        using (var arranging = new ArrangingContext(gdip, _scale, new Size(maxWidthLogical, totalHeightLogical)))
+        using (var arranging = new ArrangingContext(gdip, _scale, new Size(maxWidth, totalHeight)))
         {
             var itemTop = 0;
 
@@ -464,19 +465,19 @@ internal sealed class PopupMenu
             {
                 var item = items[i];
                 var desired = measuredSizes[i];
-                var fullRect = new Rectangle(0, itemTop, maxWidthLogical, desired.Height);
+                var fullRect = new Rectangle(0, itemTop, maxWidth, desired.Height);
 
                 arranging.ItemBounds = fullRect;
-                arranging.MeasuredItemBounds = new Rectangle(0, itemTop, desired.Width, desired.Height);
+                arranging.MeasuredItemBounds = fullRect with { Width = desired.Width };
 
                 var content = item.Arrange(arranging);
 
-                var contentWidth = Math.Clamp(content.Width, 0, maxWidthLogical);
-                var contentX = Math.Clamp(content.X, 0, maxWidthLogical - contentWidth);
+                var contentWidth = Math.Clamp(content.Width, 0, maxWidth);
+                var contentX = Math.Clamp(content.X, 0, maxWidth - contentWidth);
                 var contentRect = new Rectangle(contentX, itemTop, contentWidth, desired.Height);
 
-                item.HitBounds = ScaleRect(fullRect, _scale);
-                item.ContentBounds = ScaleRect(contentRect, _scale);
+                item.HitBounds = fullRect;
+                item.ContentBounds = contentRect;
 
                 itemTop += desired.Height;
             }
@@ -484,9 +485,6 @@ internal sealed class PopupMenu
 
         _ = PInvoke.GdipDeleteGraphics(gdip);
         _ = PInvoke.DeleteDC(hdc);
-
-        var maxWidth = (int)MathF.Round(maxWidthLogical * _scale);
-        var totalHeight = (int)MathF.Round(totalHeightLogical * _scale);
 
         var anchor = _anchorScreenRect ?? _rootCursorAnchor;
         var hMonitor = PInvoke.MonitorFromPoint(new POINT { x = anchor.X, y = anchor.Y }, PInvoke.MONITOR_DEFAULTTONEAREST);
@@ -592,16 +590,4 @@ internal sealed class PopupMenu
     private static Point RelativePosition(Rectangle bounds, POINT point) => new(point.x - bounds.X, point.y - bounds.Y);
 
     private static Point CenterOf(Rectangle bounds) => new(bounds.Width / 2, bounds.Height / 2);
-
-    private static Rectangle ScaleRect(Rectangle rect, float scale) => new(
-        (int)MathF.Ceiling(rect.X * scale),
-        (int)MathF.Ceiling(rect.Y * scale),
-        (int)MathF.Ceiling(rect.Width * scale),
-        (int)MathF.Ceiling(rect.Height * scale));
-
-    private static Rectangle UnscaleRect(Rectangle rect, float scale) => new(
-        (int)MathF.Ceiling(rect.X / scale),
-        (int)MathF.Ceiling(rect.Y / scale),
-        (int)MathF.Ceiling(rect.Width / scale),
-        (int)MathF.Ceiling(rect.Height / scale));
 }

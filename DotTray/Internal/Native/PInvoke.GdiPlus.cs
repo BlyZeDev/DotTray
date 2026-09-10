@@ -30,6 +30,9 @@ internal static partial class PInvoke
     public static partial int GdipCreatePen2(nint brush, float width, int unit, out nint pen);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipSetPenMode(nint pen, int penMode);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipDeletePen(nint pen);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
@@ -57,7 +60,13 @@ internal static partial class PInvoke
     public static partial int GdipFillRectangleI(nint graphics, nint brush, int x, int y, int width, int height);
 
     [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipDrawRectangleI(nint graphics, nint pen, int x, int y, int width, int height);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
     public static partial int GdipFillEllipseI(nint graphics, nint brush, int x, int y, int width, int height);
+
+    [LibraryImport(GdiPlus, SetLastError = true)]
+    public static partial int GdipDrawEllipseI(nint graphics, nint pen, int x, int y, int width, int height);
 
     [LibraryImport(GdiPlus, SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
     public static partial int GdipMeasureString(nint graphics, string text, int length, nint font, ref RECTF layoutRect, nint stringFormat, out RECTF boundingBox, out int codepointsFitted, out int linesFilled);
