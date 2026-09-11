@@ -12,7 +12,7 @@ sealed class Program
     {
         var cts = new CancellationTokenSource();
 
-        using var icon = await NotifyIcon.RunAsync(CreateTestIcon(StockIconId.Stack), cts.Token);
+        using var icon = await NotifyIcon.RunAsync(CreateTestIcon(StockIconId.DeviceCamera), cts.Token);
 
         Console.ReadLine();
     }

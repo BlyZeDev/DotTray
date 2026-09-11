@@ -1,4 +1,4 @@
-﻿namespace DotTray.Drawing.Primitives;
+﻿namespace DotTray.Primitives;
 
 using System.Diagnostics.CodeAnalysis;
 
