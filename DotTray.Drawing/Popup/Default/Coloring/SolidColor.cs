@@ -102,13 +102,13 @@ public readonly record struct SolidColor : IColorable
     /// <inheritdoc/>
     public readonly bool Equals(IColorable? other) => other is SolidColor solidColor && Equals(solidColor);
 
-    readonly SafeHandle IColorable.CreateGdipBrush(RectangleF bounds)
+    readonly SafeHandle IColorable.CreateGdipBrush(RectF bounds)
     {
         PInvoke.GdipCreateSolidFill((uint)(A << 24 | R << 16 | G << 8 | B), out var hBrush);
         return new BrushSafeHandle(hBrush);
     }
 
-    readonly SafeHandle IColorable.CreateGdipPen(RectangleF bounds, float width)
+    readonly SafeHandle IColorable.CreateGdipPen(RectF bounds, float width)
     {
         PInvoke.GdipCreatePen1((uint)(A << 24 | R << 16 | G << 8 | B), width, PInvoke.UnitPixel, out var hPen);
         return new PenSafeHandle(hPen);

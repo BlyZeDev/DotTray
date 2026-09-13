@@ -18,7 +18,7 @@ public sealed record ItemInteractedEventArgs
     /// <remarks>
     /// For <see cref="ItemInteractionType.MouseLeave"/>, this is the last recorded position inside the item
     /// </remarks>
-    public required Point Position { get; init; }
+    public required Pos Position { get; init; }
 
     /// <summary>
     /// Set to <see langword="true"/> to keep the popup menu open after this interaction,

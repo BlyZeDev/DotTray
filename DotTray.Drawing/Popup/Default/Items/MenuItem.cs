@@ -188,17 +188,17 @@ public class MenuItem : MenuItemBase
     internal protected override void Initialize() => isHovering = false;
 
     /// <inheritdoc/>
-    internal protected override Size Measure(MeasuringContext context)
+    internal protected override Dim Measure(MeasuringContext context)
     {
         var text = context.MeasureText(Text, FontInfo);
-        var baseSize = new Size((int)MathF.Ceiling(text.Width * 1.05f), (int)MathF.Ceiling(text.Height * 1.05f));
+        var baseSize = new Dim((int)MathF.Ceiling(text.Width * 1.05f), (int)MathF.Ceiling(text.Height * 1.05f));
 
         if (SubmenuItems.IsEmpty) return baseSize;
 
         var arrowHeight = Math.Max(6, baseSize.Height / ArrowHeightRatio);
         var arrowWidth = Math.Max(4, arrowHeight * 2 / 3);
 
-        return new Size(baseSize.Width + ArrowGap + arrowWidth + ArrowRightPadding, baseSize.Height);
+        return new Dim(baseSize.Width + ArrowGap + arrowWidth + ArrowRightPadding, baseSize.Height);
     }
 
     /// <inheritdoc/>
@@ -222,8 +222,8 @@ public class MenuItem : MenuItemBase
         var arrowX = bounds.Right - ArrowRightPadding - arrowWidth;
         var arrowY = bounds.Top + (bounds.Height - arrowHeight) / 2;
 
-        var textBounds = new Rectangle(bounds.X, bounds.Y, bounds.Width - arrowWidth - ArrowGap - ArrowRightPadding, bounds.Height);
-        var arrowBounds = new Rectangle(arrowX, arrowY, arrowWidth, arrowHeight);
+        var textBounds = new Rect(bounds.X, bounds.Y, bounds.Width - arrowWidth - ArrowGap - ArrowRightPadding, bounds.Height);
+        var arrowBounds = new Rect(arrowX, arrowY, arrowWidth, arrowHeight);
 
         context.FillRect(bounds, background);
         context.WriteRect(textBounds, Text, FontInfo, foreground);

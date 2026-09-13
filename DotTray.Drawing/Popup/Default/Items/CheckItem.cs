@@ -12,7 +12,7 @@ public class CheckItem : MenuItem
     private const int CheckLeftPadding = 10;
     private const int CheckGap = 8;
 
-    private Rectangle checkBounds;
+    private Rect checkBounds;
 
     /// <summary>
     /// <see langword="true"/> if this instance is checked, otherwise <see langword="false"/>
@@ -30,7 +30,7 @@ public class CheckItem : MenuItem
     }
 
     /// <inheritdoc/>
-    internal protected override Size Measure(MeasuringContext context)
+    internal protected override Dim Measure(MeasuringContext context)
     {
         var baseSize = base.Measure(context);
         var checkSize = Math.Max(10, baseSize.Height / 2);
@@ -39,14 +39,14 @@ public class CheckItem : MenuItem
     }
 
     /// <inheritdoc/>
-    internal protected override Rectangle Arrange(ArrangingContext context)
+    internal protected override Rect Arrange(ArrangingContext context)
     {
         var itemBounds = context.ItemBounds;
 
         var checkSize = Math.Max(10, itemBounds.Height / 2);
         var checkAreaWidth = CheckLeftPadding + checkSize + CheckGap;
 
-        checkBounds = new Rectangle(itemBounds.X + CheckLeftPadding, itemBounds.Y + (itemBounds.Height - checkSize) / 2, checkSize, checkSize);
+        checkBounds = new Rect(itemBounds.X + CheckLeftPadding, itemBounds.Y + (itemBounds.Height - checkSize) / 2, checkSize, checkSize);
 
         return itemBounds with { X = itemBounds.X + checkAreaWidth, Width = itemBounds.Width - checkAreaWidth };
     }
@@ -59,7 +59,7 @@ public class CheckItem : MenuItem
         var foreground = IsDisabled ? ForegroundDisabled : (isHovering ? ForegroundHover : Foreground);
         var background = IsDisabled ? BackgroundDisabled : (isHovering ? BackgroundHover : Background);
 
-        var gutter = new Rectangle(checkBounds.X - CheckLeftPadding, context.ItemBounds.Y, checkBounds.Width + CheckLeftPadding + CheckGap, context.ItemBounds.Height);
+        var gutter = new Rect(checkBounds.X - CheckLeftPadding, context.ItemBounds.Y, checkBounds.Width + CheckLeftPadding + CheckGap, context.ItemBounds.Height);
         context.FillRect(gutter, background);
 
         if (!IsChecked) return;

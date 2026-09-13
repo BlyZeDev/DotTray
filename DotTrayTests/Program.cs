@@ -13,6 +13,7 @@ sealed class Program
         var cts = new CancellationTokenSource();
 
         using var icon = await NotifyIcon.RunAsync(CreateTestIcon(StockIconId.DeviceCamera), cts.Token);
+        icon.SetToolTip(cts.ToString());
 
         Console.ReadLine();
     }

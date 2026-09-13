@@ -81,9 +81,9 @@ public sealed class PopupMenuTree : IDisposable
     /// <inheritdoc/>
     public void Dispose() => PInvoke.PostMessage(_rootHWnd, PInvoke.WM_CLOSE, nint.Zero, nint.Zero);
 
-    internal List<Rectangle> GetOpenWindowRects(nint excludeHWnd)
+    internal List<Rect> GetOpenWindowRects(nint excludeHWnd)
     {
-        var rects = new List<Rectangle>(_ownerByHWnd.Count);
+        var rects = new List<Rect>(_ownerByHWnd.Count);
 
         foreach (var hWnd in _ownerByHWnd.Keys)
         {
@@ -96,7 +96,7 @@ public sealed class PopupMenuTree : IDisposable
         return rects;
     }
 
-    internal void OpenChild(nint ownerHWnd, MenuItemCollection items, Rectangle anchorScreenRect, bool selectFirstItem)
+    internal void OpenChild(nint ownerHWnd, MenuItemCollection items, Rect anchorScreenRect, bool selectFirstItem)
     {
         CloseChildrenOf(ownerHWnd);
 

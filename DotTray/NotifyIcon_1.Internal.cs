@@ -204,7 +204,7 @@ public sealed partial class NotifyIcon<THandler>
         var interaction = new NotifyIconInteractedEventArgs
         {
             Type = (IconInteractionType)(uint)(lParam & 0xFFFF),
-            MousePosition = new Point((short)(wParam & 0xFFFF), (short)((wParam >> 16) & 0xFFFF))
+            MousePosition = new Pos((short)(wParam & 0xFFFF), (short)((wParam >> 16) & 0xFFFF))
         };
 
         Interacted?.Invoke(interaction);

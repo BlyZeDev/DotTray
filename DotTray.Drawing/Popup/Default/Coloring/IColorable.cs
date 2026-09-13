@@ -21,7 +21,7 @@ public interface IColorable : IEquatable<IColorable>
     /// <param name="bounds">The bounds to color</param>
     /// <returns><see cref="SafeHandle"/></returns>
     [EditorBrowsable(EditorBrowsableState.Never)]
-    SafeHandle CreateGdipBrush(RectangleF bounds);
+    SafeHandle CreateGdipBrush(RectF bounds);
 
     /// <summary>
     /// Creates a native GDI+ pen handle
@@ -30,7 +30,7 @@ public interface IColorable : IEquatable<IColorable>
     /// <param name="width">The stroke widht of the pen in pixels</param>
     /// <returns><see cref="SafeHandle"/></returns>
     [EditorBrowsable(EditorBrowsableState.Never)]
-    SafeHandle CreateGdipPen(RectangleF bounds, float width = 2f)
+    SafeHandle CreateGdipPen(RectF bounds, float width = 2f)
     {
         using (var hBrush = CreateGdipBrush(bounds))
         {
@@ -45,5 +45,5 @@ public interface IColorable : IEquatable<IColorable>
     /// <param name="width">The stroke widht of the pen in pixels</param>
     /// <returns><see cref="SafeHandle"/></returns>
     [EditorBrowsable(EditorBrowsableState.Never)]
-    SafeHandle CreateGdipPen(float width = 2f) => CreateGdipPen(new RectangleF(0, 0, 1, 1), width);
+    SafeHandle CreateGdipPen(float width = 2f) => CreateGdipPen(new RectF(0, 0, 1, 1), width);
 }

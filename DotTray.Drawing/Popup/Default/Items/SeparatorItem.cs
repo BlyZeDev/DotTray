@@ -59,7 +59,7 @@ public class SeparatorItem : MenuItemBase
     } = new Padding(8, 4);
 
     /// <inheritdoc/>
-    internal protected override Size Measure(MeasuringContext context) => new Size(Padding.Horizontal, LineHeight + Padding.Vertical);
+    internal protected override Dim Measure(MeasuringContext context) => new Dim(Padding.Horizontal, LineHeight + Padding.Vertical);
 
     /// <inheritdoc/>
     internal protected override void Draw(DrawingContext context)

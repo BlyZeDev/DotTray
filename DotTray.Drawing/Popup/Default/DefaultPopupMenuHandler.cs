@@ -42,10 +42,10 @@ public sealed class DefaultPopupMenuHandler : PopupMenuHandler
     }
 
     /// <inheritdoc/>
-    protected override void Show<THandler>(NotifyIcon<THandler> owner, Point mousePosition) => ShowRoot(owner);
+    protected override void Show<THandler>(NotifyIcon<THandler> owner, Pos mousePosition) => ShowRoot(owner);
 
     /// <inheritdoc/>
-    protected override void ShowContext<THandler>(NotifyIcon<THandler> owner, Point mousePosition) => ShowRoot(owner);
+    protected override void ShowContext<THandler>(NotifyIcon<THandler> owner, Pos mousePosition) => ShowRoot(owner);
 
     private void ShowRoot<THandler>(NotifyIcon<THandler> owner) where THandler : class, INotifyIconHandler
     {

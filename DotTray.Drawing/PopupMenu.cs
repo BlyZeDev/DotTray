@@ -22,9 +22,9 @@ internal sealed class PopupMenu
     private readonly PInvoke.WndProc _wndProc;
     private readonly PopupMenuTree _tree;
 
-    private readonly Rectangle _rootCursorAnchor;
+    private readonly Rect _rootCursorAnchor;
     private readonly MenuItemCollection _items;
-    private readonly Rectangle? _anchorScreenRect;
+    private readonly Rect? _anchorScreenRect;
 
     private MenuItemBase[] itemsSnapshot;
     private MenuItemBase? hotItem;
@@ -35,7 +35,7 @@ internal sealed class PopupMenu
 
     public nint HWnd { get; }
 
-    public PopupMenu(PopupMenuTree tree, nint ownerHWnd, MenuItemCollection items, Rectangle? anchorScreenRect, bool selectFirstItem = false)
+    public PopupMenu(PopupMenuTree tree, nint ownerHWnd, MenuItemCollection items, Rect? anchorScreenRect, bool selectFirstItem = false)
     {
         _tree = tree;
         _items = items;
@@ -132,7 +132,7 @@ internal sealed class PopupMenu
         try
         {
             PInvoke.GetClientRect(hWnd, out var cRect);
-            var bounds = new Rectangle
+            var bounds = new Rect
             {
                 X = cRect.Left,
                 Y = cRect.Top,
@@ -255,7 +255,7 @@ internal sealed class PopupMenu
         return 0;
     }
 
-    private void SetHotItem(MenuItemBase? newHot, Func<Rectangle, Point> positionFor, ItemInteractionType enterType, ItemInteractionType leaveType)
+    private void SetHotItem(MenuItemBase? newHot, Func<Rect, Pos> positionFor, ItemInteractionType enterType, ItemInteractionType leaveType)
     {
         if (ReferenceEquals(newHot, hotItem)) return;
 
@@ -292,7 +292,7 @@ internal sealed class PopupMenu
         PInvoke.InvalidateRect(HWnd, nint.Zero, false);
     }
 
-    private void Interact(MenuItemBase item, Point position, ItemInteractionType type, bool selectFirstOnSubmenu)
+    private void Interact(MenuItemBase item, Pos position, ItemInteractionType type, bool selectFirstOnSubmenu)
     {
         var args = new ItemInteractedEventArgs
         {
@@ -407,7 +407,7 @@ internal sealed class PopupMenu
         return null;
     }
 
-    private Rectangle ToScreenRect(Rectangle localRect)
+    private Rect ToScreenRect(Rect localRect)
     {
         var topLeft = new POINT
         {
@@ -437,7 +437,7 @@ internal sealed class PopupMenu
         return nint.Zero;
     }
 
-    private Rectangle CalcWindowArea(MenuItemBase[] items)
+    private Rect CalcWindowArea(MenuItemBase[] items)
     {
         var hdc = PInvoke.CreateCompatibleDC(nint.Zero);
         _ = PInvoke.GdipCreateFromHDC(hdc, out var gdip);
@@ -445,7 +445,7 @@ internal sealed class PopupMenu
         var maxWidth = 0;
         var totalHeight = 0;
 
-        var measuredSizes = new Size[items.Length];
+        var measuredSizes = new Dim[items.Length];
 
         using (var measuring = new MeasuringContext(gdip, _scale))
         {
@@ -457,7 +457,7 @@ internal sealed class PopupMenu
             }
         }
 
-        using (var arranging = new ArrangingContext(gdip, _scale, new Size(maxWidth, totalHeight)))
+        using (var arranging = new ArrangingContext(gdip, _scale, new Dim(maxWidth, totalHeight)))
         {
             var itemTop = 0;
 
@@ -465,7 +465,7 @@ internal sealed class PopupMenu
             {
                 var item = items[i];
                 var desired = measuredSizes[i];
-                var fullRect = new Rectangle(0, itemTop, maxWidth, desired.Height);
+                var fullRect = new Rect(0, itemTop, maxWidth, desired.Height);
 
                 arranging.ItemBounds = fullRect;
                 arranging.MeasuredItemBounds = fullRect with { Width = desired.Width };
@@ -474,7 +474,7 @@ internal sealed class PopupMenu
 
                 var contentWidth = Math.Clamp(content.Width, 0, maxWidth);
                 var contentX = Math.Clamp(content.X, 0, maxWidth - contentWidth);
-                var contentRect = new Rectangle(contentX, itemTop, contentWidth, desired.Height);
+                var contentRect = new Rect(contentX, itemTop, contentWidth, desired.Height);
 
                 item.HitBounds = fullRect;
                 item.ContentBounds = contentRect;
@@ -494,7 +494,7 @@ internal sealed class PopupMenu
             ? ResolveSubmenuPosition(anchor, maxWidth, totalHeight, workArea, _tree.GetOpenWindowRects(HWnd))
             : ResolveRootPosition(anchor, maxWidth, totalHeight, workArea);
 
-        return new Rectangle(pos.X, pos.Y, maxWidth, totalHeight);
+        return new Rect(pos.X, pos.Y, maxWidth, totalHeight);
     }
 
     private static POINT DecodePoint(nint lParam)
@@ -507,13 +507,13 @@ internal sealed class PopupMenu
         };
     }
 
-    private static Rectangle GetCursorAnchor()
+    private static Rect GetCursorAnchor()
     {
         PInvoke.GetCursorPos(out var pos);
-        return new Rectangle(pos.x, pos.y, 0, 0);
+        return new Rect(pos.x, pos.y, 0, 0);
     }
 
-    private static Point ResolveRootPosition(Rectangle anchor, int width, int height, Rectangle workArea)
+    private static Pos ResolveRootPosition(Rect anchor, int width, int height, Rect workArea)
     {
         var x = anchor.X;
         var y = anchor.Y;
@@ -524,7 +524,7 @@ internal sealed class PopupMenu
         return ClampToWorkArea(x, y, width, height, workArea);
     }
 
-    private static Point ResolveSubmenuPosition(Rectangle anchor, int width, int height, Rectangle workArea, List<Rectangle> obstacles)
+    private static Pos ResolveSubmenuPosition(Rect anchor, int width, int height, Rect workArea, List<Rect> obstacles)
     {
         var y = anchor.Top;
         if (y + height > workArea.Bottom) y = anchor.Bottom - height;
@@ -536,8 +536,8 @@ internal sealed class PopupMenu
         var rightFits = rightX + width <= workArea.Right;
         var leftFits = leftX >= workArea.Left;
 
-        var rightRect = new Rectangle(rightX, y, width, height);
-        var leftRect = new Rectangle(leftX, y, width, height);
+        var rightRect = new Rect(rightX, y, width, height);
+        var leftRect = new Rect(leftX, y, width, height);
 
         var rightOverlaps = rightFits ? CountOverlaps(rightRect, obstacles) : -1;
         var leftOverlaps = leftFits ? CountOverlaps(leftRect, obstacles) : -1;
@@ -553,7 +553,7 @@ internal sealed class PopupMenu
         return ClampToWorkArea(x, y, width, height, workArea);
     }
 
-    private static int CountOverlaps(Rectangle rect, IReadOnlyCollection<Rectangle> obstacles)
+    private static int CountOverlaps(Rect rect, IReadOnlyCollection<Rect> obstacles)
     {
         var count = 0;
         foreach (var obstacle in obstacles)
@@ -564,7 +564,7 @@ internal sealed class PopupMenu
         return count;
     }
 
-    private static Rectangle GetMonitorWorkArea(nint monitorHandle)
+    private static Rect GetMonitorWorkArea(nint monitorHandle)
     {
         var monitorInfo = new MONITORINFO
         {
@@ -579,15 +579,15 @@ internal sealed class PopupMenu
             monitorInfo.rcWork.Bottom - monitorInfo.rcWork.Top);
     }
 
-    private static Point ClampToWorkArea(int x, int y, int width, int height, Rectangle workArea)
+    private static Pos ClampToWorkArea(int x, int y, int width, int height, Rect workArea)
     {
         x = Math.Clamp(x, workArea.Left, Math.Max(workArea.Left, workArea.Right - width));
         y = Math.Clamp(y, workArea.Top, Math.Max(workArea.Top, workArea.Bottom - height));
 
-        return new Point(x, y);
+        return new Pos(x, y);
     }
 
-    private static Point RelativePosition(Rectangle bounds, POINT point) => new(point.x - bounds.X, point.y - bounds.Y);
+    private static Pos RelativePosition(Rect bounds, POINT point) => new(point.x - bounds.X, point.y - bounds.Y);
 
-    private static Point CenterOf(Rectangle bounds) => new(bounds.Width / 2, bounds.Height / 2);
+    private static Pos CenterOf(Rect bounds) => new(bounds.Width / 2, bounds.Height / 2);
 }

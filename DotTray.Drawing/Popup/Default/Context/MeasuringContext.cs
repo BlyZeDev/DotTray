@@ -16,8 +16,8 @@ public sealed class MeasuringContext : Context
     /// </summary>
     /// <param name="text">The text to measure</param>
     /// <param name="fontInfo">The font information to measure</param>
-    /// <returns><see cref="SizeF"/></returns>
-    public SizeF MeasureText(string text, FontInfo fontInfo)
+    /// <returns><see cref="DimF"/></returns>
+    public DimF MeasureText(string text, FontInfo fontInfo)
     {
         PInvoke.GdipCreateFontFamilyFromName(fontInfo.FontFamilyName, nint.Zero, out var hFamily);
         PInvoke.GdipCreateFont(hFamily, fontInfo.Size, 0, PInvoke.UnitPixel, out var hFont);
@@ -45,6 +45,6 @@ public sealed class MeasuringContext : Context
         PInvoke.GdipDeleteFont(hFont);
         PInvoke.GdipDeleteFontFamily(hFamily);
 
-        return new SizeF(measured.Width, measured.Height);
+        return new DimF(measured.Width, measured.Height);
     }
 }

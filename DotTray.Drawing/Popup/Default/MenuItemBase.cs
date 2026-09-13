@@ -9,8 +9,8 @@ using System;
 /// </summary>
 public abstract class MenuItemBase
 {
-    internal Rectangle HitBounds { get; set; }
-    internal Rectangle ContentBounds { get; set; }
+    internal Rect HitBounds { get; set; }
+    internal Rect ContentBounds { get; set; }
 
     internal event Action? Updated;
 
@@ -57,8 +57,8 @@ public abstract class MenuItemBase
     /// Called when this instance needs to be measured
     /// </summary>
     /// <param name="context">Context for measuring this instance</param>
-    /// <returns><see cref="Size"/></returns>
-    internal protected abstract Size Measure(MeasuringContext context);
+    /// <returns><see cref="Dim"/></returns>
+    internal protected abstract Dim Measure(MeasuringContext context);
 
     /// <summary>
     /// Called after every item in the popup has been measured, to determine the bounds this item
@@ -67,11 +67,11 @@ public abstract class MenuItemBase
     /// <remarks>
     /// The default implementation returns <see cref="ArrangingContext.ItemBounds"/> unchanged, so items
     /// draw across the full width of the popup by default.<br/>
-    /// Override to return a narrower <see cref="Rectangle"/> and reserve space for extra content
+    /// Override to return a narrower <see cref="Rect"/> and reserve space for extra content
     /// </remarks>
     /// <param name="context">Context for arranging this instance</param>
-    /// <returns><see cref="Rectangle"/></returns>
-    internal protected virtual Rectangle Arrange(ArrangingContext context) => context.ItemBounds;
+    /// <returns><see cref="Rect"/></returns>
+    internal protected virtual Rect Arrange(ArrangingContext context) => context.ItemBounds;
 
     /// <summary>
     /// Called when this instance needs to be drawn

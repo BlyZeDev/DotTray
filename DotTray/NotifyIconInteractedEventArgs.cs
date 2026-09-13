@@ -14,5 +14,5 @@ public sealed record NotifyIconInteractedEventArgs
     /// <summary>
     /// The coordinates of the cursor (in screen coordinates) at the exact moment the interaction occurred
     /// </summary>
-    public required Point MousePosition { get; init; }
+    public required Pos MousePosition { get; init; }
 }

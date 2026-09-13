@@ -22,9 +22,9 @@ public sealed class ImageSource : IDisposable
     /// <summary>
     /// The size of the image in pixels
     /// </summary>
-    public Size Size { get; }
+    public Dim Size { get; }
 
-    private ImageSource(nint handle, Size size)
+    private ImageSource(nint handle, Dim size)
     {
         _scaledCache = new LinkedList<CacheImage>();
 
@@ -60,7 +60,7 @@ public sealed class ImageSource : IDisposable
             }
         }
 
-        var scaled = new ImageSource(RenderScaled(Handle, width, height), new Size(width, height));
+        var scaled = new ImageSource(RenderScaled(Handle, width, height), new Dim(width, height));
         _scaledCache.AddFirst((scaled, width, height));
         
         if (_scaledCache.Count > MaxCachedScales)
@@ -137,7 +137,7 @@ public sealed class ImageSource : IDisposable
         var materialized = RenderScaled(hImage, (int)width, (int)height);
         PInvoke.GdipDisposeImage(hImage);
 
-        return new ImageSource(materialized, new Size((int)width, (int)height));
+        return new ImageSource(materialized, new Dim((int)width, (int)height));
     }
 
     private static nint RenderScaled(nint source, int width, int height)

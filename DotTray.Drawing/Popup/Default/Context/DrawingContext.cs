@@ -15,7 +15,7 @@ public sealed class DrawingContext : Context
     /// <summary>
     /// The size of the window that contains this item
     /// </summary>
-    public Size WindowSize { get; }
+    public Dim WindowSize { get; }
 
     /// <summary>
     /// The bounds, in window client coordinates, assigned to the item currently being drawn
@@ -23,11 +23,11 @@ public sealed class DrawingContext : Context
     /// <remarks>
     /// This is set immediately before each item's <see cref="MenuItemBase.Draw(DrawingContext)"/> is called
     /// </remarks>
-    public Rectangle ItemBounds { get; internal set; }
+    public Rect ItemBounds { get; internal set; }
 
-    internal DrawingContext(nint gdip, float scale, Rectangle windowBounds) : base(gdip, scale)
+    internal DrawingContext(nint gdip, float scale, Rect windowBounds) : base(gdip, scale)
     {
-        WindowSize = new Size(windowBounds.Right - windowBounds.Left, windowBounds.Bottom - windowBounds.Top);
+        WindowSize = new Dim(windowBounds.Right - windowBounds.Left, windowBounds.Bottom - windowBounds.Top);
     }
 
     /// <summary>
@@ -37,7 +37,7 @@ public sealed class DrawingContext : Context
     /// <param name="rect">The rectangle to outline</param>
     /// <param name="color">The color to use</param>
     /// <param name="strokeWidth">The stroke width to use</param>
-    public void DrawRect<TColor>(Rectangle rect, TColor color, float strokeWidth = 2f) where TColor : notnull, IColorable
+    public void DrawRect<TColor>(Rect rect, TColor color, float strokeWidth = 2f) where TColor : notnull, IColorable
     {
         using (var hPen = color.CreateGdipPen(rect, strokeWidth))
         {
@@ -53,7 +53,7 @@ public sealed class DrawingContext : Context
     /// <typeparam name="TColor">The color type to use</typeparam>
     /// <param name="rect">The rectangle to fill</param>
     /// <param name="color">The color to use</param>
-    public void FillRect<TColor>(Rectangle rect, TColor color) where TColor : notnull, IColorable
+    public void FillRect<TColor>(Rect rect, TColor color) where TColor : notnull, IColorable
     {
         using (var hBrush = color.CreateGdipBrush(rect))
         {
@@ -69,7 +69,7 @@ public sealed class DrawingContext : Context
     /// <param name="rect">The ellipse to outline</param>
     /// <param name="color">The color to use</param>
     /// <param name="strokeWidth">The stroke width to use</param>
-    public void DrawEllipse<TColor>(Rectangle rect, TColor color, float strokeWidth = 2f) where TColor : notnull, IColorable
+    public void DrawEllipse<TColor>(Rect rect, TColor color, float strokeWidth = 2f) where TColor : notnull, IColorable
     {
         using (var hPen = color.CreateGdipPen(rect, strokeWidth))
         {
@@ -85,7 +85,7 @@ public sealed class DrawingContext : Context
     /// <typeparam name="TColor">The color type to use</typeparam>
     /// <param name="rect">The rectangle to fill with an ellipse</param>
     /// <param name="color">The color to use</param>
-    public void FillEllipse<TColor>(Rectangle rect, TColor color) where TColor : notnull, IColorable
+    public void FillEllipse<TColor>(Rect rect, TColor color) where TColor : notnull, IColorable
     {
         using (var hBrush = color.CreateGdipBrush(rect))
         {
@@ -103,7 +103,7 @@ public sealed class DrawingContext : Context
     /// <typeparam name="TColor">The color type to use</typeparam>
     /// <param name="color">The color to use</param>
     /// <param name="points">The points defining the polygon</param>
-    public void FillPolygon<TColor>(TColor color, params ReadOnlySpan<Point> points) where TColor : notnull, IColorable
+    public void FillPolygon<TColor>(TColor color, params ReadOnlySpan<Pos> points) where TColor : notnull, IColorable
     {
         if (points.Length < 3)
         {
@@ -118,7 +118,7 @@ public sealed class DrawingContext : Context
 
             unsafe
             {
-                fixed (Point* hPoints = points)
+                fixed (Pos* hPoints = points)
                 {
                     PInvoke.GdipFillPolygonI(_gdip, hBrush.DangerousGetHandle(), (POINT*)hPoints, points.Length, PInvoke.FillModeAlternate);
                 }
@@ -132,7 +132,7 @@ public sealed class DrawingContext : Context
     /// <typeparam name="TColor">The color type to use</typeparam>
     /// <param name="bounds">The bounds to draw inside</param>
     /// <param name="color">The color to use</param>
-    public void DrawCheckmark<TColor>(Rectangle bounds, TColor color) where TColor : notnull, IColorable
+    public void DrawCheckmark<TColor>(Rect bounds, TColor color) where TColor : notnull, IColorable
     {
         var tVert = Math.Max(2, bounds.Height / 4);
         tVert += tVert % 2;
@@ -157,14 +157,14 @@ public sealed class DrawingContext : Context
 
         var p2X = left + shortArm + longArm;
 
-        ReadOnlySpan<Point> checkmark =
+        ReadOnlySpan<Pos> checkmark =
         [
-            new Point(p0X, p0Y),
-            new Point(p1X, p1Y),
-            new Point(p2X, top),
-            new Point(p2X - tVertHalf, top - tVertHalf),
-            new Point(p1X, p1Y - tVert),
-            new Point(p0X + tVertHalf, p0Y - tVertHalf)
+            new Pos(p0X, p0Y),
+            new Pos(p1X, p1Y),
+            new Pos(p2X, top),
+            new Pos(p2X - tVertHalf, top - tVertHalf),
+            new Pos(p1X, p1Y - tVert),
+            new Pos(p0X + tVertHalf, p0Y - tVertHalf)
         ];
 
         FillPolygon(color, checkmark);
@@ -176,19 +176,19 @@ public sealed class DrawingContext : Context
     /// <typeparam name="TColor">The color type to use</typeparam>
     /// <param name="bounds">The bounds to draw inside</param>
     /// <param name="color">The color to use</param>
-    public void DrawChevron<TColor>(Rectangle bounds, TColor color) where TColor : notnull, IColorable
+    public void DrawChevron<TColor>(Rect bounds, TColor color) where TColor : notnull, IColorable
     {
         var thickness = Math.Max(1, bounds.Height / 5);
         var centerY = bounds.Y + bounds.Height / 2;
 
-        ReadOnlySpan<Point> arrow =
+        ReadOnlySpan<Pos> arrow =
         [
-            new Point(bounds.X, bounds.Y),
-            new Point(bounds.X + thickness, bounds.Y),
-            new Point(bounds.X + bounds.Width, centerY),
-            new Point(bounds.X + thickness, bounds.Y + bounds.Height),
-            new Point(bounds.X, bounds.Y + bounds.Height),
-            new Point(bounds.X + bounds.Width - thickness, centerY)
+            new Pos(bounds.X, bounds.Y),
+            new Pos(bounds.X + thickness, bounds.Y),
+            new Pos(bounds.X + bounds.Width, centerY),
+            new Pos(bounds.X + thickness, bounds.Y + bounds.Height),
+            new Pos(bounds.X, bounds.Y + bounds.Height),
+            new Pos(bounds.X + bounds.Width - thickness, centerY)
         ];
 
         FillPolygon(color, arrow);
@@ -212,7 +212,7 @@ public sealed class DrawingContext : Context
     /// <param name="text">The text to write</param>
     /// <param name="fontInfo">The font information to use</param>
     /// <param name="color">The color to use</param>
-    public void WriteRect<TColor>(RectangleF rect, string text, FontInfo fontInfo, TColor color) where TColor : notnull, IColorable
+    public void WriteRect<TColor>(RectF rect, string text, FontInfo fontInfo, TColor color) where TColor : notnull, IColorable
     {
         PInvoke.GdipCreateFontFamilyFromName(fontInfo.FontFamilyName, nint.Zero, out var hFamily);
         PInvoke.GdipCreateFont(hFamily, fontInfo.Size, 0, PInvoke.UnitPixel, out var hFont);
@@ -255,13 +255,13 @@ public sealed class DrawingContext : Context
     /// </summary>
     /// <param name="rect">The rectangle to fill</param>
     /// <param name="image">The image to draw</param>
-    public void DrawImageRect(Rectangle rect, ImageSource image)
+    public void DrawImageRect(Rect rect, ImageSource image)
     {
         var scaled = image.GetScaled(rect.Width, rect.Height);
         PInvoke.GdipDrawImageRectI(_gdip, scaled.Handle, rect.X, rect.Y, rect.Width, rect.Height);
     }
 
-    private static Rectangle GetBounds(ReadOnlySpan<Point> points)
+    private static Rect GetBounds(ReadOnlySpan<Pos> points)
     {
         var minX = points[0].X;
         var minY = points[0].Y;
@@ -276,6 +276,6 @@ public sealed class DrawingContext : Context
             maxY = Math.Max(maxY, points[i].Y);
         }
 
-        return new Rectangle(minX, minY, maxX - minX, maxY - minY);
+        return new Rect(minX, minY, maxX - minX, maxY - minY);
     }
 }
