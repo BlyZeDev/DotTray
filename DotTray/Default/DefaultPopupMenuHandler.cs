@@ -98,7 +98,11 @@ public sealed class DefaultPopupMenuHandler : PopupMenuHandler
 
             PInvoke.PostMessage(ownerHWnd, PInvoke.WM_NULL, 0, 0);
 
-            if (result != 0 && itemsById.TryGetValue((nuint)result, out var clicked)) clicked.RaiseClicked();
+            if (result != 0 && itemsById.TryGetValue((nuint)result, out var clicked))
+            {
+                if (clicked is CheckItem check) check.IsChecked = !check.IsChecked;
+                clicked.RaiseClick();
+            }
         }
         finally
         {

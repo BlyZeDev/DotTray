@@ -184,6 +184,10 @@ internal static partial class PInvoke
 
     [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool EndMenu();
+
+    [LibraryImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool DestroyMenu(nint hMenu);
 
     [LibraryImport(User32, SetLastError = true)]

@@ -26,6 +26,5 @@ public sealed class CheckItem : MenuItemBase<CheckItem>
     public CheckItem() : base()
     {
         IsChecked = false;
-        Clicked += x => x.IsChecked = !x.IsChecked;
     }
 }

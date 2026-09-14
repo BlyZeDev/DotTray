@@ -45,7 +45,7 @@ public abstract class MenuItemBase : Win32Item
         IsDisabled = false;
     }
 
-    internal abstract void RaiseClicked();
+    internal abstract void RaiseClick();
 
     /// <summary>
     /// Notifies that this instance is updated
@@ -65,5 +65,5 @@ public abstract class MenuItemBase<T> : MenuItemBase where T : MenuItemBase<T>
 
     internal MenuItemBase() : base() { }
 
-    internal override void RaiseClicked() => Clicked?.Invoke((T)this);
+    internal override void RaiseClick() => Clicked?.Invoke((T)this);
 }

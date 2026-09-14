@@ -50,6 +50,8 @@ public sealed class SubmenuItem : MenuItem
                 item.Updated += Update;
             }
         }
+
+        Update();
     }
 
     /// <summary>
