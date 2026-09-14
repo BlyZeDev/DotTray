@@ -3,7 +3,7 @@
 using System.Runtime.InteropServices;
 
 [StructLayout(LayoutKind.Sequential)]
-internal unsafe struct WNDCLASS
+internal struct WNDCLASS
 {
     public uint style;
     public nint lpfnWndProc;

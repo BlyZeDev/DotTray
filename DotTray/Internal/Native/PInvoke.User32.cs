@@ -167,4 +167,32 @@ internal static partial class PInvoke
     [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool KillTimer(nint hWnd, nint nIDEvent);
+
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial nint CreatePopupMenu();
+
+    [LibraryImport(User32, EntryPoint = "AppendMenuW", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool AppendMenu(nint hMenu, uint Flags, nuint uIDNewItem, string? lpNewItem);
+
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial int TrackPopupMenuEx(nint hMenu, uint uFlags, int x, int y, nint hWnd, nint lptpm);
+
+    [LibraryImport(User32, EntryPoint = "SetMenuItemInfoW", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetMenuItemInfo(nint hMenu, nuint item, [MarshalAs(UnmanagedType.Bool)] bool fByPosition, ref MENUITEMINFO lpmii);
+
+    [LibraryImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool DestroyMenu(nint hMenu);
+
+    [LibraryImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetForegroundWindow(nint hWnd);
+
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial nint GetForegroundWindow();
+
+    [LibraryImport(User32, EntryPoint = "FindWindowW", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
+    public static partial nint FindWindow(string? lpClassName, string? lpWindowName);
 }

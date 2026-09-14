@@ -82,6 +82,31 @@ internal static partial class PInvoke
 
     public const int TME_LEAVE = 0x00000002;
 
+    public const uint MF_STRING = 0x00000000;
+    public const uint MF_GRAYED = 0x00000001;
+    public const uint MF_CHECKED = 0x00000008;
+    public const uint MF_POPUP = 0x00000010;
+    public const uint MF_SEPARATOR = 0x00000800;
+
+    public const uint MIIM_STATE = 0x00000001;
+    public const uint MIIM_STRING = 0x00000040;
+
+    public const uint MFS_ENABLED = 0x00000000;
+    public const uint MFS_UNCHECKED = 0x00000000;
+    public const uint MFS_UNHILITE = 0x00000000;
+    public const uint MFS_GRAYED = 0x00000003;
+    public const uint MFS_DISABLED = 0x00000003;
+    public const uint MFS_CHECKED = 0x00000008;
+    public const uint MFS_HILITE = 0x00000080;
+    public const uint MFS_DEFAULT = 0x00001000;
+
+    public const uint TPM_LEFTALIGN = 0x0000;
+    public const uint TPM_BOTTOMALIGN = 0x0020;
+    public const uint TPM_RETURNCMD = 0x0100;
+    public const uint TPM_NONOTIFY = 0x0080;
+
+    public const uint WM_NULL = 0x0000;
+
     public const uint NIF_MESSAGE = 0x00000001;
     public const uint NIF_ICON = 0x00000002;
     public const uint NIF_TIP = 0x00000004;
