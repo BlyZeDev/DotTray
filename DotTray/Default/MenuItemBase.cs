@@ -5,7 +5,7 @@ using System;
 /// <summary>
 /// Represents the base for a default Win32 menu item
 /// </summary>
-public abstract class MenuItemBase : Win32Item
+public abstract class MenuItemBase : ItemBase
 {
     internal event Action? Updated;
 

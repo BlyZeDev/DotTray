@@ -33,6 +33,8 @@ internal static partial class PInvoke
 
     public const int SW_SHOWNOACTIVATE = 4;
 
+    public const uint PM_REMOVE = 0x0001;
+
     public const uint WM_NCACTIVATE = 0x0086;
     public const uint WM_NCCALCSIZE = 0x0083;
     public const uint WM_ERASEBKGND = 0x0014;
@@ -41,6 +43,9 @@ internal static partial class PInvoke
 
     public const uint WM_DESTROY = 0x0002;
     public const uint WM_CLOSE = 0x0010;
+
+    public const uint WM_ENTERMENULOOP = 0x0211;
+    public const uint WM_EXITMENULOOP = 0x0212;
 
     public const int WM_APP = 0x8000;
 
@@ -134,6 +139,7 @@ internal static partial class PInvoke
 
     public const uint MDT_EFFECTIVE_DPI = 0;
 
+    public const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
     public const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
     public const int DWMWA_BORDER_COLOR = 34;
     public const int DWMWA_SYSTEMBACKDROP_TYPE = 38;

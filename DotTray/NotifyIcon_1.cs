@@ -125,6 +125,8 @@ public sealed partial class NotifyIcon<THandler> : IDisposable where THandler : 
     /// <inheritdoc/>
     public void Dispose()
     {
+        if (Handler is IDisposable disposable) disposable.Dispose();
+
         var success = PInvoke.PostMessage(hWnd, PInvoke.WM_CLOSE, 0, 0);
         NotifyIconException.ThrowIfFalse(success, "Posting a close message failed");
 

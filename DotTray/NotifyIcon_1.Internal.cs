@@ -38,7 +38,7 @@ public sealed partial class NotifyIcon<THandler>
         ToolTip = null;
         IsVisible = true;
 
-        var windowClassNameString = $"{nameof(DotTray)}NotifyIconWindow{Id}";
+        var windowClassNameString = $"{nameof(DotTray)}{nameof(NotifyIcon)}Window{Id}";
         var windowClassName = Marshal.StringToHGlobalUni(windowClassNameString);
         PopupWindowClassName = Marshal.StringToHGlobalUni($"{windowClassNameString}_Popup");
 

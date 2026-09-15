@@ -3,7 +3,7 @@
 /// <summary>
 /// Represents a default Win32 separator item
 /// </summary>
-public sealed class SeparatorItem : Win32Item
+public sealed class SeparatorItem : ItemBase
 {
     /// <summary>
     /// Shared instance of a separator item

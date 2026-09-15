@@ -13,7 +13,7 @@ public sealed class SubmenuItem : MenuItem
     /// <summary>
     /// The submenu items of this instance
     /// </summary>
-    public ObservableCollection<Win32Item> Items { get; }
+    public ObservableCollection<ItemBase> Items { get; }
 
     /// <summary>
     /// Initializes a <see cref="SubmenuItem"/> instance with the default configuration

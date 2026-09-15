@@ -1,10 +1,12 @@
 ﻿[assembly: System.Runtime.Versioning.SupportedOSPlatform("windows")]
-
 namespace DotTrayTests;
 
 using DotTray;
 using DotTray.Default;
+using System;
 using System.Drawing;
+using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 sealed class Program
@@ -13,46 +15,64 @@ sealed class Program
     {
         var cts = new CancellationTokenSource();
 
-        using var icon = await NotifyIcon.RunAsync(CreateTestIcon(StockIconId.DeviceCamera), new DefaultPopupMenuHandler(), cts.Token);
-        icon.SetToolTip(cts.ToString());
+        using var icon = await NotifyIcon.RunAsync(
+            CreateTestIcon(StockIconId.DeviceCamera),
+            new DefaultPopupMenuHandler(),
+            cts.Token);
 
-        icon.Handler.Items.Add(new MenuItem
+        var handler = icon.Handler;
+
+        handler.Items.Add(new MenuItem
         {
-            Text = "Test",
-            Clicked = x => Console.WriteLine($"{x.Text} clicked")
-        });
-        icon.Handler.Items.Add(SeparatorItem.Instance);
-        icon.Handler.Items.Add(new SubmenuItem
-        {
-            Text = "Test 2",
-            Clicked = x => Console.WriteLine($"{x.Text} clicked"),
+            Text = "Standard Action",
+            Clicked = item => Console.WriteLine("Action executed!")
         });
 
-        var item = icon.Handler.Items[2] as SubmenuItem;
-        item?.Items.Add(new MenuItem
+        handler.Items.Add(new CheckItem
         {
-            Text = "This is a submenu item",
-            IsDisabled = true,
-        });
-        item?.Items.Add(SeparatorItem.Instance);
-
-        await Task.Delay(5000);
-        Console.WriteLine("Update");
-
-        (icon.Handler.Items[2] as MenuItem)?.Text += " Edit!";
-        icon.Handler.Items.Add(new MenuItem
-        {
-            Text = "New Item"
-        });
-        item?.Items.Add(new CheckItem
-        {
-            Text = "This is also a submenu item",
-            IsDisabled = false,
+            Text = "Enable Background Sync",
             IsChecked = true,
-            Clicked = x => Console.WriteLine($"{x.Text} check state is: {x.IsChecked}")
+            Clicked = item => Console.WriteLine($"Sync is now {(item.IsChecked ? "ON" : "OFF")}")
         });
 
-        Console.ReadLine();
+        handler.Items.Add(SeparatorItem.Instance);
+
+        var submenu = new SubmenuItem { Text = "Advanced Settings" };
+
+        submenu.Items.Add(new MenuItem
+        {
+            Text = "Dynamic Item (Click to update time)",
+            Clicked = item => item.Text = $"Last clicked: {DateTime.Now:HH:mm:ss}"
+        });
+
+        submenu.Items.Add(new MenuItem
+        {
+            Text = "Premium Feature (Locked)",
+            IsDisabled = true
+        });
+
+        handler.Items.Add(submenu);
+
+        handler.Items.Add(SeparatorItem.Instance);
+
+        handler.Items.Add(new MenuItem
+        {
+            Text = "Exit Application",
+            Clicked = _ =>
+            {
+                Console.WriteLine("Exiting gracefully via tray menu...");
+                cts.Cancel();
+            }
+        });
+
+        Console.WriteLine("Tray icon is running. Right-click the system tray icon to see the menu.");
+        Console.WriteLine("Press Enter to exit forcefully.");
+
+        try
+        {
+            await Task.Delay(Timeout.Infinite, cts.Token);
+        }
+        catch (OperationCanceledException) { }
     }
 
     private static string? CreateTestIcon(StockIconId id, StockIconOptions options = StockIconOptions.ShellIconSize)

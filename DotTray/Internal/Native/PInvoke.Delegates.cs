@@ -12,4 +12,7 @@ internal static partial class PInvoke
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true)]
     public delegate nint LowLevelKeyboardProc(int nCode, nint wParam, nint lParam);
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true)]
+    public delegate bool EnumThreadWndProc(nint hWnd, nint lParam);
 }

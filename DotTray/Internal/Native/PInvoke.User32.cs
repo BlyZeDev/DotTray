@@ -74,6 +74,10 @@ internal static partial class PInvoke
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool GetMessage(out MSG lpMsg, nint hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
 
+    [LibraryImport(User32, EntryPoint = "PeekMessageW", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool PeekMessage(out MSG lpMsg, nint hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint bRemoveMsg);
+
     [LibraryImport(User32, EntryPoint = "PostMessageW", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool PostMessage(nint hWnd, uint Msg, nint wParam, nint lParam);
@@ -199,4 +203,14 @@ internal static partial class PInvoke
 
     [LibraryImport(User32, EntryPoint = "FindWindowW", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
     public static partial nint FindWindow(string? lpClassName, string? lpWindowName);
+
+    [LibraryImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool EnumThreadWindows(uint dwThreadId, EnumThreadWndProc lpfn, nint lParam);
+
+    [LibraryImport(User32, EntryPoint = "GetClassNameW", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
+    public static partial int GetClassName(nint hWnd, nint lpClassName, int nMaxCount);
+
+    [LibraryImport(User32, EntryPoint = "CallWindowProcW", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
+    public static partial nint CallWindowProc(nint lpPrevWndFunc, nint hWnd, uint msg, nint wParam, nint lParam);
 }
