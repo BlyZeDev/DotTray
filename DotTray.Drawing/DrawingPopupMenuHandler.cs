@@ -1,9 +1,9 @@
 ﻿namespace DotTray.Drawing;
 
 using DotTray;
-using DotTray.Drawing.Coloring;
 using DotTray.Primitives;
 using System;
+using System.Drawing;
 
 /// <summary>
 /// The default popup behaviour handler
@@ -18,28 +18,25 @@ public sealed class DrawingPopupMenuHandler : PopupMenuHandler
     public MenuItemCollection MenuItems { get; }
 
     /// <summary>
-    /// The background color of this <see cref="DrawingPopupMenuHandler"/> instance
+    /// The background brush of this <see cref="DrawingPopupMenuHandler"/> instance
     /// </summary>
-    /// <remarks>
-    /// Transparency is not supported
-    /// </remarks>
-    public IColorable Color { get; private set; }
+    public Brush Brush { get; private set; }
 
     internal DrawingPopupMenuHandler()
     {
         MenuItems = [];
-        Color = SolidColor.White;
+        Brush = SystemBrushes.Menu;
     }
 
     /// <summary>
-    /// Sets the <see cref="Color"/> of this <see cref="DrawingPopupMenuHandler"/> instance
+    /// Sets the <see cref="Brush"/> of this <see cref="DrawingPopupMenuHandler"/> instance
     /// </summary>
-    /// <param name="color">The color to set for <see cref="Color"/></param>
-    public void SetColor<TColor>(TColor color) where TColor : notnull, IColorable
+    /// <param name="brush">The brush to set for <see cref="Brush"/></param>
+    public void SetBrush<TBrush>(TBrush brush) where TBrush : notnull, Brush
     {
-        if (Color.Equals(color)) return;
+        if (Brush.Equals(brush)) return;
 
-        Color = color;
+        Brush = brush;
     }
 
     /// <inheritdoc/>

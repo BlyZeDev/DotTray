@@ -4,13 +4,14 @@ using DotTray.Drawing;
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using DotTray.Primitives;
+using System.Drawing;
 
 /// <summary>
 /// Includes data for measuring <see cref="MenuItemBase"/> instances
 /// </summary>
 public sealed class MeasuringContext : Context
 {
-    internal MeasuringContext(nint gdip, float scale) : base(gdip, scale) { }
+    internal MeasuringContext(Graphics graphics, float scale) : base(graphics, scale) { }
 
     /// <summary>
     /// Measures the size, in pixels, required to render <paramref name="text"/> with <paramref name="fontInfo"/>

@@ -6,6 +6,7 @@ using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using DotTray.Primitives;
 using System;
+using System.Drawing;
 
 /// <summary>
 /// Includes data for drawing <see cref="MenuItemBase"/> instances
@@ -25,7 +26,7 @@ public sealed class DrawingContext : Context
     /// </remarks>
     public Rect ItemBounds { get; internal set; }
 
-    internal DrawingContext(nint gdip, float scale, Rect windowBounds) : base(gdip, scale)
+    internal DrawingContext(Graphics graphics, float scale, Rect windowBounds) : base(graphics, scale)
     {
         WindowSize = new Dim(windowBounds.Right - windowBounds.Left, windowBounds.Bottom - windowBounds.Top);
     }

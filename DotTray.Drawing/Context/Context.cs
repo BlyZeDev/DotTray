@@ -2,23 +2,17 @@
 
 using DotTray.Internal.Native;
 using System;
-using System.ComponentModel;
+using System.Drawing;
 
 /// <summary>
 /// Represents the context base
 /// </summary>
 public abstract class Context : IDisposable
 {
-    internal readonly nint _gdip;
-
     /// <summary>
-    /// The raw GDI+ graphics handle backing this context
+    /// The graphics object backing up this context
     /// </summary>
-    /// <remarks>
-    /// <b>Caution:</b> Use this if you want native control over the drawing process
-    /// </remarks>
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public nint NativeGraphicsHandle => _gdip;
+    public Graphics Graphics { get; }
 
     /// <summary>
     /// The DPI scale factor of the monitor the menu is being shown on (1.0 = 96 DPI)
@@ -28,9 +22,9 @@ public abstract class Context : IDisposable
     /// </remarks>
     public float DpiScale { get; }
 
-    internal Context(nint gdip, float scale)
+    internal Context(Graphics graphics, float scale)
     {
-        _gdip = gdip;
+        Graphics = graphics;
         DpiScale = scale;
     }
 

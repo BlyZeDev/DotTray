@@ -2,6 +2,7 @@
 
 using DotTray.Drawing;
 using DotTray.Primitives;
+using System.Drawing;
 
 /// <summary>
 /// Includes data for arranging <see cref="MenuItemBase"/> instances
@@ -29,7 +30,7 @@ public sealed class ArrangingContext : Context
     /// </remarks>
     public Rect ItemBounds { get; internal set; }
 
-    internal ArrangingContext(nint gdip, float scale, Dim windowSize) : base(gdip, scale)
+    internal ArrangingContext(Graphics graphics, float scale, Dim windowSize) : base(graphics, scale)
     {
         WindowSize = windowSize;
     }

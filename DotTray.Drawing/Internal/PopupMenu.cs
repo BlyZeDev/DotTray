@@ -1,4 +1,4 @@
-﻿namespace DotTray.Drawing;
+﻿namespace DotTray.Drawing.Internal;
 
 using DotTray.Drawing.Context;
 using DotTray.Internal.Native;
@@ -6,6 +6,8 @@ using DotTray.Internal.Win32;
 using DotTray.Primitives;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 
 internal sealed class PopupMenu
@@ -48,15 +50,14 @@ internal sealed class PopupMenu
 
         foreach (var item in itemsSnapshot) item.Initialize();
 
+        PopupWindowClass.EnsureRegistered(out var className, out var hInstance);
+
         HWnd = PInvoke.CreateWindowEx(
             PInvoke.WS_EX_NOACTIVATE | PInvoke.WS_EX_TOOLWINDOW | PInvoke.WS_EX_TOPMOST,
-            _tree.Owner.PopupWindowClassName, nint.Zero,
+            className, nint.Zero,
             PInvoke.WS_CLIPCHILDREN | PInvoke.WS_CLIPSIBLINGS | PInvoke.WS_POPUP,
             0, 0, 0, 0,
-            ownerHWnd,
-            nint.Zero,
-            _tree.Owner.InstanceHandle,
-            nint.Zero);
+            ownerHWnd, nint.Zero, hInstance, nint.Zero);
 
         _scale = PInvoke.GetDpiForWindow(HWnd) / BaseDpi;
 
@@ -138,43 +139,31 @@ internal sealed class PopupMenu
                 Width = cRect.Right - cRect.Left,
                 Height = cRect.Bottom - cRect.Top
             };
+            if (bounds.Width <= 0 || bounds.Height <= 0) return 0;
 
-            var dc = PInvoke.CreateCompatibleDC(hPaint);
-            var hBitmap = PInvoke.CreateCompatibleBitmap(hPaint, bounds.Width, bounds.Height);
-            var hOldBitmap = PInvoke.SelectObject(dc, hBitmap);
-
-            PInvoke.GdipCreateFromHDC(dc, out var gdip);
-
-            using (var hBackground = _tree.Owner.Handler.Color.CreateGdipBrush(bounds))
+            using (var buffer = BufferedGraphicsManager.Current.Allocate(hPaint, new Rectangle(0, 0, bounds.Width, bounds.Height)))
             {
-                PInvoke.GdipFillRectangleI(
-                    gdip,
-                    hBackground.DangerousGetHandle(),
-                    bounds.X, bounds.Y,
-                    bounds.Width, bounds.Height);
-            }
+                var graphics = buffer.Graphics;
 
-            using (var drawing = new DrawingContext(gdip, _scale, bounds))
-            {
-                foreach (var item in itemsSnapshot)
+                graphics.FillRectangle(_tree.Owner.Handler.Brush, bounds.X, bounds.Y, bounds.Width, bounds.Height);
+
+                using (var drawing = new DrawingContext(graphics, _scale, bounds))
                 {
-                    var hit = item.HitBounds;
-                    PInvoke.GdipSetClipRectI(gdip, hit.X, hit.Y, hit.Width, hit.Height, PInvoke.CombineModeReplace);
+                    foreach (var item in itemsSnapshot)
+                    {
+                        var hit = item.HitBounds;
+                        graphics.SetClip(new Rectangle(hit.X, hit.Y, hit.Width, hit.Height), CombineMode.Replace);
 
-                    drawing.ItemBounds = item.ContentBounds;
-                    item.Draw(drawing);
+                        drawing.ItemBounds = item.ContentBounds;
+                        item.Draw(drawing);
+                    }
                 }
+
+                graphics.ResetClip();
+                buffer.Render();
             }
-
-            PInvoke.GdipResetClip(gdip);
-            PInvoke.GdipDeleteGraphics(gdip);
-
-            PInvoke.BitBlt(hPaint, 0, 0, bounds.Width, bounds.Height, dc, 0, 0, PInvoke.SRCCOPY);
-
-            PInvoke.SelectObject(dc, hOldBitmap);
-            PInvoke.DeleteObject(hBitmap);
-            PInvoke.DeleteDC(dc);
         }
+        catch (Exception) { }
         finally
         {
             PInvoke.EndPaint(hWnd, ref paint);
@@ -438,52 +427,49 @@ internal sealed class PopupMenu
 
     private Rect CalcWindowArea(MenuItemBase[] items)
     {
-        var hdc = PInvoke.CreateCompatibleDC(nint.Zero);
-        _ = PInvoke.GdipCreateFromHDC(hdc, out var gdip);
-
         var maxWidth = 0;
         var totalHeight = 0;
 
         var measuredSizes = new Dim[items.Length];
 
-        using (var measuring = new MeasuringContext(gdip, _scale))
+        using (var graphics = Graphics.FromHwnd(nint.Zero))
         {
-            for (var i = 0; i < items.Length; i++)
+            using (var measuring = new MeasuringContext(graphics, _scale))
             {
-                measuredSizes[i] = items[i].Measure(measuring);
-                maxWidth = Math.Max(maxWidth, measuredSizes[i].Width);
-                totalHeight += measuredSizes[i].Height;
+                for (var i = 0; i < items.Length; i++)
+                {
+                    measuredSizes[i] = items[i].Measure(measuring);
+                    maxWidth = Math.Max(maxWidth, measuredSizes[i].Width);
+                    totalHeight += measuredSizes[i].Height;
+                }
+            }
+
+            using (var arranging = new ArrangingContext(graphics, _scale, new Dim(maxWidth, totalHeight)))
+            {
+                var itemTop = 0;
+
+                for (var i = 0; i < items.Length; i++)
+                {
+                    var item = items[i];
+                    var desired = measuredSizes[i];
+                    var fullRect = new Rect(0, itemTop, maxWidth, desired.Height);
+
+                    arranging.ItemBounds = fullRect;
+                    arranging.MeasuredItemBounds = fullRect with { Width = desired.Width };
+
+                    var content = item.Arrange(arranging);
+
+                    var contentWidth = Math.Clamp(content.Width, 0, maxWidth);
+                    var contentX = Math.Clamp(content.X, 0, maxWidth - contentWidth);
+                    var contentRect = new Rect(contentX, itemTop, contentWidth, desired.Height);
+
+                    item.HitBounds = fullRect;
+                    item.ContentBounds = contentRect;
+
+                    itemTop += desired.Height;
+                }
             }
         }
-
-        using (var arranging = new ArrangingContext(gdip, _scale, new Dim(maxWidth, totalHeight)))
-        {
-            var itemTop = 0;
-
-            for (var i = 0; i < items.Length; i++)
-            {
-                var item = items[i];
-                var desired = measuredSizes[i];
-                var fullRect = new Rect(0, itemTop, maxWidth, desired.Height);
-
-                arranging.ItemBounds = fullRect;
-                arranging.MeasuredItemBounds = fullRect with { Width = desired.Width };
-
-                var content = item.Arrange(arranging);
-
-                var contentWidth = Math.Clamp(content.Width, 0, maxWidth);
-                var contentX = Math.Clamp(content.X, 0, maxWidth - contentWidth);
-                var contentRect = new Rect(contentX, itemTop, contentWidth, desired.Height);
-
-                item.HitBounds = fullRect;
-                item.ContentBounds = contentRect;
-
-                itemTop += desired.Height;
-            }
-        }
-
-        _ = PInvoke.GdipDeleteGraphics(gdip);
-        _ = PInvoke.DeleteDC(hdc);
 
         var anchor = _anchorScreenRect ?? _rootCursorAnchor;
         var hMonitor = PInvoke.MonitorFromPoint(new POINT { x = anchor.X, y = anchor.Y }, PInvoke.MONITOR_DEFAULTTONEAREST);

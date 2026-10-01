@@ -1,6 +1,7 @@
 ﻿namespace DotTray.Drawing;
 
 using DotTray;
+using DotTray.Drawing.Internal;
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using DotTray.Primitives;

@@ -3,10 +3,7 @@
 internal static partial class PInvoke
 {
     private const string User32 = "user32.dll";
-    private const string Kernel32 = "kernel32.dll";
     private const string Shell32 = "shell32.dll";
-    private const string Gdi32 = "gdi32.dll";
-    private const string GdiPlus = "gdiplus.dll";
     private const string DwmApi = "dwmapi.dll";
     private const string Shcore = "shcore.dll";
     private const string UxTheme = "uxtheme.dll";
