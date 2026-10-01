@@ -1,4 +1,4 @@
-﻿namespace DotTray.Popup.Default.Context;
+﻿namespace DotTray.Drawing.Context;
 
 using DotTray.Internal.Native;
 using System;

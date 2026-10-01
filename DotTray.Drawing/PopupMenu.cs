@@ -1,9 +1,8 @@
-﻿namespace DotTray.Drawing.Internal;
+﻿namespace DotTray.Drawing;
 
+using DotTray.Drawing.Context;
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
-using DotTray.Popup.Default;
-using DotTray.Popup.Default.Context;
 using DotTray.Primitives;
 using System;
 using System.Collections.Generic;
@@ -423,7 +422,7 @@ internal sealed class PopupMenu
         PInvoke.ClientToScreen(HWnd, ref topLeft);
         PInvoke.ClientToScreen(HWnd, ref bottomRight);
 
-        return new Rectangle(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y);
+        return new Rect(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y);
     }
 
     private nint HandleDestroy()
@@ -572,7 +571,7 @@ internal sealed class PopupMenu
         };
         PInvoke.GetMonitorInfo(monitorHandle, ref monitorInfo);
 
-        return new Rectangle(
+        return new Rect(
             monitorInfo.rcWork.Left,
             monitorInfo.rcWork.Top,
             monitorInfo.rcWork.Right - monitorInfo.rcWork.Left,

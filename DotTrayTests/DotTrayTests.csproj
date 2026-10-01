@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DotTray.Drawing\DotTray.Drawing.csproj" />
     <ProjectReference Include="..\DotTray\DotTray.csproj" />
   </ItemGroup>
 

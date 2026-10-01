@@ -1,6 +1,7 @@
-﻿namespace DotTray.Popup.Default.Items;
+﻿namespace DotTray.Drawing.Items;
 
-using DotTray.Popup.Default.Context;
+using DotTray.Drawing;
+using DotTray.Drawing.Context;
 using DotTray.Primitives;
 using System;
 

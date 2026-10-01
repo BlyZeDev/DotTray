@@ -9,6 +9,7 @@ internal static partial class PInvoke
     private const string GdiPlus = "gdiplus.dll";
     private const string DwmApi = "dwmapi.dll";
     private const string Shcore = "shcore.dll";
+    private const string UxTheme = "uxtheme.dll";
 
     public const int GWLP_WNDPROC = -4;
 

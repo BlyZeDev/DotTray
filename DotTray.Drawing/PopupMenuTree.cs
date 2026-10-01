@@ -1,7 +1,6 @@
-﻿namespace DotTray.Popup.Default;
+﻿namespace DotTray.Drawing;
 
 using DotTray;
-using DotTray.Internal;
 using DotTray.Internal.Native;
 using DotTray.Internal.Win32;
 using DotTray.Primitives;
@@ -90,7 +89,7 @@ public sealed class PopupMenuTree : IDisposable
             if (hWnd == excludeHWnd) continue;
             if (!PInvoke.GetWindowRect(hWnd, out var rect)) continue;
 
-            rects.Add(new Rectangle(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top));
+            rects.Add(new Rect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top));
         }
 
         return rects;

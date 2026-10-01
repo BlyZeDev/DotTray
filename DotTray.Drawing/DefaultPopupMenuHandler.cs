@@ -1,6 +1,7 @@
-﻿namespace DotTray.Popup.Default;
+﻿namespace DotTray.Drawing;
 
-using DotTray.Popup.Default.Coloring;
+using DotTray;
+using DotTray.Drawing.Coloring;
 using DotTray.Primitives;
 using System;
 

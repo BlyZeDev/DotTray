@@ -1,4 +1,4 @@
-﻿namespace DotTray.Popup.Default;
+﻿namespace DotTray.Drawing;
 
 using System;
 using System.Collections;

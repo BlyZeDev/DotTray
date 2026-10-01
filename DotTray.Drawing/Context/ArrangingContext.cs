@@ -1,6 +1,6 @@
-﻿namespace DotTray.Popup.Default.Context;
+﻿namespace DotTray.Drawing.Context;
 
-using DotTray.Popup.Default;
+using DotTray.Drawing;
 using DotTray.Primitives;
 
 /// <summary>

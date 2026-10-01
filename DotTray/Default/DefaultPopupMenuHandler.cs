@@ -246,16 +246,15 @@ public sealed class DefaultPopupMenuHandler : PopupMenuHandler, IDisposable
 
             try
             {
-                SetPreferredAppMode(1);
+                _ = PInvoke.SetPreferredAppMode(1);
             }
-            catch
+            catch (Exception)
             {
-                AllowDarkModeForApp(true);
+                PInvoke.AllowDarkModeForApp(true);
             }
 
-            AllowDarkModeForWindow(hWnd, true);
-
-            FlushMenuThemes();
+            PInvoke.AllowDarkModeForWindow(hWnd, true);
+            PInvoke.FlushMenuThemes();
         }
         catch (Exception) { }
     }
@@ -271,18 +270,4 @@ public sealed class DefaultPopupMenuHandler : PopupMenuHandler, IDisposable
 
         _semaphore.Dispose();
     }
-    //Experimental
-    [DllImport("uxtheme.dll", EntryPoint = "#132")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool AllowDarkModeForApp([MarshalAs(UnmanagedType.Bool)] bool allow);
-
-    [DllImport("uxtheme.dll", EntryPoint = "#133")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool AllowDarkModeForWindow(nint hWnd, [MarshalAs(UnmanagedType.Bool)] bool allow);
-
-    [DllImport("uxtheme.dll", EntryPoint = "#135")]
-    private static extern int SetPreferredAppMode(int appMode);
-
-    [DllImport("uxtheme.dll", EntryPoint = "#136")]
-    private static extern void FlushMenuThemes();
 }

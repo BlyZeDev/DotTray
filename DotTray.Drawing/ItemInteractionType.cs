@@ -1,4 +1,4 @@
-﻿namespace DotTray.Popup.Default;
+﻿namespace DotTray.Drawing;
 
 /// <summary>
 /// Describes the kind of interaction that occurred on a <see cref="MenuItemBase"/>
