@@ -25,11 +25,11 @@ public sealed class PopupMenuTree : IDisposable
     private nint currentLeafHWnd;
     private bool _disposed;
 
-    internal NotifyIcon<DefaultPopupMenuHandler> Owner { get; }
+    internal NotifyIcon<DrawingPopupMenuHandler> Owner { get; }
 
     internal event Action? Disposed;
 
-    private PopupMenuTree(NotifyIcon<DefaultPopupMenuHandler> owner, bool destroyOnClickOutside)
+    private PopupMenuTree(NotifyIcon<DrawingPopupMenuHandler> owner, bool destroyOnClickOutside)
     {
         Owner = owner;
 
@@ -190,7 +190,7 @@ public sealed class PopupMenuTree : IDisposable
     /// <param name="owner">The owner of this tree</param>
     /// <param name="destroyOnClickOutside"><see langword="true"/> if this popup tree should be destroyed when clicked outside, otherwise <see langword="false"/></param>
     /// <returns><see cref="PopupMenuTree"/></returns>
-    public static PopupMenuTree Show(NotifyIcon<DefaultPopupMenuHandler> owner, bool destroyOnClickOutside)
+    public static PopupMenuTree Show(NotifyIcon<DrawingPopupMenuHandler> owner, bool destroyOnClickOutside)
         => new PopupMenuTree(owner, destroyOnClickOutside);
 
     private static IEnumerable<nint> EnumerateOwnerWindows(nint leafWindow, bool includeLeafWindow = false)

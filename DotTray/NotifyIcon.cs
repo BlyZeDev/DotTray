@@ -12,24 +12,10 @@ using System.Threading.Tasks;
 /// </summary>
 public static class NotifyIcon
 {
-    internal static uint TotalIcons;
-    internal static nint GdipToken;
-
     /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance synchronously
+    /// The total amount of currently running <see cref="NotifyIcon{THandler}"/> instances
     /// </summary>
-    /// /// <remarks>
-    /// This will block until the <see cref="NotifyIcon{THandler}"/> instance is ready or an <see cref="Exception"/> occurs.<br/>
-    /// When using an icon handle as <paramref name="source"/> it will not be destroyed, the responsibility lies with the caller
-    /// </remarks>
-    /// <param name="source">The source of the icon to display</param>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon{THandler}"/> instance</param>
-    /// <returns><see cref="NotifyIcon{THandler}"/></returns>
-    /// <exception cref="ArgumentException"></exception>
-    /// <exception cref="FileNotFoundException"></exception>
-    /// <exception cref="NotifyIconException"></exception>
-    public static NotifyIcon<NotifyIconNullHandler> Run(IconSource source, CancellationToken cancellationToken)
-        => RunInternal(PrepareIconHandle(source), NotifyIconNullHandler.Instance, cancellationToken);
+    public static int TotalIcons { get; internal set; }
 
     /// <summary>
     /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance synchronously
@@ -48,21 +34,6 @@ public static class NotifyIcon
     public static NotifyIcon<THandler> Run<THandler>(IconSource source, THandler handler, CancellationToken cancellationToken)
         where THandler : class, INotifyIconHandler
         => RunInternal(PrepareIconHandle(source), handler, cancellationToken);
-
-    /// <summary>
-    /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance asynchronously
-    /// </summary>
-    /// <remarks>
-    /// When using an icon handle as <paramref name="source"/> it will not be destroyed, the responsibility lies with the caller
-    /// </remarks>
-    /// <param name="source">The source of the icon to display</param>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop this <see cref="NotifyIcon{THandler}"/> instance</param>
-    /// <returns><see cref="NotifyIcon{THandler}"/></returns>
-    /// <exception cref="ArgumentException"></exception>
-    /// <exception cref="FileNotFoundException"></exception>
-    /// <exception cref="NotifyIconException"></exception>
-    public static Task<NotifyIcon<NotifyIconNullHandler>> RunAsync(IconSource source, CancellationToken cancellationToken)
-        => RunInternalAsync(PrepareIconHandle(source), NotifyIconNullHandler.Instance, cancellationToken);
 
     /// <summary>
     /// Creates and runs a <see cref="NotifyIcon{THandler}"/> instance asynchronously

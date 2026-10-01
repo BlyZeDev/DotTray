@@ -3,7 +3,7 @@
 using DotTray.Internal.Win32;
 using System.Runtime.InteropServices;
 
-internal static unsafe partial class PInvoke
+internal static partial class PInvoke
 {
     [LibraryImport(Gdi32, EntryPoint = "GetObjectW", SetLastError = true)]
     public static partial int GetObject(nint hObject, int cbBuffer, out BITMAP bitmap);

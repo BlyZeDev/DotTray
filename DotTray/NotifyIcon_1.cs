@@ -133,9 +133,5 @@ public sealed partial class NotifyIcon<THandler> : IDisposable where THandler : 
         if (_thread.IsAlive) _thread.Join();
 
         NotifyIcon.TotalIcons--;
-        if (NotifyIcon.TotalIcons > 0 || NotifyIcon.GdipToken == nint.Zero) return;
-
-        PInvoke.GdiplusShutdown(NotifyIcon.GdipToken);
-        NotifyIcon.GdipToken = nint.Zero;
     }
 }

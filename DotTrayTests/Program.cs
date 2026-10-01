@@ -1,8 +1,6 @@
 ﻿[assembly: System.Runtime.Versioning.SupportedOSPlatform("windows")]
 namespace DotTrayTests;
 
-using DotTray;
-using DotTray.Default;
 using System;
 using System.Drawing;
 using System.IO;
@@ -17,61 +15,17 @@ sealed class Program
         {
             using (var tempIcon = CreateTestIcon(StockIconId.DesktopPC))
             {
-                using (var icon = await NotifyIcon.RunAsync(tempIcon.FilePath, new DefaultPopupMenuHandler(), cts.Token))
+                var win32Icon = await Win32Icon.RunAsync(tempIcon.FilePath, cts);
+                var drawingIcon = await DrawingIcon.RunAsync(tempIcon.FilePath, cts);
+
+                try
                 {
-                    var handler = icon.Handler;
-
-                    handler.Items.Add(new MenuItem
-                    {
-                        Text = "Standard Action",
-                        Clicked = item => Console.WriteLine("Action executed!")
-                    });
-
-                    handler.Items.Add(new CheckItem
-                    {
-                        Text = "Enable Background Sync",
-                        IsChecked = true,
-                        Clicked = item => Console.WriteLine($"Sync is now {(item.IsChecked ? "ON" : "OFF")}")
-                    });
-
-                    handler.Items.Add(SeparatorItem.Instance);
-
-                    var submenu = new SubmenuItem { Text = "Advanced Settings" };
-
-                    submenu.Items.Add(new MenuItem
-                    {
-                        Text = "Dynamic Item (Click to update time)",
-                        Clicked = item => item.Text = $"Last clicked: {DateTime.Now:HH:mm:ss}"
-                    });
-
-                    submenu.Items.Add(new MenuItem
-                    {
-                        Text = "Premium Feature (Locked)",
-                        IsDisabled = true
-                    });
-
-                    handler.Items.Add(submenu);
-
-                    handler.Items.Add(SeparatorItem.Instance);
-
-                    handler.Items.Add(new MenuItem
-                    {
-                        Text = "Exit Application",
-                        Clicked = _ =>
-                        {
-                            Console.WriteLine("Exiting gracefully via tray menu...");
-                            cts.Cancel();
-                        }
-                    });
-
-                    Console.WriteLine("Tray icon is running");
-
-                    try
-                    {
-                        await Task.Delay(Timeout.Infinite, cts.Token);
-                    }
-                    catch (OperationCanceledException) { }
+                    await Task.Delay(Timeout.Infinite, cts.Token);
                 }
+                catch (OperationCanceledException) { }
+
+                win32Icon.Dispose();
+                drawingIcon.Dispose();
             }
         }
     }

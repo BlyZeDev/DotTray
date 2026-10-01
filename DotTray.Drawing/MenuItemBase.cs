@@ -31,7 +31,7 @@ public abstract class MenuItemBase
     /// <remarks>
     /// <b>Note:</b> This action is fired on the <see cref="NotifyIcon"/>'s background STA thread
     /// </remarks>
-    public Action<ItemInteractedEventArgs>? Interacted { get; set; }
+    public virtual Action<ItemInteractedEventArgs>? Interacted { get; set; }
 
     /// <summary>
     /// Invokes redrawing this instance when called

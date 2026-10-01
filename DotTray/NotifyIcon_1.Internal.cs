@@ -50,16 +50,6 @@ public sealed partial class NotifyIcon<THandler>
             var result = PInvoke.SetThreadDpiAwarenessContext(PInvoke.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
             NotifyIconException.ThrowIfNull(result, "Setting the DPI awareness for this thread failed");
 
-            if (NotifyIcon.GdipToken == nint.Zero)
-            {
-                var input = new GDIPLUSSTARTUPINPUT
-                {
-                    GdiplusVersion = 1
-                };
-                var gdipStatus = (PInvoke.GdiPlusStatus)PInvoke.GdiplusStartup(out NotifyIcon.GdipToken, ref input, out _);
-                NotifyIconException.ThrowIfNotOk(gdipStatus, "GDI+ startup failed");
-            }
-
             var wndProc = new PInvoke.WndProc(WndProcFunc);
             var wndClass = new WNDCLASS
             {

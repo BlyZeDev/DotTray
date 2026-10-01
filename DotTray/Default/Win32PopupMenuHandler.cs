@@ -15,7 +15,7 @@ using System.Threading;
 /// <summary>
 /// The default Win32 popup behaviour
 /// </summary>
-public sealed class DefaultPopupMenuHandler : PopupMenuHandler, IDisposable
+public sealed class Win32PopupMenuHandler : PopupMenuHandler, IDisposable
 {
     private const uint WM_MENUREFRESH = PInvoke.WM_APP + 10;
 
@@ -32,7 +32,7 @@ public sealed class DefaultPopupMenuHandler : PopupMenuHandler, IDisposable
     /// <summary>
     /// Initializes the handler with an empty <see cref="Items"/> collection
     /// </summary>
-    public DefaultPopupMenuHandler()
+    public Win32PopupMenuHandler()
     {
         Items = [];
         Items.CollectionChanged += ItemsChanged;
@@ -82,7 +82,7 @@ public sealed class DefaultPopupMenuHandler : PopupMenuHandler, IDisposable
         if (!_semaphore.Wait(0)) return;
 
         var wndProc = new PInvoke.WndProc(WndProc);
-        var className = Marshal.StringToHGlobalUni($"{nameof(DefaultPopupMenuHandler)}Window{Guid.CreateVersion7()}");
+        var className = Marshal.StringToHGlobalUni($"{nameof(Win32PopupMenuHandler)}Window{Guid.CreateVersion7()}");
 
         try
         {
