@@ -6,3 +6,5 @@
 **/*.user
 **/.editorconfig
 **/*.ini
+**/*.ps1
+**/Properties

@@ -38,9 +38,4 @@
       <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
-	
-	<ItemGroup>
-    <InternalsVisibleTo Include="DotTray.Drawing" />
-  </ItemGroup>
-
 </Project>

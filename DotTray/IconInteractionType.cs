@@ -1,6 +1,6 @@
 ﻿namespace DotTray;
 
-using DotTray.Internal.Native;
+using DotTray.Windows.Native;
 
 /// <summary>
 /// Represents the type of interaction with the <see cref="NotifyIcon"/> or its associated balloon notifications.

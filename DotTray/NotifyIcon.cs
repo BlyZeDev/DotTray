@@ -1,9 +1,10 @@
 ﻿namespace DotTray;
 
-using DotTray.Internal;
-using DotTray.Internal.Native;
+using DotTray.Windows.Native;
 using System;
+using System.ComponentModel;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,7 +31,6 @@ public static class NotifyIcon
     /// <returns><see cref="NotifyIcon{THandler}"/></returns>
     /// <exception cref="ArgumentException"></exception>
     /// <exception cref="FileNotFoundException"></exception>
-    /// <exception cref="NotifyIconException"></exception>
     public static NotifyIcon<THandler> Run<THandler>(IconSource source, THandler handler, CancellationToken cancellationToken)
         where THandler : class, INotifyIconHandler
         => RunInternal(PrepareIconHandle(source), handler, cancellationToken);
@@ -47,7 +47,6 @@ public static class NotifyIcon
     /// <returns><see cref="NotifyIcon{THandler}"/></returns>
     /// <exception cref="ArgumentException"></exception>
     /// <exception cref="FileNotFoundException"></exception>
-    /// <exception cref="NotifyIconException"></exception>
     public static Task<NotifyIcon<THandler>> RunAsync<THandler>(IconSource source, THandler handler, CancellationToken cancellationToken)
         where THandler : class, INotifyIconHandler
         => RunInternalAsync(PrepareIconHandle(source), handler, cancellationToken);
@@ -87,14 +86,12 @@ public static class NotifyIcon
             if (!File.Exists(path)) throw new FileNotFoundException("The .ico file could not be found", path);
 
             var handle = PInvoke.LoadImage(nint.Zero, path, PInvoke.IMAGE_ICON, 0, 0, PInvoke.LR_LOADFROMFILE | PInvoke.LR_DEFAULTSIZE);
-            NotifyIconException.ThrowIfNull(handle, "The .ico file could not be loaded");
-            return handle;
+            return handle == nint.Zero ? throw new Win32Exception(Marshal.GetLastPInvokeError()) : handle;
         }
         else if (source.IsHandle)
         {
             var copyHandle = PInvoke.CopyIcon(source.Handle);
-            NotifyIconException.ThrowIfNull(copyHandle, "Copying the icon handle failed");
-            return copyHandle;
+            return copyHandle == nint.Zero ? throw new Win32Exception(Marshal.GetLastPInvokeError()) : copyHandle;
         }
         else throw new ArgumentException("The icon source is invalid", nameof(source));
     }

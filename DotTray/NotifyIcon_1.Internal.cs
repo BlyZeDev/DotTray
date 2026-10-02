@@ -1,10 +1,9 @@
 ﻿namespace DotTray;
 
-using DotTray.Internal;
-using DotTray.Internal.Native;
-using DotTray.Internal.Win32;
-using DotTray.Primitives;
+using DotTray.Windows.Native;
+using DotTray.Windows.Native.Models;
 using System;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -44,7 +43,7 @@ public sealed partial class NotifyIcon<THandler>
         _thread = new Thread(() =>
         {
             var result = PInvoke.SetThreadDpiAwarenessContext(PInvoke.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-            NotifyIconException.ThrowIfNull(result, "Setting the DPI awareness for this thread failed");
+            if (result == nint.Zero) throw new Win32Exception(Marshal.GetLastPInvokeError());
 
             var wndProc = new PInvoke.WndProc(WndProcFunc);
             var wndClass = new WNDCLASS
@@ -54,10 +53,10 @@ public sealed partial class NotifyIcon<THandler>
                 lpszClassName = windowClassName
             };
             var atom = PInvoke.RegisterClass(ref wndClass);
-            NotifyIconException.ThrowIfZero(atom, "Registering the window class failed");
+            if (atom == 0) throw new Win32Exception(Marshal.GetLastPInvokeError());
 
             hWnd = PInvoke.CreateWindowEx(0, windowClassName, nint.Zero, 0, 0, 0, 0, 0, nint.Zero, nint.Zero, HInstance, nint.Zero);
-            NotifyIconException.ThrowIfNull(hWnd, "Creating a window failed");
+            if (hWnd == nint.Zero) throw new Win32Exception(Marshal.GetLastPInvokeError());
 
             var iconData = new NOTIFYICONDATA
             {
@@ -69,18 +68,18 @@ public sealed partial class NotifyIcon<THandler>
                 hIcon = _hIco
             };
             var success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_ADD, ref iconData);
-            NotifyIconException.ThrowIfFalse(success, "Creating a notification icon failed");
+            if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
 
             iconData.uTimeoutOrVersion = 4;
             success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_SETVERSION, ref iconData);
-            NotifyIconException.ThrowIfFalse(success, "Setting the version of a notification icon failed");
+            if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
 
             onInitializationFinished();
 
             using (var registration = token.Register(() => PInvoke.PostMessage(hWnd, PInvoke.WM_CLOSE, 0, 0)))
             {
                 success = PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_TOOLTIP, 0, 0);
-                NotifyIconException.ThrowIfFalse(success, "Posting a message failed");
+                if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
 
                 while (PInvoke.GetMessage(out var message, nint.Zero, 0, 0))
                 {
@@ -96,13 +95,13 @@ public sealed partial class NotifyIcon<THandler>
                     uFlags = PInvoke.NIF_GUID
                 };
                 success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_DELETE, ref iconData);
-                NotifyIconException.ThrowIfFalse(success, "Deleting a notification icon failed");
+                if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
 
                 success = PInvoke.DestroyIcon(_hIco);
-                NotifyIconException.ThrowIfFalse(success, "Destroying the icon failed");
+                if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
 
                 success = PInvoke.UnregisterClass(windowClassName, HInstance);
-                NotifyIconException.ThrowIfFalse(success, "Unregistering a class failed");
+                if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
 
                 Marshal.FreeHGlobal(windowClassName);
             }
@@ -174,7 +173,7 @@ public sealed partial class NotifyIcon<THandler>
         var interaction = new NotifyIconInteractedEventArgs
         {
             Type = (IconInteractionType)(uint)(lParam & 0xFFFF),
-            MousePosition = new Pos((short)(wParam & 0xFFFF), (short)((wParam >> 16) & 0xFFFF))
+            MousePosition = new MousePosition((short)(wParam & 0xFFFF), (short)((wParam >> 16) & 0xFFFF))
         };
 
         Interacted?.Invoke(interaction);
@@ -193,7 +192,7 @@ public sealed partial class NotifyIcon<THandler>
         NativeString.WriteFixed(iconData.szTip, NOTIFYICONDATA.SZTIP_LENGTH, ToolTip ?? "");
 
         var success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
-        NotifyIconException.ThrowIfFalse(success, "Modifying the notification icon failed");
+        if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
     }
 
     private void HandleVisibility(nint hWnd)
@@ -209,7 +208,7 @@ public sealed partial class NotifyIcon<THandler>
         };
 
         var success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
-        NotifyIconException.ThrowIfFalse(success, "Modifying the notification icon failed");
+        if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
     }
 
     private unsafe void HandleBalloon(nint hWnd)
@@ -232,6 +231,6 @@ public sealed partial class NotifyIcon<THandler>
         nextBalloon = null;
 
         var success = PInvoke.Shell_NotifyIcon(PInvoke.NIM_MODIFY, ref iconData);
-        NotifyIconException.ThrowIfFalse(success, "Modifying the notification icon failed");
+        if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
     }
 }

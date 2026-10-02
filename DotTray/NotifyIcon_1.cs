@@ -1,9 +1,10 @@
 ﻿namespace DotTray;
 
-using DotTray.Internal.Native;
-using DotTray.Internal.Win32;
+using DotTray.Windows.Native;
+using DotTray.Windows.Native.Models;
 using System;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 
 /// <summary>
 /// Represents a Notification Icon that is displayed in the Taskbar
@@ -79,7 +80,7 @@ public sealed partial class NotifyIcon<THandler> : IDisposable where THandler : 
 
         ToolTip = toolTip;
         var success = PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_TOOLTIP, 0, 0);
-        NotifyIconException.ThrowIfFalse(success, "Posting a tooltip message failed");
+        if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
     }
 
     /// <summary>
@@ -91,7 +92,7 @@ public sealed partial class NotifyIcon<THandler> : IDisposable where THandler : 
 
         IsVisible = false;
         var success = PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_VISIBILITY, 0, 0);
-        NotifyIconException.ThrowIfFalse(success, "Posting a visibility message failed");
+        if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
     }
 
     /// <summary>
@@ -103,7 +104,7 @@ public sealed partial class NotifyIcon<THandler> : IDisposable where THandler : 
 
         IsVisible = true;
         var success = PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_VISIBILITY, 0, 0);
-        NotifyIconException.ThrowIfFalse(success, "Posting a visibility message failed");
+        if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
     }
 
     /// <summary>
@@ -119,7 +120,7 @@ public sealed partial class NotifyIcon<THandler> : IDisposable where THandler : 
         };
 
         var success = PInvoke.PostMessage(hWnd, WM_APP_TRAYICON_BALLOON, 0, 0);
-        NotifyIconException.ThrowIfFalse(success, "Posting a balloon message failed");
+        if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
     }
 
     /// <inheritdoc/>
@@ -128,7 +129,7 @@ public sealed partial class NotifyIcon<THandler> : IDisposable where THandler : 
         if (Handler is IDisposable disposable) disposable.Dispose();
 
         var success = PInvoke.PostMessage(hWnd, PInvoke.WM_CLOSE, 0, 0);
-        NotifyIconException.ThrowIfFalse(success, "Posting a close message failed");
+        if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
 
         if (_thread.IsAlive) _thread.Join();
 

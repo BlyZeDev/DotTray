@@ -1,0 +1,14 @@
+﻿namespace DotTray.Windows;
+
+/// <summary>
+/// Represents a default Win32 separator item
+/// </summary>
+public sealed class SeparatorItem : ItemBase
+{
+    /// <summary>
+    /// Shared instance of a separator item
+    /// </summary>
+    public static readonly SeparatorItem Instance = new SeparatorItem();
+
+    private SeparatorItem() { }
+}

@@ -1,7 +1,5 @@
 ﻿namespace DotTray;
 
-using DotTray.Primitives;
-
 /// <summary>
 /// Event arguments for a <see cref="NotifyIcon"/> interaction
 /// </summary>
@@ -14,5 +12,5 @@ public sealed record NotifyIconInteractedEventArgs
     /// <summary>
     /// The coordinates of the cursor (in screen coordinates) at the exact moment the interaction occurred
     /// </summary>
-    public required Pos MousePosition { get; init; }
+    public required MousePosition MousePosition { get; init; }
 }

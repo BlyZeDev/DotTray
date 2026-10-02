@@ -1,6 +1,6 @@
 ﻿namespace DotTray;
 
-using DotTray.Internal.Native;
+using DotTray.Windows.Native;
 
 /// <summary>
 /// Represents an icon that can be shown in a <see cref="BalloonNotification"/>

@@ -1,13 +1,17 @@
 ﻿namespace DotTrayTests;
 
 using DotTray;
-using DotTray.Default;
+using DotTray.Windows;
+using System.Drawing;
+using System.Runtime.Versioning;
 
+[SupportedOSPlatform("windows")]
 public static class Win32Icon
 {
     public static async Task<IDisposable> RunAsync(string iconPath, CancellationTokenSource cts)
     {
-        var icon = await NotifyIcon.RunAsync(iconPath, new Win32PopupMenuHandler(), cts.Token);
+
+        var icon = await NotifyIcon.RunAsync(iconPath, new WindowsPopupMenuHandler(), cts.Token);
         var handler = icon.Handler;
 
         handler.Items.Add(new MenuItem
@@ -56,5 +60,39 @@ public static class Win32Icon
         Console.WriteLine("Win32 icon is running");
 
         return icon;
+    }
+
+    public static TestIcon CreateTestIcon(StockIconId id, StockIconOptions options = StockIconOptions.ShellIconSize)
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"temptesticon.ico");
+
+        using (var icon = SystemIcons.GetStockIcon(id, options))
+        {
+            if (icon is null) throw new FileNotFoundException("Icon not found");
+
+            using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                icon.Save(fileStream);
+                fileStream.Flush();
+            }
+        }
+
+        return new TestIcon(tempPath);
+    }
+
+    public sealed class TestIcon : IDisposable
+    {
+        public string FilePath { get; }
+
+        public TestIcon(string filePath) => FilePath = filePath;
+
+        public void Dispose()
+        {
+            if (File.Exists(FilePath))
+            {
+                File.Delete(FilePath);
+                Console.WriteLine("Deleted: " + FilePath);
+            }
+        }
     }
 }
