@@ -1,12 +1,21 @@
 ﻿namespace DotTray.Primitives;
 
 using System.Diagnostics.CodeAnalysis;
+using System.Drawing;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 /// <summary>
 /// Represents a location and size using integer
 /// </summary>
+[StructLayout(LayoutKind.Sequential, Size = 16)]
 public readonly record struct Rect
 {
+    /// <summary>
+    /// The default <see cref="Rect"/> instance
+    /// </summary>
+    public static readonly Rect Empty = default;
+
     /// <summary>
     /// The X-coordinate of the upper-left corner of this <see cref="Rect"/> instance
     /// </summary>
@@ -56,4 +65,11 @@ public readonly record struct Rect
         Width = width;
         Height = height;
     }
+
+    /// <summary>
+    /// Converts <see cref="Rect"/> to <see cref="Rectangle"/> without allocating
+    /// </summary>
+    /// <param name="rect">The rectangle to convert</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator Rectangle(Rect rect) => Unsafe.BitCast<Rect, Rectangle>(rect);
 }

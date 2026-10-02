@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	<GenerateDocumentationFile>True</GenerateDocumentationFile>
     <Title>DotTray.Drawing</Title>
     <Version>3.0.0</Version>
     <Authors>BlyZe</Authors>

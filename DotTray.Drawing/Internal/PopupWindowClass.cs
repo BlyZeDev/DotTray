@@ -13,9 +13,8 @@ internal static class PopupWindowClass
     private static readonly PInvoke.WndProc _wndProc = WndProc;
 
     private static nint currentHClassName;
-    private static nint currentHInstance;
 
-    public static void EnsureRegistered(out nint hClassName, out nint hInstance)
+    public static void EnsureRegistered(out nint hClassName)
     {
         lock (_lock)
         {
@@ -41,11 +40,9 @@ internal static class PopupWindowClass
                 }
 
                 currentHClassName = name;
-                currentHInstance = instance;
             }
 
             hClassName = currentHClassName;
-            hInstance = currentHInstance;
         }
     }
 

@@ -61,7 +61,7 @@ public class CheckItem : MenuItem
         var background = IsDisabled ? BackgroundDisabled : (isHovering ? BackgroundHover : Background);
 
         var gutter = new Rect(checkBounds.X - CheckLeftPadding, context.ItemBounds.Y, checkBounds.Width + CheckLeftPadding + CheckGap, context.ItemBounds.Height);
-        context.FillRect(gutter, background);
+        context.Graphics.FillRectangle(background, gutter);
 
         if (!IsChecked) return;
 

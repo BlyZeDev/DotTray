@@ -18,12 +18,13 @@ public sealed partial class NotifyIcon<THandler>
     private static readonly uint WM_TASKBARCREATED = PInvoke.RegisterWindowMessage("TaskbarCreated");
 
     private readonly nint _hIco;
-    private readonly nint _hInstance;
     private readonly Thread _thread;
 
     private nint hWnd;
 
     private BalloonNotification? nextBalloon;
+
+    internal nint HInstance { get; }
 
     internal NotifyIcon(nint icoHandle, THandler handler, Action onInitializationFinished, CancellationToken token)
     {
@@ -39,7 +40,7 @@ public sealed partial class NotifyIcon<THandler>
         var windowClassNameString = $"{nameof(DotTray)}{nameof(NotifyIcon)}Window{Id}";
         var windowClassName = Marshal.StringToHGlobalUni(windowClassNameString);
 
-        _hInstance = NativeLibrary.GetMainProgramHandle();
+        HInstance = NativeLibrary.GetMainProgramHandle();
         _thread = new Thread(() =>
         {
             var result = PInvoke.SetThreadDpiAwarenessContext(PInvoke.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -49,13 +50,13 @@ public sealed partial class NotifyIcon<THandler>
             var wndClass = new WNDCLASS
             {
                 lpfnWndProc = Marshal.GetFunctionPointerForDelegate(wndProc),
-                hInstance = _hInstance,
+                hInstance = HInstance,
                 lpszClassName = windowClassName
             };
             var atom = PInvoke.RegisterClass(ref wndClass);
             NotifyIconException.ThrowIfZero(atom, "Registering the window class failed");
 
-            hWnd = PInvoke.CreateWindowEx(0, windowClassName, nint.Zero, 0, 0, 0, 0, 0, nint.Zero, nint.Zero, _hInstance, nint.Zero);
+            hWnd = PInvoke.CreateWindowEx(0, windowClassName, nint.Zero, 0, 0, 0, 0, 0, nint.Zero, nint.Zero, HInstance, nint.Zero);
             NotifyIconException.ThrowIfNull(hWnd, "Creating a window failed");
 
             var iconData = new NOTIFYICONDATA
@@ -100,7 +101,7 @@ public sealed partial class NotifyIcon<THandler>
                 success = PInvoke.DestroyIcon(_hIco);
                 NotifyIconException.ThrowIfFalse(success, "Destroying the icon failed");
 
-                success = PInvoke.UnregisterClass(windowClassName, _hInstance);
+                success = PInvoke.UnregisterClass(windowClassName, HInstance);
                 NotifyIconException.ThrowIfFalse(success, "Unregistering a class failed");
 
                 Marshal.FreeHGlobal(windowClassName);

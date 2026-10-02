@@ -1,10 +1,14 @@
 ﻿namespace DotTray.Primitives;
 
 using System.Diagnostics.CodeAnalysis;
+using System.Drawing;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 /// <summary>
 /// Represents 2-dimensional size using integer
 /// </summary>
+[StructLayout(LayoutKind.Sequential, Size = 8)]
 public readonly record struct Dim
 {
     /// <summary>
@@ -33,4 +37,11 @@ public readonly record struct Dim
         Width = width;
         Height = height;
     }
+
+    /// <summary>
+    /// Converts <see cref="Dim"/> to <see cref="Size"/> without allocating
+    /// </summary>
+    /// <param name="dim">The dimensions to convert</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator Size(Dim dim) => Unsafe.BitCast<Dim, Size>(dim);
 }

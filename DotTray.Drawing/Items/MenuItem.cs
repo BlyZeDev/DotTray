@@ -1,10 +1,11 @@
 ﻿namespace DotTray.Drawing.Items;
 
 using DotTray.Drawing;
-using DotTray.Drawing.Coloring;
 using DotTray.Drawing.Context;
+using DotTray.Drawing.Primitives;
 using DotTray.Primitives;
 using System;
+using System.Drawing;
 
 /// <summary>
 /// Represents a popup menu item
@@ -38,7 +39,7 @@ public class MenuItem : MenuItemBase
     /// <summary>
     /// The background color
     /// </summary>
-    public IColorable Background
+    public Brush Background
     {
         get;
         set
@@ -48,12 +49,12 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    } = SolidColor.Transparent;
+    } = SystemBrushes.Menu;
 
     /// <summary>
-    /// The text color
+    /// The foreground color
     /// </summary>
-    public IColorable Foreground
+    public Brush Foreground
     {
         get;
         set
@@ -63,12 +64,12 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    } = SolidColor.Black;
+    } = SystemBrushes.MenuText;
 
     /// <summary>
     /// The background hover color
     /// </summary>
-    public IColorable BackgroundHover
+    public Brush BackgroundHover
     {
         get;
         set
@@ -78,12 +79,12 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    } = SolidColor.Gray with { A = 127 };
+    } = SystemBrushes.Highlight;
 
     /// <summary>
     /// The foreground hover color
     /// </summary>
-    public IColorable ForegroundHover
+    public Brush ForegroundHover
     {
         get;
         set
@@ -93,12 +94,12 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    } = SolidColor.Black;
+    } = SystemBrushes.HighlightText;
 
     /// <summary>
     /// The background disabled color
     /// </summary>
-    public IColorable BackgroundDisabled
+    public Brush BackgroundDisabled
     {
         get;
         set
@@ -108,12 +109,12 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    } = SolidColor.Transparent;
+    } = SystemBrushes.Menu;
 
     /// <summary>
     /// The foreground disabled color
     /// </summary>
-    public IColorable ForegroundDisabled
+    public Brush ForegroundDisabled
     {
         get;
         set
@@ -123,7 +124,7 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    } = SolidColor.Gray;
+    } = SystemBrushes.GrayText;
 
     /// <summary>
     /// The displayed text
@@ -153,7 +154,7 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    } = new FontInfo("Segoe UI Emoji", 20f);
+    } = new FontInfo("Segoe UI Emoji", 12);
 
     /// <summary>
     /// <see langword="true"/> to disable this instance, otherwise <see langword="false"/>
@@ -210,7 +211,7 @@ public class MenuItem : MenuItemBase
 
         if (SubmenuItems.IsEmpty)
         {
-            context.FillRect(bounds, background);
+            context.Graphics.FillRectangle(background, bounds);
             context.Write(Text, FontInfo, foreground);
             return;
         }
@@ -224,7 +225,7 @@ public class MenuItem : MenuItemBase
         var textBounds = new Rect(bounds.X, bounds.Y, bounds.Width - arrowWidth - ArrowGap - ArrowRightPadding, bounds.Height);
         var arrowBounds = new Rect(arrowX, arrowY, arrowWidth, arrowHeight);
 
-        context.FillRect(bounds, background);
+        context.Graphics.FillRectangle(background, bounds);
         context.WriteRect(textBounds, Text, FontInfo, foreground);
         context.DrawChevron(arrowBounds, foreground);
     }

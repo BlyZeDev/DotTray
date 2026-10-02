@@ -1,12 +1,13 @@
 ﻿namespace DotTray.Drawing.Context;
 
 using DotTray.Drawing;
-using DotTray.Drawing.Coloring;
-using DotTray.Internal.Native;
-using DotTray.Internal.Win32;
+using DotTray.Drawing.Primitives;
 using DotTray.Primitives;
 using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 /// <summary>
 /// Includes data for drawing <see cref="MenuItemBase"/> instances
@@ -32,108 +33,12 @@ public sealed class DrawingContext : Context
     }
 
     /// <summary>
-    /// Draws the border of <paramref name="rect"/> with <paramref name="color"/>
+    /// Draws a checkmark inside <paramref name="bounds"/> with <paramref name="brush"/>
     /// </summary>
-    /// <typeparam name="TColor">The color type to use</typeparam>
-    /// <param name="rect">The rectangle to outline</param>
-    /// <param name="color">The color to use</param>
-    /// <param name="strokeWidth">The stroke width to use</param>
-    public void DrawRect<TColor>(Rect rect, TColor color, float strokeWidth = 2f) where TColor : notnull, IColorable
-    {
-        using (var hPen = color.CreateGdipPen(rect, strokeWidth))
-        {
-            PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeHighSpeed);
-            PInvoke.GdipSetPenMode(hPen.DangerousGetHandle(), PInvoke.PenAlignmentInset);
-            PInvoke.GdipDrawRectangleI(_gdip, hPen.DangerousGetHandle(), rect.X, rect.Y, rect.Width, rect.Height);
-        }
-    }
-
-    /// <summary>
-    /// Fills the whole <paramref name="rect"/> with <paramref name="color"/>
-    /// </summary>
-    /// <typeparam name="TColor">The color type to use</typeparam>
-    /// <param name="rect">The rectangle to fill</param>
-    /// <param name="color">The color to use</param>
-    public void FillRect<TColor>(Rect rect, TColor color) where TColor : notnull, IColorable
-    {
-        using (var hBrush = color.CreateGdipBrush(rect))
-        {
-            PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeHighSpeed);
-            PInvoke.GdipFillRectangleI(_gdip, hBrush.DangerousGetHandle(), rect.X, rect.Y, rect.Width, rect.Height);
-        }
-    }
-
-    /// <summary>
-    /// Draws the ellipse inside <paramref name="rect"/> with <paramref name="color"/>
-    /// </summary>
-    /// <typeparam name="TColor">The color type to use</typeparam>
-    /// <param name="rect">The ellipse to outline</param>
-    /// <param name="color">The color to use</param>
-    /// <param name="strokeWidth">The stroke width to use</param>
-    public void DrawEllipse<TColor>(Rect rect, TColor color, float strokeWidth = 2f) where TColor : notnull, IColorable
-    {
-        using (var hPen = color.CreateGdipPen(rect, strokeWidth))
-        {
-            PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeAntiAlias8x8);
-            PInvoke.GdipSetPenMode(hPen.DangerousGetHandle(), PInvoke.PenAlignmentInset);
-            PInvoke.GdipDrawEllipseI(_gdip, hPen.DangerousGetHandle(), rect.X, rect.Y, rect.Width, rect.Height);
-        }
-    }
-
-    /// <summary>
-    /// Fills the ellipse inside <paramref name="rect"/> with <paramref name="color"/>
-    /// </summary>
-    /// <typeparam name="TColor">The color type to use</typeparam>
-    /// <param name="rect">The rectangle to fill with an ellipse</param>
-    /// <param name="color">The color to use</param>
-    public void FillEllipse<TColor>(Rect rect, TColor color) where TColor : notnull, IColorable
-    {
-        using (var hBrush = color.CreateGdipBrush(rect))
-        {
-            PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeAntiAlias8x8);
-            PInvoke.GdipFillEllipseI(_gdip, hBrush.DangerousGetHandle(), rect.X, rect.Y, rect.Width, rect.Height);
-        }
-    }
-
-    /// <summary>
-    /// Fills a polygon defined by <paramref name="points"/> with <paramref name="color"/>
-    /// </summary>
-    /// <remarks>
-    /// A polygon requires at least 3 points
-    /// </remarks>
-    /// <typeparam name="TColor">The color type to use</typeparam>
-    /// <param name="color">The color to use</param>
-    /// <param name="points">The points defining the polygon</param>
-    public void FillPolygon<TColor>(TColor color, params ReadOnlySpan<Pos> points) where TColor : notnull, IColorable
-    {
-        if (points.Length < 3)
-        {
-            return;
-        }
-
-        var bounds = GetBounds(points);
-
-        using (var hBrush = color.CreateGdipBrush(bounds))
-        {
-            PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeAntiAlias8x8);
-
-            unsafe
-            {
-                fixed (Pos* hPoints = points)
-                {
-                    PInvoke.GdipFillPolygonI(_gdip, hBrush.DangerousGetHandle(), (POINT*)hPoints, points.Length, PInvoke.FillModeAlternate);
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Draws a checkmark inside <paramref name="bounds"/> with <paramref name="color"/>
-    /// </summary>
-    /// <typeparam name="TColor">The color type to use</typeparam>
+    /// <typeparam name="TBrush">The brush type to use</typeparam>
     /// <param name="bounds">The bounds to draw inside</param>
-    /// <param name="color">The color to use</param>
-    public void DrawCheckmark<TColor>(Rect bounds, TColor color) where TColor : notnull, IColorable
+    /// <param name="brush">The brush to use</param>
+    public void DrawCheckmark<TBrush>(Rect bounds, TBrush brush) where TBrush : notnull, Brush
     {
         var tVert = Math.Max(2, bounds.Height / 4);
         tVert += tVert % 2;
@@ -168,16 +73,16 @@ public sealed class DrawingContext : Context
             new Pos(p0X + tVertHalf, p0Y - tVertHalf)
         ];
 
-        FillPolygon(color, checkmark);
+        FillPolygon(brush, checkmark);
     }
 
     /// <summary>
-    /// Draws a chevron arrow inside <paramref name="bounds"/> with <paramref name="color"/>
+    /// Draws a chevron arrow inside <paramref name="bounds"/> with <paramref name="brush"/>
     /// </summary>
-    /// <typeparam name="TColor">The color type to use</typeparam>
+    /// <typeparam name="TBrush">The brush type to use</typeparam>
     /// <param name="bounds">The bounds to draw inside</param>
-    /// <param name="color">The color to use</param>
-    public void DrawChevron<TColor>(Rect bounds, TColor color) where TColor : notnull, IColorable
+    /// <param name="brush">The brush to use</param>
+    public void DrawChevron<TBrush>(Rect bounds, TBrush brush) where TBrush : notnull, Brush
     {
         var thickness = Math.Max(1, bounds.Height / 5);
         var centerY = bounds.Y + bounds.Height / 2;
@@ -192,91 +97,46 @@ public sealed class DrawingContext : Context
             new Pos(bounds.X + bounds.Width - thickness, centerY)
         ];
 
-        FillPolygon(color, arrow);
+        FillPolygon(brush, arrow);
     }
 
     /// <summary>
-    /// Fills the whole <see cref="ItemBounds"/> with <paramref name="text"/> using <paramref name="fontInfo"/> and <paramref name="color"/>
+    /// Fills the whole <see cref="ItemBounds"/> with <paramref name="text"/> using <paramref name="fontInfo"/> and <paramref name="brush"/>
     /// </summary>
-    /// <typeparam name="TColor">The color type to use</typeparam>
+    /// <typeparam name="TBrush">The brush type to use</typeparam>
     /// <param name="text">The text to write</param>
     /// <param name="fontInfo">The font information to use</param>
-    /// <param name="color">The color to use</param>
-    public void Write<TColor>(string text, FontInfo fontInfo, TColor color) where TColor : notnull, IColorable
-        => WriteRect(ItemBounds, text, fontInfo, color);
+    /// <param name="brush">The brush to use</param>
+    public void Write<TBrush>(string text, FontInfo fontInfo, TBrush brush) where TBrush : notnull, Brush
+        => WriteRect(ItemBounds, text, fontInfo, brush);
 
     /// <summary>
-    /// Fills the whole <paramref name="rect"/> with <paramref name="text"/> using <paramref name="fontInfo"/> and <paramref name="color"/>
+    /// Fills the whole <paramref name="rect"/> with <paramref name="text"/> using <paramref name="fontInfo"/> and <paramref name="brush"/>
     /// </summary>
-    /// <typeparam name="TColor">The color type to use</typeparam>
+    /// <typeparam name="TBrush">The brush type to use</typeparam>
     /// <param name="rect">The rectangle to fill</param>
     /// <param name="text">The text to write</param>
     /// <param name="fontInfo">The font information to use</param>
-    /// <param name="color">The color to use</param>
-    public void WriteRect<TColor>(RectF rect, string text, FontInfo fontInfo, TColor color) where TColor : notnull, IColorable
+    /// <param name="brush">The brush to use</param>
+    public void WriteRect<TBrush>(RectF rect, string text, FontInfo fontInfo, TBrush brush) where TBrush : notnull, Brush
     {
-        PInvoke.GdipCreateFontFamilyFromName(fontInfo.FontFamilyName, nint.Zero, out var hFamily);
-        PInvoke.GdipCreateFont(hFamily, fontInfo.Size, 0, PInvoke.UnitPixel, out var hFont);
-
-        PInvoke.GdipCreateStringFormat(0, 0, out var hFormat);
-        PInvoke.GdipSetStringFormatFlags(hFormat, PInvoke.StringFormatFlagsFitBlackBox | PInvoke.StringFormatFlagsNoWrap);
-        PInvoke.GdipSetStringFormatAlign(hFormat, (int)fontInfo.Alignment);
-        PInvoke.GdipSetStringFormatLineAlign(hFormat, PInvoke.StringAlignmentCenter);
-
-        using (var hBrush = color.CreateGdipBrush(rect))
+        using (var font = CreateFont(fontInfo))
         {
-            var layoutRect = new RECTF
+            using (var format = CreateFormat(fontInfo))
             {
-                X = rect.X,
-                Y = rect.Y,
-                Width = rect.Width,
-                Height = rect.Height
-            };
-            text = SanitizeText(text);
+                text = SanitizeText(text);
 
-            PInvoke.GdipSetSmoothingMode(_gdip, PInvoke.SmoothingModeAntiAlias8x8);
-            PInvoke.GdipSetPixelOffsetMode(_gdip, PInvoke.PixelOffsetModeHalf);
-            PInvoke.GdipSetTextRenderingHint(_gdip, GetTextRenderingHint(fontInfo.Size));
-            PInvoke.GdipDrawString(_gdip, text, text.Length, hFont, ref layoutRect, hFormat, hBrush.DangerousGetHandle());
+                Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                Graphics.PixelOffsetMode = PixelOffsetMode.Half;
+                Graphics.TextRenderingHint = GetTextRenderingHint(fontInfo.Size);
+                Graphics.DrawString(text, font, brush, Unsafe.BitCast<RectF, RectangleF>(rect), format);
+            }
         }
-
-        PInvoke.GdipDeleteStringFormat(hFormat);
-        PInvoke.GdipDeleteFont(hFont);
-        PInvoke.GdipDeleteFontFamily(hFamily);
     }
 
-    /// <summary>
-    /// Fills the whole <see cref="ItemBounds"/> with <paramref name="image"/>
-    /// </summary>
-    /// <param name="image">The image to draw</param>
-    public void DrawImage(ImageSource image) => DrawImageRect(ItemBounds, image);
-
-    /// <summary>
-    /// Fills the whole <paramref name="rect"/> with <paramref name="image"/>
-    /// </summary>
-    /// <param name="rect">The rectangle to fill</param>
-    /// <param name="image">The image to draw</param>
-    public void DrawImageRect(Rect rect, ImageSource image)
+    private void FillPolygon(Brush brush, ReadOnlySpan<Pos> polygon)
     {
-        var scaled = image.GetScaled(rect.Width, rect.Height);
-        PInvoke.GdipDrawImageRectI(_gdip, scaled.Handle, rect.X, rect.Y, rect.Width, rect.Height);
-    }
-
-    private static Rect GetBounds(ReadOnlySpan<Pos> points)
-    {
-        var minX = points[0].X;
-        var minY = points[0].Y;
-        var maxX = minX;
-        var maxY = minY;
-
-        for (var i = 1; i < points.Length; i++)
-        {
-            minX = Math.Min(minX, points[i].X);
-            minY = Math.Min(minY, points[i].Y);
-            maxX = Math.Max(maxX, points[i].X);
-            maxY = Math.Max(maxY, points[i].Y);
-        }
-
-        return new Rect(minX, minY, maxX - minX, maxY - minY);
+        Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        Graphics.FillPolygon(brush, MemoryMarshal.Cast<Pos, Point>(polygon), FillMode.Alternate);
     }
 }

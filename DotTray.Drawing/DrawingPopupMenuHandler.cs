@@ -20,6 +20,9 @@ public sealed class DrawingPopupMenuHandler : PopupMenuHandler
     /// <summary>
     /// The background brush of this <see cref="DrawingPopupMenuHandler"/> instance
     /// </summary>
+    /// <remarks>
+    /// <b>Do not dispose this instance</b>
+    /// </remarks>
     public Brush Brush { get; private set; }
 
     internal DrawingPopupMenuHandler()

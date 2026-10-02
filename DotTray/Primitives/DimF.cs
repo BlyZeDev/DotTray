@@ -1,10 +1,14 @@
 ﻿namespace DotTray.Primitives;
 
 using System.Diagnostics.CodeAnalysis;
+using System.Drawing;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 /// <summary>
 /// Represents 2-dimensional size using floating point
 /// </summary>
+[StructLayout(LayoutKind.Sequential, Size = 8)]
 public readonly record struct DimF
 {
     /// <summary>
@@ -37,6 +41,13 @@ public readonly record struct DimF
     /// <summary>
     /// Implicitly converts <see cref="Dim"/> to <see cref="DimF"/>
     /// </summary>
-    /// <param name="size">The size to convert</param>
-    public static implicit operator DimF(Dim size) => new DimF(size.Width, size.Height);
+    /// <param name="dim">The dimensions to convert</param>
+    public static implicit operator DimF(Dim dim) => new DimF(dim.Width, dim.Height);
+
+    /// <summary>
+    /// Converts <see cref="DimF"/> to <see cref="SizeF"/> without allocating
+    /// </summary>
+    /// <param name="dimF">The dimensions to convert</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator SizeF(DimF dimF) => Unsafe.BitCast<DimF, SizeF>(dimF);
 }

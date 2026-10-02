@@ -50,14 +50,14 @@ internal sealed class PopupMenu
 
         foreach (var item in itemsSnapshot) item.Initialize();
 
-        PopupWindowClass.EnsureRegistered(out var className, out var hInstance);
+        PopupWindowClass.EnsureRegistered(out var className);
 
         HWnd = PInvoke.CreateWindowEx(
             PInvoke.WS_EX_NOACTIVATE | PInvoke.WS_EX_TOOLWINDOW | PInvoke.WS_EX_TOPMOST,
             className, nint.Zero,
             PInvoke.WS_CLIPCHILDREN | PInvoke.WS_CLIPSIBLINGS | PInvoke.WS_POPUP,
             0, 0, 0, 0,
-            ownerHWnd, nint.Zero, hInstance, nint.Zero);
+            ownerHWnd, nint.Zero, _tree.Owner.HInstance, nint.Zero);
 
         _scale = PInvoke.GetDpiForWindow(HWnd) / BaseDpi;
 

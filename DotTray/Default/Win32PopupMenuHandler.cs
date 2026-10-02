@@ -39,10 +39,10 @@ public sealed class Win32PopupMenuHandler : PopupMenuHandler, IDisposable
     }
 
     /// <inheritdoc/>
-    protected override void Show<THandler>(NotifyIcon<THandler> owner, Pos mousePosition) => ShowPopupMenu(owner.NativeWindowHandle, owner.InstanceHandle, mousePosition);
+    protected override void Show<THandler>(NotifyIcon<THandler> owner, Pos mousePosition) => ShowPopupMenu(owner.NativeWindowHandle, owner.HInstance, mousePosition);
 
     /// <inheritdoc/>
-    protected override void ShowContext<THandler>(NotifyIcon<THandler> owner, Pos mousePosition) => ShowPopupMenu(owner.NativeWindowHandle, owner.InstanceHandle, mousePosition);
+    protected override void ShowContext<THandler>(NotifyIcon<THandler> owner, Pos mousePosition) => ShowPopupMenu(owner.NativeWindowHandle, owner.HInstance, mousePosition);
 
     private void ItemsChanged(object? sender, NotifyCollectionChangedEventArgs args)
     {

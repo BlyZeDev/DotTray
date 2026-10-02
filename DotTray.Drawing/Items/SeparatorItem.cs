@@ -1,11 +1,11 @@
 ﻿namespace DotTray.Drawing.Items;
 
 using DotTray.Drawing;
-using DotTray.Drawing.Coloring;
 using DotTray.Drawing.Context;
 using DotTray.Drawing.Primitives;
 using DotTray.Primitives;
 using System;
+using System.Drawing;
 
 /// <summary>
 /// Represents a basic popup separator item
@@ -18,7 +18,7 @@ public class SeparatorItem : MenuItemBase
     /// <summary>
     /// The line color
     /// </summary>
-    public IColorable LineColor
+    public Brush LineColor
     {
         get;
         set
@@ -28,7 +28,7 @@ public class SeparatorItem : MenuItemBase
             field = value;
             Update();
         }
-    } = SolidColor.Black;
+    } = SystemBrushes.ControlDark;
 
     /// <summary>
     /// The line height
@@ -66,12 +66,12 @@ public class SeparatorItem : MenuItemBase
     /// <inheritdoc/>
     internal protected override void Draw(DrawingContext context)
     {
-        context.FillRect(context.ItemBounds with
+        context.Graphics.FillRectangle(LineColor, context.ItemBounds with
         {
             X = context.ItemBounds.X + Padding.Left,
             Y = context.ItemBounds.Y + Padding.Top,
             Width = Math.Max(0, context.ItemBounds.Width - Padding.Horizontal),
             Height = LineHeight
-        }, LineColor);
+        });
     }
 }

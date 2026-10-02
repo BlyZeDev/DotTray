@@ -1,6 +1,13 @@
 ﻿namespace DotTray.Drawing;
 
-public static class NotifyIconExtensions
+using DotTray.Primitives;
+using System.Drawing;
+using System.Runtime.CompilerServices;
+
+/// <summary>
+/// Extensions which this library includes
+/// </summary>
+public static class DotTrayExtensions
 {
     extension(NotifyIcon)
     {
