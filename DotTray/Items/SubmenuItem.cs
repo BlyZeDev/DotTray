@@ -1,4 +1,4 @@
-﻿namespace DotTray.Windows;
+﻿namespace DotTray.Items;
 
 using System.Collections;
 using System.Collections.ObjectModel;

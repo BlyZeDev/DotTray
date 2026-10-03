@@ -1,7 +1,8 @@
-﻿namespace DotTray.Windows;
+﻿namespace DotTray;
 
-using DotTray.Windows.Native;
-using DotTray.Windows.Native.Models;
+using DotTray.Internal;
+using DotTray.Internal.Models;
+using DotTray.Items;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,7 +15,7 @@ using System.Threading;
 /// <summary>
 /// The default Win32 popup behaviour
 /// </summary>
-public sealed class WindowsPopupMenuHandler : PopupMenuHandler, IDisposable
+public sealed class DefaultPopupMenuHandler : PopupMenuHandler, IDisposable
 {
     private const uint WM_MENUREFRESH = PInvoke.WM_APP + 10;
 
@@ -31,17 +32,17 @@ public sealed class WindowsPopupMenuHandler : PopupMenuHandler, IDisposable
     /// <summary>
     /// Initializes the handler with an empty <see cref="Items"/> collection
     /// </summary>
-    public WindowsPopupMenuHandler()
+    public DefaultPopupMenuHandler()
     {
         Items = [];
         Items.CollectionChanged += ItemsChanged;
     }
 
     /// <inheritdoc/>
-    protected override void Show<THandler>(NotifyIcon<THandler> owner, MousePosition mousePosition) => ShowPopupMenu(owner.NativeWindowHandle, owner.HInstance, mousePosition);
+    protected override void Show<THandler>(NotifyIcon<THandler> owner, MousePosition mousePosition) => ShowPopupMenu(owner.NativeWindowHandle, mousePosition);
 
     /// <inheritdoc/>
-    protected override void ShowContext<THandler>(NotifyIcon<THandler> owner, MousePosition mousePosition) => ShowPopupMenu(owner.NativeWindowHandle, owner.HInstance, mousePosition);
+    protected override void ShowContext<THandler>(NotifyIcon<THandler> owner, MousePosition mousePosition) => ShowPopupMenu(owner.NativeWindowHandle, mousePosition);
 
     private void ItemsChanged(object? sender, NotifyCollectionChangedEventArgs args)
     {
@@ -76,24 +77,25 @@ public sealed class WindowsPopupMenuHandler : PopupMenuHandler, IDisposable
         PInvoke.PostMessage(currentHWnd, WM_MENUREFRESH, 0, 0);
     }
 
-    private void ShowPopupMenu(nint ownerHWnd, nint instanceHandle, MousePosition mousePosition)
+    private void ShowPopupMenu(nint ownerHWnd, MousePosition mousePosition)
     {
         if (!_semaphore.Wait(0)) return;
 
         var wndProc = new PInvoke.WndProc(WndProc);
-        var className = Marshal.StringToHGlobalUni($"{nameof(WindowsPopupMenuHandler)}Window{Guid.CreateVersion7()}");
+        var className = Marshal.StringToHGlobalUni($"{nameof(DefaultPopupMenuHandler)}Window{Guid.CreateVersion7()}");
 
+        var hInstance = NativeLibrary.GetMainProgramHandle();
         try
         {
             var wndClass = new WNDCLASS
             {
                 lpfnWndProc = Marshal.GetFunctionPointerForDelegate(wndProc),
-                hInstance = instanceHandle,
+                hInstance = hInstance,
                 lpszClassName = className
             };
             if (PInvoke.RegisterClass(ref wndClass) == 0) return;
 
-            hWnd = PInvoke.CreateWindowEx(0, className, nint.Zero, 0, 0, 0, 0, 0, nint.Zero, nint.Zero, instanceHandle, nint.Zero);
+            hWnd = PInvoke.CreateWindowEx(0, className, nint.Zero, 0, 0, 0, 0, 0, nint.Zero, nint.Zero, hInstance, nint.Zero);
             if (hWnd == nint.Zero) return;
 
             RunMenuLoop(ownerHWnd, mousePosition);
@@ -106,7 +108,7 @@ public sealed class WindowsPopupMenuHandler : PopupMenuHandler, IDisposable
                 hWnd = nint.Zero;
             }
 
-            PInvoke.UnregisterClass(className, instanceHandle);
+            PInvoke.UnregisterClass(className, hInstance);
             Marshal.FreeHGlobal(className);
 
             requestedReopen = false;

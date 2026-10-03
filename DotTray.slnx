@@ -1,10 +1,4 @@
 <Solution>
-  <Folder Name="/Projektmappenelemente/">
-    <File Path="deploy-run-raspi.ps1" />
-  </Folder>
-  <Folder Name="/Solution Items/">
-    <File Path=".editorconfig" />
-  </Folder>
   <Project Path="DotTray/DotTray.csproj" />
   <Project Path="DotTrayTests/DotTrayTests.csproj" />
 </Solution>

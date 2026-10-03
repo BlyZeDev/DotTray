@@ -1,4 +1,4 @@
-﻿namespace DotTray.Windows.Native.Models;
+﻿namespace DotTray.Internal.Models;
 
 using System;
 using System.Runtime.InteropServices;

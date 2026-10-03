@@ -1,4 +1,4 @@
-﻿namespace DotTray;
+﻿namespace DotTray.Internal;
 
 using System.Threading;
 using System.Threading.Tasks;

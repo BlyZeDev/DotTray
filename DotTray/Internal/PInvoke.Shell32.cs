@@ -1,6 +1,6 @@
-﻿namespace DotTray.Windows.Native;
+﻿namespace DotTray.Internal;
 
-using DotTray.Windows.Native.Models;
+using DotTray.Internal.Models;
 using System.Runtime.InteropServices;
 
 internal static partial class PInvoke

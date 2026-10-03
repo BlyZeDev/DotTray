@@ -1,6 +1,6 @@
 ﻿namespace DotTray;
 
-using DotTray.Windows.Native.Models;
+using DotTray.Internal.Models;
 using System;
 
 /// <summary>
@@ -8,10 +8,6 @@ using System;
 /// </summary>
 public sealed record BalloonNotification
 {
-    private readonly string _title = "";
-    private readonly string _message = "";
-    private readonly BalloonNotificationIcon _icon = BalloonNotificationIcon.None;
-
     /// <summary>
     /// The title of the notification
     /// </summary>
@@ -20,8 +16,8 @@ public sealed record BalloonNotification
     /// </remarks>
     public required string Title
     {
-        get => _title;
-        init => _title = value.Length > NOTIFYICONDATA.SZINFOTITLE_LENGTH ? value[..NOTIFYICONDATA.SZINFOTITLE_LENGTH] : value;
+        get;
+        init => field = value.Length > NOTIFYICONDATA.SZINFOTITLE_LENGTH ? value[..NOTIFYICONDATA.SZINFOTITLE_LENGTH] : value;
     }
 
     /// <summary>
@@ -32,8 +28,8 @@ public sealed record BalloonNotification
     /// </remarks>
     public required string Message
     {
-        get => _message;
-        init => _message = value.Length > NOTIFYICONDATA.SZINFO_LENGTH ? value[..NOTIFYICONDATA.SZINFO_LENGTH] : value;
+        get;
+        init => field = value.Length > NOTIFYICONDATA.SZINFO_LENGTH ? value[..NOTIFYICONDATA.SZINFO_LENGTH] : value;
     }
 
     /// <summary>
@@ -41,12 +37,12 @@ public sealed record BalloonNotification
     /// </summary>
     public BalloonNotificationIcon Icon
     {
-        get => _icon;
+        get;
         init
         {
-            if (Enum.IsDefined(value)) _icon = value;
+            if (Enum.IsDefined(value)) field = value;
         }
-    }
+    } = BalloonNotificationIcon.None;
 
     /// <summary>
     /// <see langword="true"/> if no sound should be played, otherwise <see langword="false"/>

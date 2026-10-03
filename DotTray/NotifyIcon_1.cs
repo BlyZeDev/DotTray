@@ -1,7 +1,7 @@
 ﻿namespace DotTray;
 
-using DotTray.Windows.Native;
-using DotTray.Windows.Native.Models;
+using DotTray.Internal;
+using DotTray.Internal.Models;
 using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 /// Represents a Notification Icon that is displayed in the Taskbar
 /// </summary>
 /// <remarks> 
-/// To get the best possible result it's recommended that the icon includes a 16x16 or 32x32 variant with a 32-bit color depth including alpha channel.<br/>
+/// To get the best looking result it's recommended that the icon includes a 16x16 or 32x32 variant with a 32-bit color depth including alpha channel.<br/>
 /// Using other sizes or color depths may lead to unexpected results or poor quality rendering.
 /// </remarks>
 public sealed partial class NotifyIcon<THandler> : IDisposable where THandler : class, INotifyIconHandler
@@ -126,8 +126,6 @@ public sealed partial class NotifyIcon<THandler> : IDisposable where THandler : 
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (Handler is IDisposable disposable) disposable.Dispose();
-
         var success = PInvoke.PostMessage(hWnd, PInvoke.WM_CLOSE, 0, 0);
         if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
 

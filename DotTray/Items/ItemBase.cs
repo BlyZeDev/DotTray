@@ -1,4 +1,4 @@
-﻿namespace DotTray.Windows;
+﻿namespace DotTray.Items;
 
 /// <summary>
 /// Represents the base of a Win32 item

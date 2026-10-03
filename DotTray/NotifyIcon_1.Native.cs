@@ -1,7 +1,7 @@
 ﻿namespace DotTray;
 
-using DotTray.Windows.Native;
-using DotTray.Windows.Native.Models;
+using DotTray.Internal;
+using DotTray.Internal.Models;
 using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
@@ -17,13 +17,12 @@ public sealed partial class NotifyIcon<THandler>
     private static readonly uint WM_TASKBARCREATED = PInvoke.RegisterWindowMessage("TaskbarCreated");
 
     private readonly nint _hIco;
+    private readonly nint _hInstance;
     private readonly Thread _thread;
 
     private nint hWnd;
 
     private BalloonNotification? nextBalloon;
-
-    internal nint HInstance { get; }
 
     internal NotifyIcon(nint icoHandle, THandler handler, Action onInitializationFinished, CancellationToken token)
     {
@@ -39,7 +38,7 @@ public sealed partial class NotifyIcon<THandler>
         var windowClassNameString = $"{nameof(DotTray)}{nameof(NotifyIcon)}Window{Id}";
         var windowClassName = Marshal.StringToHGlobalUni(windowClassNameString);
 
-        HInstance = NativeLibrary.GetMainProgramHandle();
+        _hInstance = NativeLibrary.GetMainProgramHandle();
         _thread = new Thread(() =>
         {
             var result = PInvoke.SetThreadDpiAwarenessContext(PInvoke.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -49,13 +48,13 @@ public sealed partial class NotifyIcon<THandler>
             var wndClass = new WNDCLASS
             {
                 lpfnWndProc = Marshal.GetFunctionPointerForDelegate(wndProc),
-                hInstance = HInstance,
+                hInstance = _hInstance,
                 lpszClassName = windowClassName
             };
             var atom = PInvoke.RegisterClass(ref wndClass);
             if (atom == 0) throw new Win32Exception(Marshal.GetLastPInvokeError());
 
-            hWnd = PInvoke.CreateWindowEx(0, windowClassName, nint.Zero, 0, 0, 0, 0, 0, nint.Zero, nint.Zero, HInstance, nint.Zero);
+            hWnd = PInvoke.CreateWindowEx(0, windowClassName, nint.Zero, 0, 0, 0, 0, 0, nint.Zero, nint.Zero, _hInstance, nint.Zero);
             if (hWnd == nint.Zero) throw new Win32Exception(Marshal.GetLastPInvokeError());
 
             var iconData = new NOTIFYICONDATA
@@ -100,15 +99,17 @@ public sealed partial class NotifyIcon<THandler>
                 success = PInvoke.DestroyIcon(_hIco);
                 if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
 
-                success = PInvoke.UnregisterClass(windowClassName, HInstance);
+                success = PInvoke.UnregisterClass(windowClassName, _hInstance);
                 if (!success) throw new Win32Exception(Marshal.GetLastPInvokeError());
 
                 Marshal.FreeHGlobal(windowClassName);
             }
 
             GC.KeepAlive(wndProc);
-        });
-        _thread.Name = $"{nameof(NotifyIcon)}::{Id}";
+        })
+        {
+            Name = $"{nameof(NotifyIcon)}::{Id}"
+        };
         _thread.SetApartmentState(ApartmentState.STA);
         _thread.Start();
     }

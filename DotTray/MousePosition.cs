@@ -1,6 +1,5 @@
 ﻿namespace DotTray;
 
-using System;
 using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
@@ -11,20 +10,12 @@ public readonly record struct MousePosition
     /// <summary>
     /// The X-coordinate
     /// </summary>
-    public readonly int X
-    {
-        get;
-        init => field = Math.Max(0, value);
-    }
+    public readonly int X { get; init; }
 
     /// <summary>
     /// The Y-coordinate
     /// </summary>
-    public readonly int Y
-    {
-        get;
-        init => field = Math.Max(0, value);
-    }
+    public readonly int Y { get; init; }
 
     /// <summary>
     /// Initializes a new mouse position

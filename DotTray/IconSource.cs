@@ -15,6 +15,9 @@ public readonly struct IconSource
     internal bool IsPath => Path is not null;
     internal bool IsHandle => Handle != nint.Zero;
 
+    /// <exception cref="InvalidOperationException"></exception>
+    public IconSource() => throw new InvalidOperationException("The source can not be empty");
+
     private IconSource(string? path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(path));

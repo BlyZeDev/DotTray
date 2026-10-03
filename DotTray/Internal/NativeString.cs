@@ -1,4 +1,4 @@
-﻿namespace DotTray;
+﻿namespace DotTray.Internal;
 
 using System;
 using System.Runtime.InteropServices;

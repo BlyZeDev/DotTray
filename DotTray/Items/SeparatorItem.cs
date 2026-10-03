@@ -1,4 +1,4 @@
-﻿namespace DotTray.Windows;
+﻿namespace DotTray.Items;
 
 /// <summary>
 /// Represents a default Win32 separator item

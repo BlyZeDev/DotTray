@@ -1,6 +1,6 @@
 ﻿namespace DotTray;
 
-using DotTray.Windows.Native;
+using DotTray.Internal;
 using System;
 using System.ComponentModel;
 using System.IO;
