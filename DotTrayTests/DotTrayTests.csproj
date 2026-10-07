@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DotTray.Direct\DotTray.Direct.csproj" />
     <ProjectReference Include="..\DotTray\DotTray.csproj" />
   </ItemGroup>
 

@@ -2,29 +2,37 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <IsAotCompatible>true</IsAotCompatible>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <ApplicationIcon>icon.ico</ApplicationIcon>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Title>DotTray.Direct</Title>
+    <Version>3.0.0</Version>
     <Authors>BlyZe</Authors>
-    <Title>DotTray</Title>
-    <Description>Lightweight Windows notification icon</Description>
-    <Copyright></Copyright>
+    <Description>Lightweight, highly customizable Windows notification icon powered by Direct2D</Description>
     <PackageProjectUrl>https://github.com/BlyZeDev/DotTray</PackageProjectUrl>
     <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/BlyZeDev/DotTray</RepositoryUrl>
-    <PackageTags>notify;notifyicon;notification;notificationicon;blyze;blyzedev;dottray;tray;trayicon</PackageTags>
+    <PackageTags>notify;notifyicon;notification;notificationicon;blyze;blyzedev;dottray;tray;trayicon;direct;direct2d;directwrite</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <Version>3.0.0</Version>
-    <PackageReleaseNotes></PackageReleaseNotes>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
-	<ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <IsAotCompatible>True</IsAotCompatible>
+    <IsTrimmable>True</IsTrimmable>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <IsAotCompatible>True</IsAotCompatible>
+    <IsTrimmable>True</IsTrimmable>
+  </PropertyGroup>
+
+  <ItemGroup>
     <Content Include="icon.ico" />
   </ItemGroup>
 
@@ -38,4 +46,9 @@
       <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DotTray\DotTray.csproj" />
+  </ItemGroup>
+
 </Project>

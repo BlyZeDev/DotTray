@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="DotTray.Direct/DotTray.Direct.csproj" Id="6fda0519-8e2f-4577-8d0e-69af550c5196" />
   <Project Path="DotTray/DotTray.csproj" />
   <Project Path="DotTrayTests/DotTrayTests.csproj" />
 </Solution>
