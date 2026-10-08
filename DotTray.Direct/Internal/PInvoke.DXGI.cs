@@ -14,5 +14,5 @@ internal static partial class PInvoke
     public const uint DXGI_ALPHA_MODE_PREMULTIPLIED = 1;
 
     [LibraryImport(DXGI)]
-    public static partial int CreateDXGIFactory2(uint flags, in Guid riid, [MarshalUsing(typeof(ComInterfaceMarshaller<COM.IDXGIFactory2>))] out COM.IDXGIFactory2 factory);
+    public static partial int CreateDXGIFactory2(uint flags, in Guid riid, [MarshalUsing(typeof(ComInterfaceMarshaller<IDXGIFactory2>))] out IDXGIFactory2 factory);
 }

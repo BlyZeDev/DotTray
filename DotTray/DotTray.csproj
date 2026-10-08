@@ -24,7 +24,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
-	<ItemGroup>
+    <ItemGroup>
     <Content Include="icon.ico" />
   </ItemGroup>
 

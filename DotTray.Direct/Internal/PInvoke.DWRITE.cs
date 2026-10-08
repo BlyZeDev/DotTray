@@ -21,5 +21,5 @@ internal static partial class PInvoke
     public const uint DWRITE_WORD_WRAPPING_NO_WRAP = 1;
 
     [LibraryImport(DWRITE)]
-    public static partial int DWriteCreateFactory(uint factoryType, in Guid iid, [MarshalUsing(typeof(ComInterfaceMarshaller<COM.IDWriteFactory>))] out COM.IDWriteFactory factory);
+    public static partial int DWriteCreateFactory(uint factoryType, in Guid iid, [MarshalUsing(typeof(ComInterfaceMarshaller<IDWriteFactory>))] out IDWriteFactory factory);
 }

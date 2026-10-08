@@ -17,5 +17,5 @@ internal static partial class PInvoke
     public const uint D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT = 4;
 
     [LibraryImport(D2D1)]
-    public static partial int D2D1CreateDevice([MarshalUsing(typeof(ComInterfaceMarshaller<COM.IDXGIDevice>))] COM.IDXGIDevice dxgiDevice, nint creationProperties, [MarshalUsing(typeof(ComInterfaceMarshaller<COM.ID2D1Device>))] out COM.ID2D1Device device);
+    public static partial int D2D1CreateDevice([MarshalUsing(typeof(ComInterfaceMarshaller<IDXGIDevice>))] IDXGIDevice dxgiDevice, nint creationProperties, [MarshalUsing(typeof(ComInterfaceMarshaller<ID2D1Device>))] out ID2D1Device device);
 }

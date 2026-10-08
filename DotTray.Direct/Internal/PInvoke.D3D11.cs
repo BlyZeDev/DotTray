@@ -13,5 +13,5 @@ internal static partial class PInvoke
     public const uint D3D11_SDK_VERSION = 7;
 
     [LibraryImport(D3D11)]
-    public static partial int D3D11CreateDevice(nint adapter, uint driverType, nint software, uint flags, nint featureLevels, uint featureLevelCount, uint sdkVersion, [MarshalUsing(typeof(ComInterfaceMarshaller<COM.ID3D11Device>))] out COM.ID3D11Device device, nint featureLevel, nint immediateContext);
+    public static partial int D3D11CreateDevice(nint adapter, uint driverType, nint software, uint flags, nint featureLevels, uint featureLevelCount, uint sdkVersion, [MarshalUsing(typeof(ComInterfaceMarshaller<ID3D11Device>))] out ID3D11Device device, nint featureLevel, nint immediateContext);
 }

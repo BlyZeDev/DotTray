@@ -81,7 +81,7 @@ public sealed class DefaultPopupMenuHandler : PopupMenuHandler, IDisposable
     {
         if (!_semaphore.Wait(0)) return;
 
-        var wndProc = new PInvoke.WndProc(WndProc);
+        var wndProc = new PInvoke.WndProc(WndProcFunc);
         var className = Marshal.StringToHGlobalUni($"{nameof(DefaultPopupMenuHandler)}Window{Guid.CreateVersion7()}");
 
         var hInstance = NativeLibrary.GetMainProgramHandle();
@@ -175,7 +175,7 @@ public sealed class DefaultPopupMenuHandler : PopupMenuHandler, IDisposable
         }
     }
 
-    private static nint WndProc(nint hWnd, uint msg, nint wParam, nint lParam)
+    private static nint WndProcFunc(nint hWnd, uint msg, nint wParam, nint lParam)
     {
         if (msg == WM_MENUREFRESH)
         {
@@ -244,7 +244,7 @@ public sealed class DefaultPopupMenuHandler : PopupMenuHandler, IDisposable
         {
             var enabled = 1;
             PInvoke.DwmSetWindowAttribute(hWnd, PInvoke.DWMWA_USE_IMMERSIVE_DARK_MODE, ref enabled, sizeof(int));
-
+            
             try
             {
                 _ = PInvoke.SetPreferredAppMode(1);
