@@ -11,6 +11,7 @@ internal static partial class PInvoke
     public const int DWRITE_FONT_WEIGHT_NORMAL = 400;
     public const int DWRITE_FONT_WEIGHT_SEMI_BOLD = 600;
     public const int DWRITE_FONT_STYLE_NORMAL = 0;
+    public const int DWRITE_FONT_STYLE_ITALIC = 2;
     public const int DWRITE_FONT_STRETCH_NORMAL = 5;
     public const uint DWRITE_TEXT_ALIGNMENT_LEADING = 0;
     public const uint DWRITE_TEXT_ALIGNMENT_TRAILING = 1;

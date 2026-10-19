@@ -11,6 +11,7 @@ internal static partial class PInvoke
     public const uint D2D1_BITMAP_OPTIONS_TARGET = 0x1;
     public const uint D2D1_BITMAP_OPTIONS_CANNOT_DRAW = 0x2;
     public const uint D2D1_ANTIALIAS_MODE_PER_PRIMITIVE = 0;
+    public const uint D2D1_ANTIALIAS_MODE_ALIASED = 1;
     public const uint D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE = 2;
     public const uint D2D1_DRAW_TEXT_OPTIONS_NONE = 0;
     public const uint D2D1_DRAW_TEXT_OPTIONS_CLIP = 2;

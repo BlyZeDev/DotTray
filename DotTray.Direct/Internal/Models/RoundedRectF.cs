@@ -5,6 +5,6 @@ using System.Runtime.InteropServices;
 [StructLayout(LayoutKind.Sequential)]
 internal struct RoundedRectF
 {
-    public RectF Rect;
+    public RECTF Rect;
     public float RadiusX, RadiusY;
 }

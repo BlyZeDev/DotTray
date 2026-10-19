@@ -5,7 +5,7 @@ using DotTray.Items;
 using System;
 using System.Drawing;
 
-internal class DotTrayTest
+public static class DotTrayTest
 {
     public static async Task TestAsync()
     {

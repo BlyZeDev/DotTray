@@ -3,7 +3,7 @@
 using System.Runtime.InteropServices;
 
 [StructLayout(LayoutKind.Sequential)]
-internal struct RectF
+internal struct RECTF
 {
     public float Left, Top, Right, Bottom;
 }

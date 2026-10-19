@@ -53,9 +53,9 @@ internal partial interface ID2D1RenderTarget : ID2D1Resource
     [PreserveSig]
     void DrawLine(PointF p0, PointF p1, ID2D1Brush brush, float strokeWidth, nint strokeStyle);
     [PreserveSig]
-    void DrawRectangle(in RectF rect, ID2D1Brush brush, float strokeWidth, nint strokeStyle);
+    void DrawRectangle(in RECTF rect, ID2D1Brush brush, float strokeWidth, nint strokeStyle);
     [PreserveSig]
-    void FillRectangle(in RectF rect, ID2D1Brush brush);
+    void FillRectangle(in RECTF rect, ID2D1Brush brush);
     [PreserveSig]
     void DrawRoundedRectangle(in RoundedRectF rect, ID2D1Brush brush, float strokeWidth, nint strokeStyle);
     [PreserveSig]
@@ -72,7 +72,7 @@ internal partial interface ID2D1RenderTarget : ID2D1Resource
     void DrawBitmap_Unbound();
 
     [PreserveSig]
-    void DrawText(string text, uint length, IDWriteTextFormat format, in RectF layoutRect, ID2D1Brush brush, uint options, uint measuringMode);
+    void DrawText(string text, uint length, IDWriteTextFormat format, in RECTF layoutRect, ID2D1Brush brush, uint options, uint measuringMode);
     [PreserveSig]
     void DrawTextLayout(PointF origin, IDWriteTextLayout layout, ID2D1Brush brush, uint options);
 
@@ -96,7 +96,7 @@ internal partial interface ID2D1RenderTarget : ID2D1Resource
     void SaveDrawingState_Unbound();
     void RestoreDrawingState_Unbound();
     [PreserveSig]
-    void PushAxisAlignedClip(in RectF clipRect, uint antialiasMode);
+    void PushAxisAlignedClip(in RECTF clipRect, uint antialiasMode);
     [PreserveSig]
     void PopAxisAlignedClip();
     [PreserveSig]
