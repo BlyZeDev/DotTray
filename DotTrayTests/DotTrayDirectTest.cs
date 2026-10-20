@@ -50,7 +50,7 @@ public static class DotTrayDirectTest
                                 x.Foreground = Color.White;
                                 x.ForegroundHover = Color.ForestGreen;
                             });
-                            x.Interacted = args => Console.WriteLine(args.Type);
+                            x.Interacted = args => Console.WriteLine(args);
                         });
                         icon.Handler.MenuItems.Add<MenuItem>(x =>
                         {

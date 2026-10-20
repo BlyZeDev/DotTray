@@ -214,7 +214,7 @@ public sealed class PopupMenuTree : IDisposable
     /// <param name="destroyOnClickOutside"><see langword="true"/> if this popup tree should be destroyed when clicked outside, otherwise <see langword="false"/></param>
     /// <returns><see cref="PopupMenuTree"/></returns>
     public static PopupMenuTree Show(DirectPopupMenuHandler handler, bool destroyOnClickOutside)
-        => new(handler.MenuItems, handler.Style, destroyOnClickOutside, destroy => Show(handler, destroy));
+        => new PopupMenuTree(handler.MenuItems, handler.Style, destroyOnClickOutside, destroy => Show(handler, destroy));
 
     private static IEnumerable<nint> EnumerateOwnerWindows(nint leafWindow, bool includeLeafWindow = false)
     {
