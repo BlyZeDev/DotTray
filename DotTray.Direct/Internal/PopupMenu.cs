@@ -201,7 +201,7 @@ internal sealed class PopupMenu
 
     private void DrawWindow(DrawingContext context)
     {
-        context.FillRect(new Rect(0, 0, context.WindowSize.Width, context.WindowSize.Height), _tree.Style.Background);
+        context.FillRect(new Rect(0, 0, context.WindowSize.Width, context.WindowSize.Height), _tree.Owner.Background);
 
         foreach (var entry in windowLayout.Items)
         {

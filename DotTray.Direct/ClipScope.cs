@@ -1,4 +1,6 @@
-﻿namespace DotTray.Direct.Context;
+﻿using DotTray.Direct.Context;
+
+namespace DotTray.Direct;
 
 using DotTray.Direct.Internal.Rendering;
 

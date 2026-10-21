@@ -1,9 +1,9 @@
 ﻿namespace DotTray.Direct.Items;
 
+using DotTray.Direct.Coloring;
 using DotTray.Direct.Context;
 using DotTray.Direct.Primitives;
 using System;
-using System.Drawing;
 
 /// <summary>
 /// Represents a popup menu item
@@ -37,7 +37,7 @@ public class MenuItem : MenuItemBase
     /// <summary>
     /// The background color
     /// </summary>
-    public Color Background
+    public IDirectBrush Background
     {
         get;
         set
@@ -47,12 +47,12 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    } = SystemColors.Menu;
+    } = DirectDefaultStyles.ItemBackground;
 
     /// <summary>
     /// The foreground color
     /// </summary>
-    public Color Foreground
+    public IDirectBrush Foreground
     {
         get;
         set
@@ -62,12 +62,12 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    } = SystemColors.MenuText;
+    } = DirectDefaultStyles.ItemForeground;
 
     /// <summary>
     /// The background hover color
     /// </summary>
-    public Color BackgroundHover
+    public IDirectBrush BackgroundHover
     {
         get;
         set
@@ -77,12 +77,12 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    } = SystemColors.Highlight;
+    } = DirectDefaultStyles.ItemBackgroundHover;
 
     /// <summary>
     /// The foreground hover color
     /// </summary>
-    public Color ForegroundHover
+    public IDirectBrush ForegroundHover
     {
         get;
         set
@@ -92,12 +92,12 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    } = SystemColors.HighlightText;
+    } = DirectDefaultStyles.ItemForegroundHover;
 
     /// <summary>
     /// The background disabled color
     /// </summary>
-    public Color BackgroundDisabled
+    public IDirectBrush BackgroundDisabled
     {
         get;
         set
@@ -107,12 +107,12 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    } = SystemColors.Menu;
+    } = DirectDefaultStyles.ItemBackgroundDisabled;
 
     /// <summary>
     /// The foreground disabled color
     /// </summary>
-    public Color ForegroundDisabled
+    public IDirectBrush ForegroundDisabled
     {
         get;
         set
@@ -122,7 +122,7 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    } = SystemColors.GrayText;
+    } = DirectDefaultStyles.ItemForegroundDisabled;
 
     /// <summary>
     /// The displayed text

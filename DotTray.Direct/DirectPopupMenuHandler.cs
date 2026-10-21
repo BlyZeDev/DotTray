@@ -1,6 +1,8 @@
 ﻿namespace DotTray.Direct;
 
 using DotTray;
+using DotTray.Direct.Coloring;
+using DotTray.Direct.Internal;
 
 /// <summary>
 /// The default popup behaviour handler, rendering with Direct2D and DirectWrite
@@ -16,9 +18,9 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
     private bool disposed;
 
     /// <summary>
-    /// The style shared by every popup shown by this instance
+    /// The background color of the popup windows
     /// </summary>
-    public PopupMenuStyle Style { get; }
+    public IDirectBrush Background { get; set; } = DirectDefaultStyles.PopupWindowBackground;
 
     /// <summary>
     /// The <see cref="MenuItemCollection"/> of this instance
@@ -28,13 +30,11 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
     /// <summary>
     /// Initializes a new <see cref="DirectPopupMenuHandler"/> instance
     /// </summary>
-    /// <param name="style">The style shared by every popup shown by this instance, or <see langword="null"/> for the default style</param>
-    public DirectPopupMenuHandler(PopupMenuStyle? style = null)
+    public DirectPopupMenuHandler()
     {
         _lock = new Lock();
         _activeTrees = new Dictionary<object, PopupMenuTree>(ReferenceEqualityComparer.Instance);
 
-        Style = style ?? new PopupMenuStyle();
         MenuItems = [];
     }
 
@@ -81,7 +81,7 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
 
         active?.Dispose();
 
-        var tree = PopupMenuTree.Show(this, true);
+        var tree = new PopupMenuTree(this, MenuItems);
 
         tree.Disposed += () => Untrack(owner, tree);
 

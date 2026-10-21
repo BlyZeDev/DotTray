@@ -1,9 +1,11 @@
 ﻿namespace DotTray.Direct.Internal.Rendering;
 
 using DotTray.Direct;
+using DotTray.Direct.Coloring;
 using DotTray.Direct.Internal.Models;
 using DotTray.Direct.Primitives;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.Marshalling;
 
 internal sealed class DirectSurface : IDisposable
 {
@@ -18,7 +20,6 @@ internal sealed class DirectSurface : IDisposable
 
     private readonly DirectDevice _device;
     private readonly ID2D1DeviceContext _context;
-    private readonly ID2D1SolidColorBrush _brush;
     private readonly IDXGISwapChain1 _swapChain;
     private readonly IDCompositionTarget _compositionTarget;
     private readonly IDCompositionVisual _compositionVisual;
@@ -37,14 +38,21 @@ internal sealed class DirectSurface : IDisposable
         this.height = ToPixels(height);
         this.dpi = dpi;
 
-        device.D2DDevice.CreateDeviceContext(0, out _context);
+        _device.D2DDevice.CreateDeviceContext(0, out _context);
         _context.SetTextAntialiasMode(PInvoke.D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
-        _context.CreateSolidColorBrush(new ColorF { R = 1, G = 1, B = 1, A = 1 }, nint.Zero, out _brush);
 
-        _swapChain = device.CreateSwapChain(this.width, this.height);
-        (_compositionTarget, _compositionVisual) = device.CreateComposition(hWnd, _swapChain);
+        _swapChain = _device.CreateSwapChain(this.width, this.height);
+        (_compositionTarget, _compositionVisual) = _device.CreateComposition(hWnd, _swapChain);
 
         CreateTarget();
+    }
+
+    public unsafe nint GetContextPointer()
+    {
+        var pointer = ComInterfaceMarshaller<ID2D1DeviceContext>.ConvertToUnmanaged(_context);
+        ComInterfaceMarshaller<ID2D1DeviceContext>.Free(pointer);
+
+        return (nint)pointer;
     }
 
     public DrawScope BeginDraw()
@@ -58,7 +66,7 @@ internal sealed class DirectSurface : IDisposable
         return new DrawScope(this);
     }
 
-    internal void EndDraw()
+    public void EndDraw()
     {
         var hr = _context.EndDraw(nint.Zero, nint.Zero);
         if (hr >= 0) hr = _swapChain.Present(1, 0);
@@ -84,29 +92,27 @@ internal sealed class DirectSurface : IDisposable
         CreateTarget();
     }
 
-    public void FillRect(Rect rect, System.Drawing.Color color)
+    public ID2D1Brush CreateSolidBrush(Rgba color)
     {
-        SetColor(color);
-        _context.FillRectangle(Snap(rect), _brush);
+        _context.CreateSolidColorBrush(ToColorF(color), nint.Zero, out var brush);
+        return brush;
     }
 
-    public void FillRoundedRect(Rect rect, float radius, System.Drawing.Color color)
-    {
-        SetColor(color);
+    public void FillRect(Rect rect, ID2D1Brush brush) => _context.FillRectangle(Snap(rect), brush);
 
+    public void FillRoundedRect(Rect rect, float radius, ID2D1Brush brush)
+    {
         _context.FillRoundedRectangle(new RoundedRectF
         { 
             Rect = Snap(rect),
             RadiusX = radius,
             RadiusY = radius
         }
-        , _brush);
+        , brush);
     }
 
-    public void DrawLine(float x1, float y1, float x2, float y2, float width, System.Drawing.Color color)
+    public void DrawLine(float x1, float y1, float x2, float y2, float width, ID2D1Brush brush)
     {
-        SetColor(color);
-
         _context.DrawLine(new PointF
         {
             X = x1,
@@ -115,10 +121,10 @@ internal sealed class DirectSurface : IDisposable
         {
             X = x2,
             Y = y2
-        }, _brush, width, nint.Zero);
+        }, brush, width, nint.Zero);
     }
 
-    public void DrawText(string text, FontInfo font, Rect bounds, System.Drawing.Color color)
+    public void DrawText(string text, FontInfo font, Rect bounds, ID2D1Brush brush)
     {
         if (text.Length == 0) return;
 
@@ -126,12 +132,11 @@ internal sealed class DirectSurface : IDisposable
 
         try
         {
-            SetColor(color);
             _context.DrawTextLayout(new PointF
             {
                 X = bounds.X,
                 Y = bounds.Y
-            }, layout, _brush, PInvoke.D2D1_DRAW_TEXT_OPTIONS_CLIP | PInvoke.D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
+            }, layout, brush, PInvoke.D2D1_DRAW_TEXT_OPTIONS_CLIP | PInvoke.D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
         }
         finally
         {
@@ -150,14 +155,11 @@ internal sealed class DirectSurface : IDisposable
 
         _context.SetTarget(nint.Zero);
 
-        Com.Release(_brush);
         Com.Release(_compositionVisual);
         Com.Release(_compositionTarget);
         Com.Release(_swapChain);
         Com.Release(_context);
     }
-
-    private void SetColor(System.Drawing.Color color) => _brush.SetColor(new ColorF { R = color.R / 255f, G = color.G / 255f, B = color.B / 255f, A = color.A / 255f });
 
     private void CreateTarget()
     {
@@ -198,4 +200,12 @@ internal sealed class DirectSurface : IDisposable
     private float SnapEdge(float dips) => MathF.Round(dips * Scale) / Scale;
 
     private static uint ToPixels(int value) => (uint)int.Max(1, value);
+
+    private static ColorF ToColorF(Rgba color) => new ColorF
+    {
+        R = color.R / (float)byte.MaxValue,
+        G = color.G / (float)byte.MaxValue,
+        B = color.B / (float)byte.MaxValue,
+        A = color.A / (float)byte.MaxValue
+    };
 }
