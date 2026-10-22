@@ -140,7 +140,7 @@ public class MenuItem : MenuItemBase
     } = "";
 
     /// <summary>
-    /// The font info used to display the text. The size is in DIPs
+    /// The font info used to display the text
     /// </summary>
     public FontInfo FontInfo
     {

@@ -125,7 +125,7 @@ internal sealed class DirectDevice : IDisposable
         var locale = CultureInfo.CurrentUICulture.Name is { Length: > 0 } name ? name : "en-US";
         var style = font.Italic ? PInvoke.DWRITE_FONT_STYLE_ITALIC : PInvoke.DWRITE_FONT_STYLE_NORMAL;
         
-        _dwriteFactory.CreateTextFormat(font.Family, nint.Zero, (int)font.Weight, style, PInvoke.DWRITE_FONT_STRETCH_NORMAL, font.Size, locale, out var format);
+        _dwriteFactory.CreateTextFormat(font.Family, nint.Zero, font.Weight, style, PInvoke.DWRITE_FONT_STRETCH_NORMAL, font.Size, locale, out var format);
 
         format.SetTextAlignment((uint)font.Align);
         format.SetParagraphAlignment(PInvoke.DWRITE_PARAGRAPH_ALIGNMENT_CENTER);

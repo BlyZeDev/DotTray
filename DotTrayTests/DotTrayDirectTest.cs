@@ -57,6 +57,18 @@ public static class DotTrayDirectTest
                             {
                                 Family = "Arial Black",
                                 Size = 100f,
+                                Weight = FontWeight.Light,
+                                Align = TextAlign.Center
+                            };
+                        });
+                        handler.MenuItems.Add<MenuItem>(x =>
+                        {
+                            x.Text = "🔥 Fire 🔥";
+                            x.FontInfo = new FontInfo
+                            {
+                                Family = "Inter",
+                                Size = 111f,
+                                Weight = FontWeight.MaxValue,
                                 Align = TextAlign.Center
                             };
                         });

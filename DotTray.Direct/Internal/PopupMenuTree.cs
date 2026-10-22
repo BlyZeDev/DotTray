@@ -74,10 +74,11 @@ internal sealed class PopupMenuTree : IDisposable
         return rects;
     }
 
-    public void OpenChild(nint ownerHWnd, MenuItemCollection items, Rect anchorScreenRect, bool selectFirstItem)
+    public nint OpenChild(nint ownerHWnd, MenuItemCollection items, Rect anchorScreenRect, bool selectFirstItem)
     {
         CloseChildrenOf(ownerHWnd);
-        CreatePopup(ownerHWnd, items, anchorScreenRect, selectFirstItem);
+        var popupMenu = CreatePopup(ownerHWnd, items, anchorScreenRect, selectFirstItem);
+        return popupMenu.HWnd;
     }
 
     public void CloseChildrenOf(nint hWnd)
@@ -102,7 +103,7 @@ internal sealed class PopupMenuTree : IDisposable
 
     public void UnregisterWindow(nint hWnd)
     {
-        _popups.Remove(hWnd);
+        if (_popups.Remove(hWnd, out var popup) && _popups.TryGetValue(popup.OwnerHWnd, out var owner)) owner.OnChildDestroyed(hWnd);
 
         if (hWnd == _rootHWnd) DisposeCore();
         if (_popups.Count == 0) Device.Dispose();

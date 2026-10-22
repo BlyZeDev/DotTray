@@ -25,23 +25,26 @@ internal sealed class PopupMenu
     private readonly PInvoke.WndProc _wndProc;
     private readonly DirectSurface _surface;
 
-    private WindowLayout windowLayout = new(default, []);
+    private WindowLayout windowLayout;
     private MenuItemBase? hotItem;
+    private nint openSubmenuHWnd;
     private MenuItemBase? openSubmenuOwner;
     private bool submenuTimerActive;
     private bool tracking;
     private Pos lastPoint;
 
-    internal nint HWnd { get; }
+    public nint HWnd { get; }
 
-    internal nint OwnerHWnd { get; }
+    public nint OwnerHWnd { get; }
 
-    internal PopupMenu(PopupMenuTree tree, nint ownerHWnd, MenuItemCollection items, Rect? anchorScreenRect, bool selectFirstItem)
+    public PopupMenu(PopupMenuTree tree, nint ownerHWnd, MenuItemCollection items, Rect? anchorScreenRect, bool selectFirstItem)
     {
         _tree = tree;
         _items = items;
         _isRoot = anchorScreenRect is null;
         _anchor = anchorScreenRect ?? PopupPlacement.GetCursorAnchor();
+
+        windowLayout = new WindowLayout(Dim.Empty);
 
         OwnerHWnd = ownerHWnd;
 
@@ -49,7 +52,6 @@ internal sealed class PopupMenu
 
         PopupWindowHelper.EnsureRegistered(out var hInstance, out var hClassName);
 
-        // Created tiny at the anchor so the window already lives on the target monitor and reports that monitor's DPI
         HWnd = PInvoke.CreateWindowEx(
             PInvoke.WS_EX_NOACTIVATE | PInvoke.WS_EX_TOOLWINDOW | PInvoke.WS_EX_TOPMOST | PInvoke.WS_EX_NOREDIRECTIONBITMAP,
             hClassName, nint.Zero,
@@ -68,15 +70,15 @@ internal sealed class PopupMenu
             var borderColor = PInvoke.DWMWA_COLOR_NONE;
             PInvoke.DwmSetWindowAttribute(HWnd, PInvoke.DWMWA_BORDER_COLOR, ref borderColor, sizeof(uint));
 
-            var (pixelSize, position) = ComputeLayout();
-            _surface = new DirectSurface(_tree.Device, HWnd, pixelSize.Width, pixelSize.Height, _dpi);
+            var bounds = ComputeLayout();
+            _surface = new DirectSurface(_tree.Device, HWnd, bounds.Width, bounds.Height, _dpi);
 
-            _wndProc = new PInvoke.WndProc(SafeWndProc);
+            _wndProc = new PInvoke.WndProc(WndProc);
             PInvoke.SetWindowLongPtr(HWnd, PInvoke.GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProc));
 
             _items.Updated += RequestRedraw;
 
-            ApplyWindowPos(pixelSize, position);
+            ApplyWindowPos(bounds);
             PInvoke.ShowWindow(HWnd, PInvoke.SW_SHOWNOACTIVATE);
             PInvoke.InvalidateRect(HWnd, nint.Zero, false);
 
@@ -84,28 +86,18 @@ internal sealed class PopupMenu
         }
         catch
         {
-            // The window must never outlive a failed construction, popup and window share one lifetime
             _items.Updated -= RequestRedraw;
             PInvoke.DestroyWindow(HWnd);
             throw;
         }
     }
 
-    /// <summary>
-    /// An exception that crosses the native boundary takes down the host process, so every failure
-    /// (device loss, a throwing item) closes the tree instead
-    /// </summary>
-    private nint SafeWndProc(nint hWnd, uint msg, nint wParam, nint lParam)
+    public void OnChildDestroyed(nint childHWnd)
     {
-        try
-        {
-            return WndProc(hWnd, msg, wParam, lParam);
-        }
-        catch (Exception)
-        {
-            _tree.Dispose();
-            return PInvoke.DefWindowProc(hWnd, msg, wParam, lParam);
-        }
+        if (childHWnd != openSubmenuHWnd) return;
+
+        openSubmenuOwner = null;
+        openSubmenuHWnd = nint.Zero;
     }
 
     private nint WndProc(nint hWnd, uint msg, nint wParam, nint lParam)
@@ -133,13 +125,15 @@ internal sealed class PopupMenu
         return PInvoke.DefWindowProc(hWnd, msg, wParam, lParam);
     }
 
-    private (Dim PixelSize, Pos Position) ComputeLayout()
+    private Rect ComputeLayout()
     {
         windowLayout = CalculateWindow(_items.GetSnapshot());
         DropStaleHotItem();
 
         var pixelSize = new Dim(ToPixels(windowLayout.Size.Width), ToPixels(windowLayout.Size.Height));
-        return (pixelSize, CalculatePosition(pixelSize));
+        var position = CalculatePosition(pixelSize);
+
+        return new Rect(position.X, position.Y, pixelSize.Width, pixelSize.Height);
     }
 
     private WindowLayout CalculateWindow(ReadOnlySpan<MenuItemBase> items)
@@ -170,24 +164,6 @@ internal sealed class PopupMenu
         }
 
         return new WindowLayout(size, arranged);
-    }
-
-    private static ItemLayout ArrangeItem(ArrangingContext context, MenuItemBase item, Rect bounds, Dim measured)
-    {
-        context.ItemBounds = bounds;
-        context.MeasuredItemBounds = bounds with { Width = measured.Width };
-
-        var content = item.Arrange(context);
-
-        var contentWidth = Math.Clamp(content.Width, 0, bounds.Width);
-        var contentX = Math.Clamp(content.X, bounds.X, bounds.X + bounds.Width - contentWidth);
-
-        return new ItemLayout
-        {
-            Item = item,
-            HitBounds = bounds,
-            ContentBounds = new Rect(contentX, bounds.Y, contentWidth, bounds.Height)
-        };
     }
 
     private Pos CalculatePosition(Dim pixelSize)
@@ -237,17 +213,17 @@ internal sealed class PopupMenu
         hotItem = null;
     }
 
-    private void ApplyWindowPos(Dim pixelSize, Pos position)
-        => PInvoke.SetWindowPos(HWnd, nint.Zero, position.X, position.Y, pixelSize.Width, pixelSize.Height, PInvoke.SWP_NOZORDER | PInvoke.SWP_NOACTIVATE | PInvoke.SWP_NOCOPYBITS);
+    private void ApplyWindowPos(Rect bounds)
+        => PInvoke.SetWindowPos(HWnd, nint.Zero, bounds.X, bounds.Y, bounds.Width, bounds.Height, PInvoke.SWP_NOZORDER | PInvoke.SWP_NOACTIVATE | PInvoke.SWP_NOCOPYBITS);
 
     private void RequestRedraw() => PInvoke.PostMessage(HWnd, WM_APP_POPUP_CALCWND, nint.Zero, nint.Zero);
 
     private nint HandleCalcWnd()
     {
-        var (pixelSize, position) = ComputeLayout();
+        var bounds = ComputeLayout();
 
-        _surface.Resize(pixelSize.Width, pixelSize.Height, _dpi);
-        ApplyWindowPos(pixelSize, position);
+        _surface.Resize(bounds.Width, bounds.Height, _dpi);
+        ApplyWindowPos(bounds);
         PInvoke.InvalidateRect(HWnd, nint.Zero, false);
 
         return nint.Zero;
@@ -487,8 +463,8 @@ internal sealed class PopupMenu
     private void OpenSubmenu(MenuItemBase submenu, bool selectFirstItem)
     {
         if (ReferenceEquals(openSubmenuOwner, submenu)) return;
-
-        _tree.OpenChild(HWnd, submenu.SubmenuItems, ToScreenRect(HitBoundsOf(submenu)), selectFirstItem);
+        
+        openSubmenuHWnd = _tree.OpenChild(HWnd, submenu.SubmenuItems, ToScreenRect(HitBoundsOf(submenu)), selectFirstItem);
         openSubmenuOwner = submenu;
     }
 
@@ -498,6 +474,7 @@ internal sealed class PopupMenu
 
         _tree.CloseChildrenOf(HWnd);
         openSubmenuOwner = null;
+        openSubmenuHWnd = nint.Zero;
     }
 
     private Rect HitBoundsOf(MenuItemBase item)
@@ -540,6 +517,24 @@ internal sealed class PopupMenu
         var y = unchecked((short)((value >> 16) & 0xFFFF));
 
         return new Pos((int)MathF.Floor(x / _scale), (int)MathF.Floor(y / _scale));
+    }
+
+    private static ItemLayout ArrangeItem(ArrangingContext context, MenuItemBase item, Rect bounds, Dim measured)
+    {
+        context.ItemBounds = bounds;
+        context.MeasuredItemBounds = bounds with { Width = measured.Width };
+
+        var content = item.Arrange(context);
+
+        var contentWidth = Math.Clamp(content.Width, 0, bounds.Width);
+        var contentX = Math.Clamp(content.X, bounds.X, bounds.X + bounds.Width - contentWidth);
+
+        return new ItemLayout
+        {
+            Item = item,
+            HitBounds = bounds,
+            ContentBounds = new Rect(contentX, bounds.Y, contentWidth, bounds.Height)
+        };
     }
 
     private static int IndexOf(ReadOnlySpan<ItemLayout> items, MenuItemBase? item)

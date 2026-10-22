@@ -47,15 +47,15 @@ public sealed record FontInfo
     /// </summary>
     /// <param name="family">The font family</param>
     /// <param name="size">The size of the font in DIPs</param>
-    /// <param name="weight">The weight of the font</param>
+    /// <param name="weight">The weight of the font, or <see langword="null"/> to use <see cref="FontWeight.Normal"/></param>
     /// <param name="italic"><see langword="true"/> if the font should be italic, otherwise <see langword="false"/></param>
     /// <param name="align">The alignment of the text</param>
     [SetsRequiredMembers]
-    public FontInfo(string family, float size, FontWeight weight = FontWeight.Normal, bool italic = false, TextAlign align = TextAlign.Left)
+    public FontInfo(string family, float size, FontWeight? weight = null, bool italic = false, TextAlign align = TextAlign.Left)
     {
         Family = family;
         Size = size;
-        Weight = weight;
+        Weight = weight ?? FontWeight.Normal;
         Italic = italic;
         Align = align;
     }
