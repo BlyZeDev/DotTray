@@ -1,9 +1,9 @@
 ﻿namespace DotTray.Direct.Context;
 
-using DotTray.Direct;
 using DotTray.Direct.Internal.Rendering;
 using DotTray.Direct.Items;
 using DotTray.Direct.Primitives;
+using DotTray.Direct.Typography;
 
 /// <summary>
 /// Includes data for measuring <see cref="MenuItemBase"/> instances

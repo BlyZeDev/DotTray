@@ -423,6 +423,7 @@ internal sealed class PopupMenu
     private void OpenHotSubmenu()
     {
         if (hotItem is null) return;
+        if (!hotItem.CanOpenSubmenu(ItemInteractionType.KeyboardActivate)) return;
 
         KillSubmenuTimer();
         OpenSubmenu(hotItem, true);

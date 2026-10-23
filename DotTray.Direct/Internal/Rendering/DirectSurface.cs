@@ -1,9 +1,9 @@
 ﻿namespace DotTray.Direct.Internal.Rendering;
 
-using DotTray.Direct;
 using DotTray.Direct.Coloring;
 using DotTray.Direct.Internal.Models;
 using DotTray.Direct.Primitives;
+using DotTray.Direct.Typography;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 

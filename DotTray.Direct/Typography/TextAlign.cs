@@ -1,4 +1,4 @@
-﻿namespace DotTray.Direct;
+﻿namespace DotTray.Direct.Typography;
 
 /// <summary>
 /// Represents the horizontal alignment of text inside its bounds

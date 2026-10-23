@@ -4,8 +4,7 @@ using DotTray;
 using DotTray.Direct;
 using DotTray.Direct.Coloring;
 using DotTray.Direct.Items;
-using System.Drawing;
-using System.Security.Cryptography;
+using DotTray.Direct.Typography;
 
 public static class DotTrayDirectTest
 {
@@ -13,7 +12,7 @@ public static class DotTrayDirectTest
     {
         using (var cts = new CancellationTokenSource())
         {
-            using (var tempIcon = CreateTestIcon(StockIconId.Application))
+            using (var tempIcon = CreateTestIcon(System.Drawing.StockIconId.Application))
             {
                 using (var handler = new DirectPopupMenuHandler())
                 {
@@ -44,7 +43,7 @@ public static class DotTrayDirectTest
                                     Family = "Bahnschrift",
                                     Size = 125f,
                                     Weight = FontWeight.Bold,
-                                    Italic = true,
+                                    Style = FontStyle.Oblique,
                                     Align = TextAlign.Center
                                 };
                             });
@@ -86,11 +85,11 @@ public static class DotTrayDirectTest
         }
     }
 
-    private static TestIcon CreateTestIcon(StockIconId id, StockIconOptions options = StockIconOptions.ShellIconSize)
+    private static TestIcon CreateTestIcon(System.Drawing.StockIconId id, System.Drawing.StockIconOptions options = System.Drawing.StockIconOptions.ShellIconSize)
     {
         var tempPath = Path.Combine(Path.GetTempPath(), $"temptesticon.ico");
 
-        using (var icon = SystemIcons.GetStockIcon(id, options))
+        using (var icon = System.Drawing.SystemIcons.GetStockIcon(id, options))
         {
             if (icon is null) throw new FileNotFoundException("Icon not found");
 

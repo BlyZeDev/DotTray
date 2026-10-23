@@ -3,6 +3,7 @@
 using DotTray.Direct.Coloring;
 using DotTray.Direct.Context;
 using DotTray.Direct.Primitives;
+using DotTray.Direct.Typography;
 using System;
 
 /// <summary>

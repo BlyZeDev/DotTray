@@ -1,8 +1,8 @@
 ﻿namespace DotTray.Direct.Internal.Rendering;
 
-using DotTray.Direct;
 using DotTray.Direct.Internal.Models;
 using DotTray.Direct.Primitives;
+using DotTray.Direct.Typography;
 using System.Globalization;
 
 internal sealed class DirectDevice : IDisposable
@@ -122,10 +122,9 @@ internal sealed class DirectDevice : IDisposable
 
         if (_formatCache.TryGetValue(font, out var cached)) return cached;
 
-        var locale = CultureInfo.CurrentUICulture.Name is { Length: > 0 } name ? name : "en-US";
-        var style = font.Italic ? PInvoke.DWRITE_FONT_STYLE_ITALIC : PInvoke.DWRITE_FONT_STYLE_NORMAL;
+        var locale = CultureInfo.CurrentUICulture.Name is { Length: > 0 } name ? name : "en-US"; // Add Language Tag in FontInfo instead of hardcoding lol
         
-        _dwriteFactory.CreateTextFormat(font.Family, nint.Zero, font.Weight, style, PInvoke.DWRITE_FONT_STRETCH_NORMAL, font.Size, locale, out var format);
+        _dwriteFactory.CreateTextFormat(font.Family, nint.Zero, font.Weight.Value, (int)font.Style, (int)font.Stretch, font.Size, locale, out var format);
 
         format.SetTextAlignment((uint)font.Align);
         format.SetParagraphAlignment(PInvoke.DWRITE_PARAGRAPH_ALIGNMENT_CENTER);

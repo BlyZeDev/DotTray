@@ -5,6 +5,7 @@ using DotTray.Direct.Coloring;
 using DotTray.Direct.Internal.Rendering;
 using DotTray.Direct.Items;
 using DotTray.Direct.Primitives;
+using DotTray.Direct.Typography;
 
 /// <summary>
 /// Includes data for drawing <see cref="MenuItemBase"/> instances
