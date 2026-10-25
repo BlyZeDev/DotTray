@@ -124,6 +124,20 @@ internal sealed class DirectSurface : IDisposable
         }, brush, width, nint.Zero);
     }
 
+    public void DrawPolyline(ReadOnlySpan<PointF> points, float width, ID2D1Brush brush)
+    {
+        var geometry = _device.CreatePolyline(points);
+
+        try
+        {
+            _context.DrawGeometry(geometry, brush, width, _device.RoundStroke);
+        }
+        finally
+        {
+            Com.Release(geometry);
+        }
+    }
+
     public void DrawText(string text, FontInfo font, Rect bounds, ID2D1Brush brush)
     {
         if (text.Length == 0) return;

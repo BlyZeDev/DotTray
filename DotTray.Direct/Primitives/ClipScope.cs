@@ -1,11 +1,10 @@
-﻿using DotTray.Direct.Context;
+﻿namespace DotTray.Direct.Primitives;
 
-namespace DotTray.Direct;
-
+using DotTray.Direct.Context;
 using DotTray.Direct.Internal.Rendering;
 
 /// <summary>
-/// Restores the previous clip when disposed. Created by <see cref="DrawingContext.Clip(Primitives.Rect)"/>
+/// Restores the previous clip when disposed. Created by <see cref="DrawingContext.Clip(Rect)"/>
 /// </summary>
 public readonly struct ClipScope : IDisposable
 {

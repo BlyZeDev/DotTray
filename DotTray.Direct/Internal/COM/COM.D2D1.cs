@@ -65,7 +65,8 @@ internal partial interface ID2D1RenderTarget : ID2D1Resource
     [PreserveSig]
     void FillEllipse(in EllipseF ellipse, ID2D1Brush brush);
 
-    void DrawGeometry_Unbound();
+    [PreserveSig]
+    void DrawGeometry(ID2D1Geometry geometry, ID2D1Brush brush, float strokeWidth, ID2D1StrokeStyle? strokeStyle);
     void FillGeometry_Unbound();
     void FillMesh_Unbound();
     void FillOpacityMask_Unbound();
@@ -149,4 +150,71 @@ internal partial interface ID2D1DeviceContext : ID2D1RenderTarget
 internal partial interface ID2D1Device : ID2D1Resource
 {
     void CreateDeviceContext(uint options, out ID2D1DeviceContext deviceContext);
+}
+
+[GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
+[Guid("06152247-6f50-465a-9245-118bfd3b6007")]
+internal partial interface ID2D1Factory
+{
+    void ReloadSystemMetrics_Unbound();
+    void GetDesktopDpi_Unbound();
+    void CreateRectangleGeometry_Unbound();
+    void CreateRoundedRectangleGeometry_Unbound();
+    void CreateEllipseGeometry_Unbound();
+    void CreateGeometryGroup_Unbound();
+    void CreateTransformedGeometry_Unbound();
+
+    void CreatePathGeometry(out ID2D1PathGeometry geometry);
+    void CreateStrokeStyle(in StrokeStyleProperties properties, nint dashes, uint dashesCount, out ID2D1StrokeStyle strokeStyle);
+}
+
+[GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
+[Guid("2cd9069d-12e2-11dc-9fed-001143a055f9")]
+internal partial interface ID2D1StrokeStyle : ID2D1Resource;
+
+[GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
+[Guid("2cd906a1-12e2-11dc-9fed-001143a055f9")]
+internal partial interface ID2D1Geometry : ID2D1Resource
+{
+    void GetBounds_Unbound();
+    void GetWidenedBounds_Unbound();
+    void StrokeContainsPoint_Unbound();
+    void FillContainsPoint_Unbound();
+    void CompareWithGeometry_Unbound();
+    void Simplify_Unbound();
+    void Tessellate_Unbound();
+    void CombineWithGeometry_Unbound();
+    void Outline_Unbound();
+    void ComputeArea_Unbound();
+    void ComputeLength_Unbound();
+    void ComputePointAtLength_Unbound();
+    void Widen_Unbound();
+}
+
+[GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
+[Guid("2cd906a5-12e2-11dc-9fed-001143a055f9")]
+internal partial interface ID2D1PathGeometry : ID2D1Geometry
+{
+    void Open(out ID2D1GeometrySink sink);
+}
+
+[GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
+[Guid("2cd9069f-12e2-11dc-9fed-001143a055f9")]
+internal partial interface ID2D1GeometrySink
+{
+    [PreserveSig]
+    void SetFillMode(uint fillMode);
+    [PreserveSig]
+    void SetSegmentFlags(uint flags);
+    [PreserveSig]
+    void BeginFigure(PointF startPoint, uint figureBegin);
+    void AddLines_Unbound();
+    void AddBeziers_Unbound();
+    [PreserveSig]
+    void EndFigure(uint figureEnd);
+    [PreserveSig]
+    int Close();
+
+    [PreserveSig]
+    void AddLine(PointF point);
 }

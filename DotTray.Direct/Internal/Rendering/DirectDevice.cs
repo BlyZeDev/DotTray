@@ -3,7 +3,7 @@
 using DotTray.Direct.Internal.Models;
 using DotTray.Direct.Primitives;
 using DotTray.Direct.Typography;
-using System.Globalization;
+using System.Runtime.InteropServices.Marshalling;
 
 internal sealed class DirectDevice : IDisposable
 {
@@ -11,17 +11,23 @@ internal sealed class DirectDevice : IDisposable
     private readonly IDXGIDevice _dxgiDevice;
     private readonly IDWriteFactory _dwriteFactory;
     private readonly IDCompositionDevice _compositionDevice;
+    private readonly ID2D1Factory _d2dFactory;
     private readonly Dictionary<FontInfo, IDWriteTextFormat> _formatCache = [];
 
     private bool disposed;
 
     public ID2D1Device D2DDevice { get; }
 
+    public ID2D1StrokeStyle RoundStroke { get; }
+
     public DirectDevice()
     {
         _d3dDevice = CreateD3DDevice();
         _dxgiDevice = (IDXGIDevice)_d3dDevice;
         D2DDevice = CreateD2DDevice(_dxgiDevice);
+
+        _d2dFactory = GetFactory(D2DDevice);
+        RoundStroke = CreateRoundStroke(_d2dFactory);
 
         HR.ThrowIfError(PInvoke.DWriteCreateFactory(0, typeof(IDWriteFactory).GUID, out _dwriteFactory));
         HR.ThrowIfError(PInvoke.DCompositionCreateDevice(_dxgiDevice, typeof(IDCompositionDevice).GUID, out _compositionDevice));
@@ -98,6 +104,42 @@ internal sealed class DirectDevice : IDisposable
         }
     }
 
+    public ID2D1PathGeometry CreatePolyline(ReadOnlySpan<PointF> points)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
+        _d2dFactory.CreatePathGeometry(out var geometry);
+
+        try
+        {
+            geometry.Open(out var sink);
+
+            try
+            {
+                sink.BeginFigure(points[0], PInvoke.D2D1_FIGURE_BEGIN_HOLLOW);
+
+                for (var i = 1; i < points.Length; i++)
+                {
+                    sink.AddLine(points[i]);
+                }
+
+                sink.EndFigure(PInvoke.D2D1_FIGURE_END_OPEN);
+                HR.ThrowIfError(sink.Close());
+            }
+            finally
+            {
+                Com.Release(sink);
+            }
+
+            return geometry;
+        }
+        catch
+        {
+            Com.Release(geometry);
+            throw;
+        }
+    }
+
     public void Dispose()
     {
         if (disposed) return;
@@ -111,6 +153,8 @@ internal sealed class DirectDevice : IDisposable
 
         Com.Release(_dwriteFactory);
         Com.Release(_compositionDevice);
+        Com.Release(RoundStroke);
+        Com.Release(_d2dFactory);
         Com.Release(D2DDevice);
         Com.Release(_dxgiDevice);
         Com.Release(_d3dDevice);
@@ -121,15 +165,13 @@ internal sealed class DirectDevice : IDisposable
         ObjectDisposedException.ThrowIf(disposed, this);
 
         if (_formatCache.TryGetValue(font, out var cached)) return cached;
-
-        var locale = CultureInfo.CurrentUICulture.Name is { Length: > 0 } name ? name : "en-US"; // Add Language Tag in FontInfo instead of hardcoding lol
         
-        _dwriteFactory.CreateTextFormat(font.Family, nint.Zero, font.Weight.Value, (int)font.Style, (int)font.Stretch, font.Size, locale, out var format);
+        _dwriteFactory.CreateTextFormat(font.Family, nint.Zero, font.Weight.Value, (int)font.Style, (int)font.Stretch, font.Size, font.Language.Value, out var format);
 
         format.SetTextAlignment((uint)font.Align);
         format.SetParagraphAlignment(PInvoke.DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
         format.SetWordWrapping(PInvoke.DWRITE_WORD_WRAPPING_NO_WRAP);
-
+        
         _formatCache[font] = format;
         return format;
     }
@@ -149,5 +191,33 @@ internal sealed class DirectDevice : IDisposable
     {
         HR.ThrowIfError(PInvoke.D2D1CreateDevice(dxgiDevice, nint.Zero, out var device));
         return device;
+    }
+
+    private static unsafe ID2D1Factory GetFactory(ID2D1Device device)
+    {
+        device.GetFactory(out var pointer);
+
+        try
+        {
+            return ComInterfaceMarshaller<ID2D1Factory>.ConvertToManaged((void*)pointer)!;
+        }
+        finally
+        {
+            ComInterfaceMarshaller<ID2D1Factory>.Free((void*)pointer);
+        }
+    }
+
+    private static ID2D1StrokeStyle CreateRoundStroke(ID2D1Factory factory)
+    {
+        var properties = new StrokeStyleProperties
+        {
+            StartCap = PInvoke.D2D1_CAP_STYLE_ROUND,
+            EndCap = PInvoke.D2D1_CAP_STYLE_ROUND,
+            LineJoin = PInvoke.D2D1_LINE_JOIN_ROUND,
+            MiterLimit = 1f
+        };
+
+        factory.CreateStrokeStyle(properties, nint.Zero, 0, out var stroke);
+        return stroke;
     }
 }

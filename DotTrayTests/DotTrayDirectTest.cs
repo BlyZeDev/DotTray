@@ -29,6 +29,7 @@ public static class DotTrayDirectTest
                         handler.MenuItems.Add<MenuItem>(x =>
                         {
                             x.Text = "GHI 🫪";
+                            x.Foreground = new SolidColorBrush(new Rgba(200, 0, 200, 200));
                             x.FontInfo = new FontInfo
                             {
                                 Family = "Segoe UI Emoji",

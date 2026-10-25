@@ -1,11 +1,12 @@
 ﻿namespace DotTray.Direct.Context;
 
-using DotTray.Direct;
 using DotTray.Direct.Coloring;
+using DotTray.Direct.Internal.Models;
 using DotTray.Direct.Internal.Rendering;
 using DotTray.Direct.Items;
 using DotTray.Direct.Primitives;
 using DotTray.Direct.Typography;
+using System.Runtime.CompilerServices;
 
 /// <summary>
 /// Includes data for drawing <see cref="MenuItemBase"/> instances
@@ -105,16 +106,40 @@ public sealed class DrawingContext : Context
     /// <typeparam name="TBrush">The type of brush to use</typeparam>
     /// <param name="bounds">The bounds to draw in</param>
     /// <param name="brush">The brush to use</param>
-    public void DrawChevron<TBrush>(Rect bounds, TBrush brush) where TBrush : IDirectBrush
+    /// <param name="direction">The direction the chevron points to</param>
+    /// <param name="thickness">The stroke thickness, or <c>0f</c> to derive it from the size of <paramref name="bounds"/></param>
+    public void DrawChevron<TBrush>(Rect bounds, TBrush brush, Direction direction = Direction.Right, float thickness = 0f) where TBrush : IDirectBrush
     {
-        var stroke = Math.Max(1f, bounds.Height / 10f);
-        var centerY = bounds.Y + bounds.Height / 2f;
+        var span = direction is Direction.Left or Direction.Right ? bounds.Height : bounds.Width;
+        var stroke = thickness > 0f ? thickness : Math.Max(1f, span / 10f);
+        var half = stroke / 2f;
+
+        var left = bounds.X + half;
+        var top = bounds.Y + half;
+        var right = bounds.X + bounds.Width - half;
+        var bottom = bounds.Y + bounds.Height - half;
+        var centerX = (left + right) / 2f;
+        var centerY = (top + bottom) / 2f;
+
+        var (start, tip, end) = direction switch
+        {
+            Direction.Left => (Point(right, top), Point(left, centerY), Point(right, bottom)),
+            Direction.Up => (Point(left, bottom), Point(centerX, top), Point(right, bottom)),
+            Direction.Down => (Point(left, top), Point(centerX, bottom), Point(right, top)),
+            _ => (Point(left, top), Point(right, centerY), Point(left, bottom))
+        };
 
         using (var scope = brush.Create(_brushContext, bounds))
         {
-            _surface.DrawLine(bounds.X, bounds.Y, bounds.X + bounds.Width, centerY, stroke, scope.Native);
-            _surface.DrawLine(bounds.X + bounds.Width, centerY, bounds.X, bounds.Y + bounds.Height, stroke, scope.Native);
+            _surface.DrawPolyline([start, tip, end], stroke, scope.Native);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static PointF Point(float x, float y) => new PointF
+        {
+            X = x,
+            Y = y
+        };
     }
 
     /// <summary>

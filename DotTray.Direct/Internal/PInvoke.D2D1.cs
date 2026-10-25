@@ -16,6 +16,10 @@ internal static partial class PInvoke
     public const uint D2D1_DRAW_TEXT_OPTIONS_NONE = 0;
     public const uint D2D1_DRAW_TEXT_OPTIONS_CLIP = 2;
     public const uint D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT = 4;
+    public const uint D2D1_CAP_STYLE_ROUND = 2;
+    public const uint D2D1_LINE_JOIN_ROUND = 2;
+    public const uint D2D1_FIGURE_BEGIN_HOLLOW = 1;
+    public const uint D2D1_FIGURE_END_OPEN = 0;
 
     [LibraryImport(D2D1)]
     public static partial int D2D1CreateDevice([MarshalUsing(typeof(ComInterfaceMarshaller<IDXGIDevice>))] IDXGIDevice dxgiDevice, nint creationProperties, [MarshalUsing(typeof(ComInterfaceMarshaller<ID2D1Device>))] out ID2D1Device device);

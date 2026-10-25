@@ -1,5 +1,7 @@
 ﻿namespace DotTray.Direct.Typography;
 
+using System.Globalization;
+
 /// <summary>
 /// Represents a font description
 /// </summary>
@@ -43,4 +45,9 @@ public sealed record FontInfo
     /// The alignment of the text
     /// </summary>
     public TextAlign Align { get; init; } = TextAlign.Left;
+
+    /// <summary>
+    /// The language used for text formatting and glyph selection
+    /// </summary>
+    public LanguageTag Language { get; init; } = new LanguageTag(CultureInfo.CurrentUICulture);
 }
