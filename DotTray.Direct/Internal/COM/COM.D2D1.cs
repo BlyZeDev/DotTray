@@ -36,16 +36,19 @@ internal partial interface ID2D1SolidColorBrush : ID2D1Brush
 
 [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16, Options = ComInterfaceOptions.ComObjectWrapper)]
 [Guid("2cd90694-12e2-11dc-9fed-001143a055f9")]
-internal partial interface ID2D1RenderTarget : ID2D1Resource
+internal unsafe partial interface ID2D1RenderTarget : ID2D1Resource
 {
     void CreateBitmap_Unbound();
     void CreateBitmapFromWicBitmap_Unbound();
     void CreateSharedBitmap_Unbound();
     void CreateBitmapBrush_Unbound();
     void CreateSolidColorBrush(in ColorF color, nint brushProperties, out ID2D1SolidColorBrush brush);
-    void CreateGradientStopCollection_Unbound();
-    void CreateLinearGradientBrush_Unbound();
-    void CreateRadialGradientBrush_Unbound();
+    [PreserveSig]
+    int CreateGradientStopCollection(GradientStopF* stops, uint stopsCount, uint gamma, uint extendMode, out nint collection);
+    [PreserveSig]
+    int CreateLinearGradientBrush(in LinearGradientBrushProperties properties, nint brushProperties, nint stopCollection, out ID2D1Brush brush);
+    [PreserveSig]
+    int CreateRadialGradientBrush(in RadialGradientBrushProperties properties, nint brushProperties, nint stopCollection, out ID2D1Brush brush);
     void CreateCompatibleRenderTarget_Unbound();
     void CreateLayer_Unbound();
     void CreateMesh_Unbound();
@@ -119,7 +122,7 @@ internal partial interface ID2D1RenderTarget : ID2D1Resource
 
 [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16, Options = ComInterfaceOptions.ComObjectWrapper)]
 [Guid("e8f7fe7a-191c-466d-ad95-975678bda998")]
-internal partial interface ID2D1DeviceContext : ID2D1RenderTarget
+internal unsafe partial interface ID2D1DeviceContext : ID2D1RenderTarget
 {
     void CreateBitmapDc_Unbound();
     void CreateBitmapFromWicBitmapDc_Unbound();
@@ -138,7 +141,8 @@ internal partial interface ID2D1DeviceContext : ID2D1RenderTarget
     void IsBufferPrecisionSupported_Unbound();
     void GetImageLocalBounds_Unbound();
     void GetImageWorldBounds_Unbound();
-    void GetGlyphRunWorldBounds_Unbound();
+    [PreserveSig]
+    int GetGlyphRunWorldBounds(PointF baselineOrigin, nint glyphRun, uint measuringMode, out RECTF bounds);
     void GetDevice_Unbound();
 
     [PreserveSig]
@@ -176,7 +180,8 @@ internal partial interface ID2D1StrokeStyle : ID2D1Resource;
 [Guid("2cd906a1-12e2-11dc-9fed-001143a055f9")]
 internal partial interface ID2D1Geometry : ID2D1Resource
 {
-    void GetBounds_Unbound();
+    [PreserveSig]
+    int GetBounds(nint worldTransform, out RECTF bounds);
     void GetWidenedBounds_Unbound();
     void StrokeContainsPoint_Unbound();
     void FillContainsPoint_Unbound();

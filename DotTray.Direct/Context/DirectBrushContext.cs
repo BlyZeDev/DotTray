@@ -5,7 +5,7 @@ namespace DotTray.Direct.Context;
 using DotTray.Direct.Internal.Rendering;
 
 /// <summary>
-/// Represents the context passed into <see cref="IDirectBrush.Create(DirectBrushContext, Primitives.Rect)"/>
+/// Represents the context passed into <see cref="IDirectBrush.Create(DirectBrushContext, Primitives.RectF)"/>
 /// </summary>
 public sealed class DirectBrushContext
 {

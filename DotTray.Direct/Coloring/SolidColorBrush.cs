@@ -33,5 +33,5 @@ public sealed class SolidColorBrush : IDirectBrush
     public SolidColorBrush(Rgba color) => Color = color;
 
     /// <inheritdoc/>
-    public DirectBrush Create(DirectBrushContext context, Rect bounds) => new DirectBrush(context._surface.CreateSolidBrush(Color));
+    public DirectBrush Create(DirectBrushContext context, RectF bounds) => new DirectBrush(context._surface.CreateSolidBrush(Color));
 }

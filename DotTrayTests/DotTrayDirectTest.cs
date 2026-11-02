@@ -17,6 +17,7 @@ public static class DotTrayDirectTest
                 using (var handler = new DirectPopupMenuHandler())
                 {
                     handler.Background = new SolidColorBrush(Rgba.Black with { A = 200 });
+                    handler.Background = LinearGradientBrush.Vertical(Rgba.Blue, Rgba.Green);
 
                     using (var icon = await NotifyIcon.RunAsync(tempIcon.FilePath, handler, cts.Token))
                     {
@@ -28,8 +29,15 @@ public static class DotTrayDirectTest
                         handler.MenuItems.Add<MenuItem>(x => x.Text = "DEF");
                         handler.MenuItems.Add<MenuItem>(x =>
                         {
-                            x.Text = "GHI 🫪";
-                            x.Foreground = new SolidColorBrush(new Rgba(200, 0, 200, 200));
+                            x.Text = "GHI 👪🏽";
+                            x.Background = new SolidColorBrush(Rgba.White);
+                            x.Foreground = LinearGradientBrush.FromAngle(
+                                [
+                                    new GradientStop(Rgba.Red, 0f),
+                                    new GradientStop(Rgba.Green, 1f / 3f),
+                                    new GradientStop(Rgba.Blue, 2f / 3f),
+                                    new GradientStop(Rgba.Black, 1f)
+                                ], 180f);
                             x.FontInfo = new FontInfo
                             {
                                 Family = "Segoe UI Emoji",
@@ -53,6 +61,25 @@ public static class DotTrayDirectTest
                         handler.MenuItems.Add<MenuItem>(x =>
                         {
                             x.Text = "JKL 🐖";
+                            x.FontInfo = new FontInfo
+                            {
+                                Family = "Arial Black",
+                                Size = 100f,
+                                Weight = FontWeight.Light,
+                                Align = TextAlign.Center
+                            };
+                        });
+                        handler.MenuItems.Add<MenuItem>(x =>
+                        {
+                            x.Text = "HHH";
+                            x.Background = new SolidColorBrush(Rgba.White);
+                            x.Foreground = LinearGradientBrush.FromAngle(
+                                [
+                                    new GradientStop(Rgba.Red, 0f),
+                                    new GradientStop(Rgba.Green, 1f / 3f),
+                                    new GradientStop(Rgba.Blue, 2f / 3f),
+                                    new GradientStop(Rgba.Black, 1f)
+                                ], 180f);
                             x.FontInfo = new FontInfo
                             {
                                 Family = "Arial Black",

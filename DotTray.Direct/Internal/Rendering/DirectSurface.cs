@@ -1,6 +1,7 @@
 ﻿namespace DotTray.Direct.Internal.Rendering;
 
 using DotTray.Direct.Coloring;
+using DotTray.Direct.Context;
 using DotTray.Direct.Internal.Models;
 using DotTray.Direct.Primitives;
 using DotTray.Direct.Typography;
@@ -98,6 +99,50 @@ internal sealed class DirectSurface : IDisposable
         return brush;
     }
 
+    public ID2D1Brush CreateLinearGradientBrush(ReadOnlySpan<GradientStop> stops, PointF start, PointF end, GradientExtendMode extendMode)
+    {
+        var collection = CreateStopCollection(stops, extendMode);
+
+        try
+        {
+            var properties = new LinearGradientBrushProperties
+            {
+                StartPoint = start,
+                EndPoint = end
+            };
+
+            HR.ThrowIfError(_context.CreateLinearGradientBrush(properties, nint.Zero, collection, out var brush));
+            return brush;
+        }
+        finally
+        {
+            Marshal.Release(collection);
+        }
+    }
+
+    public ID2D1Brush CreateRadialGradientBrush(ReadOnlySpan<GradientStop> stops, PointF center, PointF originOffset, float radiusX, float radiusY, GradientExtendMode extendMode)
+    {
+        var collection = CreateStopCollection(stops, extendMode);
+
+        try
+        {
+            var properties = new RadialGradientBrushProperties
+            {
+                Center = center,
+                GradientOriginOffset = originOffset,
+                RadiusX = radiusX,
+                RadiusY = radiusY
+            };
+
+            HR.ThrowIfError(_context.CreateRadialGradientBrush(properties, nint.Zero, collection, out var brush));
+            return brush;
+        }
+        finally
+        {
+            Marshal.Release(collection);
+        }
+    }
+
     public void FillRect(Rect rect, ID2D1Brush brush) => _context.FillRectangle(Snap(rect), brush);
 
     public void FillRoundedRect(Rect rect, float radius, ID2D1Brush brush)
@@ -138,7 +183,7 @@ internal sealed class DirectSurface : IDisposable
         }
     }
 
-    public void DrawText(string text, FontInfo font, Rect bounds, ID2D1Brush brush)
+    public void DrawText(string text, FontInfo font, Rect bounds, IDirectBrush brush, DirectBrushContext context)
     {
         if (text.Length == 0) return;
 
@@ -146,11 +191,21 @@ internal sealed class DirectSurface : IDisposable
 
         try
         {
-            _context.DrawTextLayout(new PointF
+            var renderer = new InkBoundsRenderer(_device.D2DFactory);
+            HR.ThrowIfError(layout.Draw(nint.Zero, renderer, bounds.X, bounds.Y));
+
+            var textBounds = renderer.HasInk
+                ? new RectF(renderer.Left, renderer.Top, renderer.Right - renderer.Left, renderer.Bottom - renderer.Top)
+                : new RectF(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+
+            using (var native = brush.Create(context, textBounds))
             {
-                X = bounds.X,
-                Y = bounds.Y
-            }, layout, brush, PInvoke.D2D1_DRAW_TEXT_OPTIONS_CLIP | PInvoke.D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
+                _context.DrawTextLayout(new PointF
+                {
+                    X = bounds.X,
+                    Y = bounds.Y
+                }, layout, native.Native, PInvoke.D2D1_DRAW_TEXT_OPTIONS_CLIP | PInvoke.D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
+            }
         }
         finally
         {
@@ -201,6 +256,26 @@ internal sealed class DirectSurface : IDisposable
         }
 
         _context.SetDpi(dpi, dpi);
+    }
+
+    private unsafe nint CreateStopCollection(ReadOnlySpan<GradientStop> stops, GradientExtendMode extendMode)
+    {
+        Span<GradientStopF> native = stops.Length <= 16 ? stackalloc GradientStopF[stops.Length] : new GradientStopF[stops.Length];
+
+        for (var i = 0; i < stops.Length; i++)
+        {
+            native[i] = new GradientStopF
+            {
+                Position = stops[i].Offset,
+                Color = ToColorF(stops[i].Color)
+            };
+        }
+
+        fixed (GradientStopF* pointer = native)
+        {
+            HR.ThrowIfError(_context.CreateGradientStopCollection(pointer, (uint)native.Length, 0, (uint)extendMode, out var collection));
+            return collection;
+        }
     }
 
     private RECTF Snap(Rect rect) => new()

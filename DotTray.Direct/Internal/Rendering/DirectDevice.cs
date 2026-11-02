@@ -11,12 +11,12 @@ internal sealed class DirectDevice : IDisposable
     private readonly IDXGIDevice _dxgiDevice;
     private readonly IDWriteFactory _dwriteFactory;
     private readonly IDCompositionDevice _compositionDevice;
-    private readonly ID2D1Factory _d2dFactory;
     private readonly Dictionary<FontInfo, IDWriteTextFormat> _formatCache = [];
 
     private bool disposed;
 
     public ID2D1Device D2DDevice { get; }
+    public ID2D1Factory D2DFactory { get; }
 
     public ID2D1StrokeStyle RoundStroke { get; }
 
@@ -26,8 +26,8 @@ internal sealed class DirectDevice : IDisposable
         _dxgiDevice = (IDXGIDevice)_d3dDevice;
         D2DDevice = CreateD2DDevice(_dxgiDevice);
 
-        _d2dFactory = GetFactory(D2DDevice);
-        RoundStroke = CreateRoundStroke(_d2dFactory);
+        D2DFactory = GetFactory(D2DDevice);
+        RoundStroke = CreateRoundStroke(D2DFactory);
 
         HR.ThrowIfError(PInvoke.DWriteCreateFactory(0, typeof(IDWriteFactory).GUID, out _dwriteFactory));
         HR.ThrowIfError(PInvoke.DCompositionCreateDevice(_dxgiDevice, typeof(IDCompositionDevice).GUID, out _compositionDevice));
@@ -108,7 +108,7 @@ internal sealed class DirectDevice : IDisposable
     {
         ObjectDisposedException.ThrowIf(disposed, this);
 
-        _d2dFactory.CreatePathGeometry(out var geometry);
+        D2DFactory.CreatePathGeometry(out var geometry);
 
         try
         {
@@ -154,7 +154,7 @@ internal sealed class DirectDevice : IDisposable
         Com.Release(_dwriteFactory);
         Com.Release(_compositionDevice);
         Com.Release(RoundStroke);
-        Com.Release(_d2dFactory);
+        Com.Release(D2DFactory);
         Com.Release(D2DDevice);
         Com.Release(_dxgiDevice);
         Com.Release(_d3dDevice);

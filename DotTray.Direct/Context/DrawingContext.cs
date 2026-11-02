@@ -162,11 +162,5 @@ public sealed class DrawingContext : Context
     /// <param name="text">The text to write</param>
     /// <param name="fontInfo">The font information to use</param>
     /// <param name="brush">The brush to use</param>
-    public void WriteRect<TBrush>(Rect bounds, string text, FontInfo fontInfo, TBrush brush) where TBrush : IDirectBrush
-    {
-        using (var scope = brush.Create(_brushContext, bounds))
-        {
-            _surface.DrawText(text, fontInfo, bounds, scope.Native);
-        }
-    }
+    public void WriteRect<TBrush>(Rect bounds, string text, FontInfo fontInfo, TBrush brush) where TBrush : IDirectBrush => _surface.DrawText(text, fontInfo, bounds, brush, _brushContext);
 }

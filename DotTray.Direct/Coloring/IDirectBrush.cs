@@ -14,5 +14,5 @@ public interface IDirectBrush
     /// <param name="context">The context of the window the brush is created for</param>
     /// <param name="bounds">The bounds that will be painted in DIPs</param>
     /// <returns><see cref="DirectBrush"/></returns>
-    DirectBrush Create(DirectBrushContext context, Rect bounds);
+    DirectBrush Create(DirectBrushContext context, RectF bounds);
 }
