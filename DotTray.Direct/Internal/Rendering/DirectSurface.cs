@@ -5,6 +5,7 @@ using DotTray.Direct.Context;
 using DotTray.Direct.Internal.Models;
 using DotTray.Direct.Primitives;
 using DotTray.Direct.Typography;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 
@@ -183,7 +184,7 @@ internal sealed class DirectSurface : IDisposable
         }
     }
 
-    public void DrawText(string text, FontInfo font, Rect bounds, IDirectBrush brush, DirectBrushContext context)
+    public void DrawText(string text, TextInfo font, Rect bounds, IDirectBrush brush, DirectBrushContext context)
     {
         if (text.Length == 0) return;
 
@@ -191,12 +192,7 @@ internal sealed class DirectSurface : IDisposable
 
         try
         {
-            var renderer = new InkBoundsRenderer(_device.D2DFactory);
-            HR.ThrowIfError(layout.Draw(nint.Zero, renderer, bounds.X, bounds.Y));
-
-            var textBounds = renderer.HasInk
-                ? new RectF(renderer.Left, renderer.Top, renderer.Right - renderer.Left, renderer.Bottom - renderer.Top)
-                : new RectF(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+            var textBounds = GetBrushBounds(layout, bounds, _device.GetCapHeight(font));
 
             using (var native = brush.Create(context, textBounds))
             {
@@ -287,6 +283,34 @@ internal sealed class DirectSurface : IDisposable
     };
 
     private float SnapEdge(float dips) => MathF.Round(dips * Scale) / Scale;
+
+    private static unsafe RectF GetBrushBounds(IDWriteTextLayout layout, Rect bounds, float capHeight)
+    {
+        const int MaxLines = 16;
+        
+        layout.GetMetrics(out var metrics);
+
+        var left = bounds.X + metrics.Left;
+        var top = bounds.Y + metrics.Top;
+        var lineBox = new RectF(left, top, metrics.Width, metrics.Height);
+
+        if (capHeight <= 0f) return lineBox;
+
+        var lines = stackalloc LineMetrics[MaxLines];
+        if (layout.GetLineMetrics(lines, MaxLines, out var count) < 0 || count == 0) return lineBox;
+
+        var first = top + lines[0].Baseline - capHeight;
+        var y = top;
+        var last = first;
+
+        for (var i = 0; i < count; i++)
+        {
+            last = y + lines[i].Baseline;
+            y += lines[i].Height;
+        }
+
+        return new RectF(left, first, metrics.Width, last - first);
+    }
 
     private static uint ToPixels(int value) => (uint)int.Max(1, value);
 

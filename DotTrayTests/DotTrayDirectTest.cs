@@ -4,6 +4,7 @@ using DotTray;
 using DotTray.Direct;
 using DotTray.Direct.Coloring;
 using DotTray.Direct.Items;
+using DotTray.Direct.Primitives;
 using DotTray.Direct.Typography;
 
 public static class DotTrayDirectTest
@@ -29,7 +30,7 @@ public static class DotTrayDirectTest
                         handler.MenuItems.Add<MenuItem>(x => x.Text = "DEF");
                         handler.MenuItems.Add<MenuItem>(x =>
                         {
-                            x.Text = "GHI 👪🏽";
+                            x.Text = "Qualle🪼";
                             x.Background = new SolidColorBrush(Rgba.White);
                             x.Foreground = LinearGradientBrush.FromAngle(
                                 [
@@ -37,19 +38,34 @@ public static class DotTrayDirectTest
                                     new GradientStop(Rgba.Green, 1f / 3f),
                                     new GradientStop(Rgba.Blue, 2f / 3f),
                                     new GradientStop(Rgba.Black, 1f)
-                                ], 180f);
-                            x.FontInfo = new FontInfo
+                                ], 0f);
+                            x.TextInfo = new TextInfo
                             {
-                                Family = "Segoe UI Emoji",
+                                Font = new UserFont(@"C:\NotoColorEmoji-Regular.ttf"),
                                 Size = 150f
                             };
-                            x.Items.Add<MenuItem>(x => x.Text = "Hi");
+                            x.Items.Add<MenuItem>(x =>
+                            {
+                                x.Text = "Hi";
+                                x.TextInfo = new TextInfo
+                                {
+                                    Font = SystemFont.Default,
+                                    Size = 250f
+                                };
+                                x.Background = new RadialGradientBrush(
+                                    [
+                                        new GradientStop(new Rgba(254, 225, 64), 0f),
+                                        new GradientStop(new Rgba(250, 112, 154), 0.5f),
+                                        new GradientStop(new Rgba(127, 0, 255), 1f)
+                                    ], new PosF(0.3f, 0.3f), new PosF(0.85f, 0.85f), new PosF(-0.1f, -0.1f));
+                                x.BackgroundHover = x.Background;
+                            });
                             x.Items.Add<MenuItem>(x =>
                             {
                                 x.Text = "This is a test";
-                                x.FontInfo = new FontInfo
+                                x.TextInfo = new TextInfo
                                 {
-                                    Family = "Bahnschrift",
+                                    Font = new SystemFont("Bahnschrift"),
                                     Size = 125f,
                                     Weight = FontWeight.Bold,
                                     Style = FontStyle.Oblique,
@@ -61,9 +77,9 @@ public static class DotTrayDirectTest
                         handler.MenuItems.Add<MenuItem>(x =>
                         {
                             x.Text = "JKL 🐖";
-                            x.FontInfo = new FontInfo
+                            x.TextInfo = new TextInfo
                             {
-                                Family = "Arial Black",
+                                Font = new SystemFont("Arial"),
                                 Size = 100f,
                                 Weight = FontWeight.Light,
                                 Align = TextAlign.Center
@@ -80,9 +96,9 @@ public static class DotTrayDirectTest
                                     new GradientStop(Rgba.Blue, 2f / 3f),
                                     new GradientStop(Rgba.Black, 1f)
                                 ], 180f);
-                            x.FontInfo = new FontInfo
+                            x.TextInfo = new TextInfo
                             {
-                                Family = "Arial Black",
+                                Font = new SystemFont("Arial"),
                                 Size = 100f,
                                 Weight = FontWeight.Light,
                                 Align = TextAlign.Center
@@ -90,13 +106,21 @@ public static class DotTrayDirectTest
                         });
                         handler.MenuItems.Add<MenuItem>(x =>
                         {
-                            x.Text = "🔥 Fire 🔥";
-                            x.FontInfo = new FontInfo
+                            x.Text = "🪼🔥 Élite 🔥🪼";
+                            x.ForegroundHover = LinearGradientBrush.FromAngle(
+                                [
+                                    new GradientStop(new Rgba(255, 235, 160), 0f),
+                                    new GradientStop(new Rgba(240, 190, 60), 0.25f),
+                                    new GradientStop(new Rgba(200, 130, 20), 0.5f),
+                                    new GradientStop(new Rgba(150, 80, 10), 0.75f),
+                                    new GradientStop(new Rgba(90, 40, 5), 1f)
+                                ], 135f);
+                            x.TextInfo = new TextInfo
                             {
-                                Family = "Inter",
+                                Font = new SystemFont("Algerian"),
                                 Size = 111f,
-                                Weight = FontWeight.MaxValue,
-                                Align = TextAlign.Center
+                                Align = TextAlign.Center,
+                                Language = new LanguageTag("fr-FR")
                             };
                         });
 

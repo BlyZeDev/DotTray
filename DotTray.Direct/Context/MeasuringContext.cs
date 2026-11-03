@@ -18,10 +18,10 @@ public sealed class MeasuringContext : Context
     }
 
     /// <summary>
-    /// Measures the size, in DIPs, required to render <paramref name="text"/> with <paramref name="fontInfo"/>
+    /// Measures the size, in DIPs, required to render <paramref name="text"/> with <paramref name="textInfo"/>
     /// </summary>
     /// <param name="text">The text to measure</param>
-    /// <param name="fontInfo">The font information to measure the text in</param>
+    /// <param name="textInfo">The text information to measure the text for</param>
     /// <returns><see cref="DimF"/></returns>
-    public DimF MeasureText(string text, FontInfo fontInfo) => _device.MeasureText(text, fontInfo);
+    public DimF MeasureText(string text, TextInfo textInfo) => _device.MeasureText(text, textInfo);
 }

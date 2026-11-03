@@ -3,23 +3,23 @@
 using System.Globalization;
 
 /// <summary>
-/// Represents a font description
+/// Describes how a text should be rendered
 /// </summary>
-public sealed record FontInfo
+public sealed record TextInfo
 {
     /// <summary>
     /// Segoe UI Emoji, 16 DIPs
     /// </summary>
-    public static FontInfo Default => new FontInfo
+    public static TextInfo Default => new TextInfo
     {
-        Family = "Segoe UI Emoji",
+        Font = SystemFont.Default,
         Size = 16f
     };
 
     /// <summary>
-    /// The name of the font family, eg. Segoe UI Emoji
+    /// The font used, eg. <see cref="SystemFont.Default"/>
     /// </summary>
-    public required string Family { get; init; }
+    public required Font Font { get; init; }
 
     /// <summary>
     /// The size in DIPs

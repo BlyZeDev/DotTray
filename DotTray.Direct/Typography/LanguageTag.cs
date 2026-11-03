@@ -13,6 +13,11 @@ public readonly record struct LanguageTag
     public readonly string Value { get; }
 
     /// <summary>
+    /// Initializes a new <see cref="LanguageTag"/> using <see cref="CultureInfo.CurrentUICulture"/>
+    /// </summary>
+    public LanguageTag() : this(CultureInfo.CurrentUICulture) { }
+
+    /// <summary>
     /// Initializes a new <see cref="LanguageTag"/>
     /// </summary>
     /// <param name="tag">The name of the culture in BCP47</param>

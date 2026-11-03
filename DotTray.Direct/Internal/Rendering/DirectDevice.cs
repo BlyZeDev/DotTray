@@ -7,11 +7,16 @@ using System.Runtime.InteropServices.Marshalling;
 
 internal sealed class DirectDevice : IDisposable
 {
+    private const float FallbackCapHeightRatio = 0.7f;
+
     private readonly ID3D11Device _d3dDevice;
     private readonly IDXGIDevice _dxgiDevice;
     private readonly IDWriteFactory _dwriteFactory;
+    private readonly IDWriteFactory3 _dwriteFactory3;
     private readonly IDCompositionDevice _compositionDevice;
-    private readonly Dictionary<FontInfo, IDWriteTextFormat> _formatCache = [];
+    private readonly IDWriteFontCollection _systemCollection;
+    private readonly Dictionary<UserFont, IDWriteFontCollection> _userCollections = [];
+    private readonly Dictionary<TextInfo, ResolvedFont> _fonts = [];
 
     private bool disposed;
 
@@ -19,6 +24,8 @@ internal sealed class DirectDevice : IDisposable
     public ID2D1Factory D2DFactory { get; }
 
     public ID2D1StrokeStyle RoundStroke { get; }
+
+    private sealed record ResolvedFont(IDWriteTextFormat Format, float CapHeight);
 
     public DirectDevice()
     {
@@ -30,6 +37,9 @@ internal sealed class DirectDevice : IDisposable
         RoundStroke = CreateRoundStroke(D2DFactory);
 
         HR.ThrowIfError(PInvoke.DWriteCreateFactory(0, typeof(IDWriteFactory).GUID, out _dwriteFactory));
+        _dwriteFactory3 = (IDWriteFactory3)_dwriteFactory;
+        HR.ThrowIfError(_dwriteFactory.GetSystemFontCollection(out _systemCollection, 0));
+
         HR.ThrowIfError(PInvoke.DCompositionCreateDevice(_dxgiDevice, typeof(IDCompositionDevice).GUID, out _compositionDevice));
     }
 
@@ -81,17 +91,17 @@ internal sealed class DirectDevice : IDisposable
         return (target, visual);
     }
 
-    public IDWriteTextLayout CreateTextLayout(string text, FontInfo font, float maxWidth = float.MaxValue, float maxHeight = float.MaxValue)
+    public IDWriteTextLayout CreateTextLayout(string text, TextInfo info, float maxWidth = float.MaxValue, float maxHeight = float.MaxValue)
     {
-        var format = GetTextFormat(font);
+        var format = Resolve(info).Format;
 
         _dwriteFactory.CreateTextLayout(text, (uint)text.Length, format, maxWidth, maxHeight, out var layout);
         return layout;
     }
 
-    public DimF MeasureText(string text, FontInfo font)
+    public DimF MeasureText(string text, TextInfo info)
     {
-        var layout = CreateTextLayout(text, font);
+        var layout = CreateTextLayout(text, info);
 
         try
         {
@@ -103,6 +113,8 @@ internal sealed class DirectDevice : IDisposable
             Com.Release(layout);
         }
     }
+
+    public float GetCapHeight(TextInfo info) => Resolve(info).CapHeight;
 
     public ID2D1PathGeometry CreatePolyline(ReadOnlySpan<PointF> points)
     {
@@ -145,11 +157,19 @@ internal sealed class DirectDevice : IDisposable
         if (disposed) return;
         disposed = true;
 
-        foreach (var format in _formatCache.Values)
+        foreach (var resolved in _fonts.Values)
         {
-            Com.Release(format);
+            Com.Release(resolved.Format);
         }
-        _formatCache.Clear();
+        _fonts.Clear();
+
+        foreach (var collection in _userCollections.Values)
+        {
+            Com.Release(collection);
+        }
+        _userCollections.Clear();
+
+        Com.Release(_systemCollection);
 
         Com.Release(_dwriteFactory);
         Com.Release(_compositionDevice);
@@ -160,20 +180,77 @@ internal sealed class DirectDevice : IDisposable
         Com.Release(_d3dDevice);
     }
 
-    private IDWriteTextFormat GetTextFormat(FontInfo font)
+    private ResolvedFont Resolve(TextInfo info)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
 
-        if (_formatCache.TryGetValue(font, out var cached)) return cached;
-        
-        _dwriteFactory.CreateTextFormat(font.Family, nint.Zero, font.Weight.Value, (int)font.Style, (int)font.Stretch, font.Size, font.Language.Value, out var format);
+        if (_fonts.TryGetValue(info, out var cached)) return cached;
 
-        format.SetTextAlignment((uint)font.Align);
-        format.SetParagraphAlignment(PInvoke.DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-        format.SetWordWrapping(PInvoke.DWRITE_WORD_WRAPPING_NO_WRAP);
-        
-        _formatCache[font] = format;
-        return format;
+        var collection = GetCollection(info.Font);
+
+        if (!TryGetFamily(collection, info.Font.Family, out var family)) throw new FontNotFoundException(info.Font.Family);
+
+        try
+        {
+            var capHeight = ReadCapHeight(family, info);
+
+            _dwriteFactory.CreateTextFormat(info.Font.Family, collection, info.Weight.Value, (int)info.Style, (int)info.Stretch, info.Size, info.Language.Value, out var format);
+            format.SetTextAlignment((uint)info.Align);
+            format.SetParagraphAlignment(PInvoke.DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+            format.SetWordWrapping(PInvoke.DWRITE_WORD_WRAPPING_NO_WRAP);
+
+            var resolved = new ResolvedFont(format, capHeight);
+            _fonts[info] = resolved;
+
+            return resolved;
+        }
+        finally
+        {
+            Com.Release(family);
+        }
+    }
+
+    private IDWriteFontCollection GetCollection(Font font)
+    {
+        if (font is not UserFont user) return _systemCollection;
+        if (_userCollections.TryGetValue(user, out var cached)) return cached;
+
+        if (!Font.TryCreateCollection(_dwriteFactory3, [.. user.Paths], out var collection))
+        {
+            throw new InvalidDataException($"Failed to load font '{user.Family}'");
+        }
+
+        _userCollections[user] = collection;
+        return collection;
+    }
+
+    private static bool TryGetFamily(IDWriteFontCollection collection, string name, out IDWriteFontFamily family)
+    {
+        family = null!;
+
+        return !HR.IsError(collection.FindFamilyName(name, out var index, out var exists))
+            && exists != 0
+            && !HR.IsError(collection.GetFontFamily(index, out family));
+    }
+
+    private static float ReadCapHeight(IDWriteFontFamily family, TextInfo info)
+    {
+        var fallback = info.Size * FallbackCapHeightRatio;
+
+        if (HR.IsError(family.GetFirstMatchingFont((uint)info.Weight.Value, (uint)info.Stretch, (uint)info.Style, out var match))) return fallback;
+
+        try
+        {
+            match.GetMetrics(out var metrics);
+            if (metrics.DesignUnitsPerEm == 0) return fallback;
+
+            var units = metrics.CapHeight != 0 ? metrics.CapHeight : metrics.Ascent;
+            return units * info.Size / metrics.DesignUnitsPerEm;
+        }
+        finally
+        {
+            Com.Release(match);
+        }
     }
 
     private static ID3D11Device CreateD3DDevice()

@@ -141,9 +141,9 @@ public class MenuItem : MenuItemBase
     } = "";
 
     /// <summary>
-    /// The font info used to display the text
+    /// The text info used to display the text
     /// </summary>
-    public FontInfo FontInfo
+    public TextInfo TextInfo
     {
         get;
         set
@@ -153,7 +153,7 @@ public class MenuItem : MenuItemBase
             field = value;
             Update();
         }
-    } = FontInfo.Default;
+    } = TextInfo.Default;
 
     /// <summary>
     /// <see langword="true"/> to disable this instance, otherwise <see langword="false"/>
@@ -189,7 +189,7 @@ public class MenuItem : MenuItemBase
     /// <inheritdoc/>
     internal protected override Dim Measure(MeasuringContext context)
     {
-        var text = context.MeasureText(Text, FontInfo);
+        var text = context.MeasureText(Text, TextInfo);
         var baseSize = new Dim((int)MathF.Ceiling(text.Width * 1.05f), (int)MathF.Ceiling(text.Height * 1.05f));
 
         if (SubmenuItems.IsEmpty) return baseSize;
@@ -211,7 +211,7 @@ public class MenuItem : MenuItemBase
         if (SubmenuItems.IsEmpty)
         {
             context.FillRect(bounds, background);
-            context.Write(Text, FontInfo, foreground);
+            context.Write(Text, TextInfo, foreground);
             return;
         }
 
@@ -225,7 +225,7 @@ public class MenuItem : MenuItemBase
         var arrowBounds = new Rect(arrowX, arrowY, arrowWidth, arrowHeight);
 
         context.FillRect(bounds, background);
-        context.WriteRect(textBounds, Text, FontInfo, foreground);
+        context.WriteRect(textBounds, Text, TextInfo, foreground);
         context.DrawChevron(arrowBounds, foreground);
     }
 

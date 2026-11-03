@@ -143,16 +143,16 @@ public sealed class DrawingContext : Context
     }
 
     /// <summary>
-    /// Fills the whole <see cref="ItemBounds"/> with <paramref name="text"/> using <paramref name="fontInfo"/> and <paramref name="brush"/>
+    /// Fills the whole <see cref="ItemBounds"/> with <paramref name="text"/> using <paramref name="textInfo"/> and <paramref name="brush"/>
     /// </summary>
     /// <typeparam name="TBrush">The type of brush to use</typeparam>
     /// <param name="text">The text to write</param>
-    /// <param name="fontInfo">The font information to use</param>
+    /// <param name="textInfo">The text information to use</param>
     /// <param name="brush">The brush to use</param>
-    public void Write<TBrush>(string text, FontInfo fontInfo, TBrush brush) where TBrush : IDirectBrush => WriteRect(ItemBounds, text, fontInfo, brush);
+    public void Write<TBrush>(string text, TextInfo textInfo, TBrush brush) where TBrush : IDirectBrush => WriteRect(ItemBounds, text, textInfo, brush);
 
     /// <summary>
-    /// Fills the whole <paramref name="bounds"/> with <paramref name="text"/> using <paramref name="fontInfo"/> and <paramref name="brush"/>
+    /// Fills the whole <paramref name="bounds"/> with <paramref name="text"/> using <paramref name="textInfo"/> and <paramref name="brush"/>
     /// </summary>
     /// <remarks>
     /// The text is vertically centered and clipped to <paramref name="bounds"/>
@@ -160,7 +160,7 @@ public sealed class DrawingContext : Context
     /// <typeparam name="TBrush">The type of brush to use</typeparam>
     /// <param name="bounds">The bounds to fill</param>
     /// <param name="text">The text to write</param>
-    /// <param name="fontInfo">The font information to use</param>
+    /// <param name="textInfo">The text information to use</param>
     /// <param name="brush">The brush to use</param>
-    public void WriteRect<TBrush>(Rect bounds, string text, FontInfo fontInfo, TBrush brush) where TBrush : IDirectBrush => _surface.DrawText(text, fontInfo, bounds, brush, _brushContext);
+    public void WriteRect<TBrush>(Rect bounds, string text, TextInfo textInfo, TBrush brush) where TBrush : IDirectBrush => _surface.DrawText(text, textInfo, bounds, brush, _brushContext);
 }

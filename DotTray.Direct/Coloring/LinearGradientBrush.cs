@@ -42,6 +42,23 @@ public sealed class LinearGradientBrush : IDirectBrush
         ExtendMode = extendMode;
     }
 
+    /// <inheritdoc/>
+    public DirectBrush Create(DirectBrushContext context, RectF bounds)
+    {
+        var start = new PointF
+        {
+            X = bounds.X + Start.X * bounds.Width,
+            Y = bounds.Y + Start.Y * bounds.Height
+        };
+        var end = new PointF
+        {
+            X = bounds.X + End.X * bounds.Width,
+            Y = bounds.Y + End.Y * bounds.Height
+        };
+
+        return new DirectBrush(context._surface.CreateLinearGradientBrush(_stops, start, end, ExtendMode));
+    }
+
     /// <summary>
     /// Creates a gradient running in a CSS-like <paramref name="degrees"/> direction<br/>
     /// (0 = bottom to top, 90 = left to right, 180 = top to bottom)
@@ -91,23 +108,6 @@ public sealed class LinearGradientBrush : IDirectBrush
         };
 
         return new LinearGradientBrush(stops, new PosF(0f, 0f), new PosF(1f, 0f));
-    }
-
-    /// <inheritdoc/>
-    public DirectBrush Create(DirectBrushContext context, RectF bounds)
-    {
-        var start = new PointF
-        {
-            X = bounds.X + Start.X * bounds.Width,
-            Y = bounds.Y + Start.Y * bounds.Height
-        };
-        var end = new PointF
-        {
-            X = bounds.X + End.X * bounds.Width,
-            Y = bounds.Y + End.Y * bounds.Height
-        };
-
-        return new DirectBrush(context._surface.CreateLinearGradientBrush(_stops, start, end, ExtendMode));
     }
 
     private static GradientStop[] Sort(IEnumerable<GradientStop> stops)

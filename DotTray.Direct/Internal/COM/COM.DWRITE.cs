@@ -1,7 +1,6 @@
 ﻿namespace DotTray.Direct.Internal;
 
 using DotTray.Direct.Internal.Models;
-using DotTray.Direct.Internal.Rendering;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 
@@ -9,11 +8,13 @@ using System.Runtime.InteropServices.Marshalling;
 [Guid("b859ee5a-d838-4b5b-a2e8-1adc7d93db48")]
 internal partial interface IDWriteFactory
 {
-    void GetSystemFontCollection_Unbound();
+    [PreserveSig]
+    int GetSystemFontCollection(out IDWriteFontCollection fontCollection, int checkForUpdates);
     void CreateCustomFontCollection_Unbound();
     void RegisterFontCollectionLoader_Unbound();
     void UnregisterFontCollectionLoader_Unbound();
-    void CreateFontFileReference_Unbound();
+    [PreserveSig]
+    int CreateFontFileReference(string filePath, nint lastWriteTime, out IDWriteFontFile fontFile);
     void CreateCustomFontFileReference_Unbound();
     void CreateFontFace_Unbound();
     void CreateRenderingParams_Unbound();
@@ -22,12 +23,17 @@ internal partial interface IDWriteFactory
     void RegisterFontFileLoader_Unbound();
     void UnregisterFontFileLoader_Unbound();
 
-    void CreateTextFormat(string fontFamilyName, nint fontCollection, int fontWeight, int fontStyle, int fontStretch, float fontSize, string localeName, out IDWriteTextFormat textFormat);
+    void CreateTextFormat(string fontFamilyName, IDWriteFontCollection? fontCollection, int fontWeight, int fontStyle, int fontStretch, float fontSize, string localeName, out IDWriteTextFormat textFormat);
 
     void CreateTypography_Unbound();
     void GetGdiInterop_Unbound();
 
     void CreateTextLayout(string text, uint length, IDWriteTextFormat textFormat, float maxWidth, float maxHeight, out IDWriteTextLayout textLayout);
+    void CreateGdiCompatibleTextLayout_Unbound();
+    void CreateEllipsisTrimmingSign_Unbound();
+    void CreateTextAnalyzer_Unbound();
+    void CreateNumberSubstitution_Unbound();
+    void CreateGlyphRunAnalysis_Unbound();
 }
 
 [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16, Options = ComInterfaceOptions.ComObjectWrapper)]
@@ -44,9 +50,29 @@ internal partial interface IDWriteFactory2 : IDWriteFactory1
 {
     void GetSystemFontFallback_Unbound();
     void CreateFontFallbackBuilder_Unbound();
+    void TranslateColorGlyphRun_Unbound();
+    void CreateCustomRenderingParams2_Unbound();
+    void CreateGlyphRunAnalysis2_Unbound();
+}
+
+[GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16, Options = ComInterfaceOptions.ComObjectWrapper)]
+[Guid("9a1b41c3-d3bb-466a-87fc-fe67556a3b65")]
+internal partial interface IDWriteFactory3 : IDWriteFactory2
+{
+    void CreateGlyphRunAnalysis3_Unbound();
+    void CreateCustomRenderingParams3_Unbound();
+    void CreateFontFaceReferenceFromFile_Unbound();
 
     [PreserveSig]
-    int TranslateColorGlyphRun(float baselineOriginX, float baselineOriginY, nint glyphRun, nint glyphRunDescription, uint measuringMode, nint worldToDeviceTransform, uint colorPaletteIndex, out nint colorLayers);
+    int CreateFontFaceReference(string filePath, nint lastWriteTime, uint faceIndex, uint simulations, out IDWriteFontFaceReference fontFaceReference);
+
+    void GetSystemFontSet_Unbound();
+
+    [PreserveSig]
+    int CreateFontSetBuilder(out IDWriteFontSetBuilder fontSetBuilder);
+
+    [PreserveSig]
+    int CreateFontCollectionFromFontSet(IDWriteFontSet fontSet, out IDWriteFontCollection fontCollection);
 }
 
 [GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
@@ -114,168 +140,125 @@ internal partial interface IDWriteTextLayout : IDWriteTextFormat
     void GetTypography_Unbound();
     void LayoutGetLocaleNameLength_Unbound();
     void LayoutGetLocaleName_Unbound();
+    void Draw_Unbound();
     [PreserveSig]
-    int Draw(nint clientDrawingContext, IDWriteTextRenderer renderer, float originX, float originY);
-    void GetLineMetrics_Unbound();
+    unsafe int GetLineMetrics(LineMetrics* lineMetrics, uint maxLineCount, out uint actualLineCount);
     void GetMetrics(out TextMetrics metrics);
 }
 
-[GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
-[Guid("5f49804d-7024-4d43-bfa9-d25984f53849")]
-internal unsafe partial interface IDWriteFontFace
+[GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16, Options = ComInterfaceOptions.ComObjectWrapper)]
+[Guid("a84cee02-3eea-4eee-a827-87c1a02a0fcc")]
+internal partial interface IDWriteFontCollection
 {
-    void GetType_Unbound();
-    void GetFiles_Unbound();
-    void GetIndex_Unbound();
-    void GetSimulations_Unbound();
+    [PreserveSig]
+    uint GetFontFamilyCount();
+
+    [PreserveSig]
+    int GetFontFamily(uint index, out IDWriteFontFamily fontFamily);
+
+    [PreserveSig]
+    int FindFamilyName(string familyName, out uint index, out int exists);
+
+    void GetFontFromFontFace_Unbound();
+}
+
+[GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
+[Guid("1a0d8438-1d97-4ec1-aef9-a2fb86ed6acb")]
+internal partial interface IDWriteFontList
+{
+    void GetFontCollection_Unbound();
+    void GetFontCount_Unbound();
+    void GetFont_Unbound();
+}
+
+[GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
+[Guid("da20d8ef-812a-4c43-9802-62ec4abd7add")]
+internal partial interface IDWriteFontFamily : IDWriteFontList
+{
+    [PreserveSig]
+    int GetFamilyNames(out IDWriteLocalizedStrings names);
+
+    [PreserveSig]
+    int GetFirstMatchingFont(uint weight, uint stretch, uint style, out IDWriteFont font);
+
+    void GetMatchingFonts_Unbound();
+}
+
+[GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
+[Guid("acd16696-8c14-4f5d-877e-fe3fc1d32737")]
+internal partial interface IDWriteFont
+{
+    void GetFontFamily_Unbound();
+    void GetWeight_Unbound();
+    void GetStretch_Unbound();
+    void GetStyle_Unbound();
     void IsSymbolFont_Unbound();
-    void GetMetrics_Unbound();
-    void GetGlyphCount_Unbound();
-    void GetDesignGlyphMetrics_Unbound();
-    void GetGlyphIndices_Unbound();
-    void TryGetFontTable_Unbound();
-    void ReleaseFontTable_Unbound();
+    void GetFaceNames_Unbound();
+    void GetInformationalStrings_Unbound();
+    void GetSimulations_Unbound();
 
     [PreserveSig]
-    int GetGlyphRunOutline(float emSize, ushort* glyphIndices, float* glyphAdvances, nint glyphOffsets, uint glyphCount, int isSideways, int isRightToLeft, ID2D1GeometrySink geometrySink);
-    void GetRecommendedRenderingMode_Unbound();
-    void GetGdiCompatibleMetrics_Unbound();
-    void GetGdiCompatibleGlyphMetrics_Unbound();
+    void GetMetrics(out DWriteFontMetrics fontMetrics);
+
+    void HasCharacter_Unbound();
+    void CreateFontFace_Unbound();
 }
 
 [GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
-[Guid("a71efdb4-9fdb-4838-ad90-cfc3be8c3daf")]
-internal unsafe partial interface IDWriteFontFace1 : IDWriteFontFace
+[Guid("739d886a-cef5-47dc-8769-1a8b41bebbb0")]
+internal partial interface IDWriteFontFile
 {
-    void GetMetrics1_Unbound();
-    void GetGdiCompatibleMetrics1_Unbound();
-    void GetCaretMetrics_Unbound();
-    void GetUnicodeRanges_Unbound();
-    void IsMonospacedFont_Unbound();
-    void GetDesignGlyphAdvances_Unbound();
-    void GetGdiCompatibleGlyphAdvances_Unbound();
-    void GetKerningPairAdjustments_Unbound();
-    void HasKerningPairs_Unbound();
-    void GetRecommendedRenderingMode1_Unbound();
-    void GetVerticalGlyphVariants_Unbound();
-    void HasVerticalGlyphVariants_Unbound();
+    void GetReferenceKey_Unbound();
+    void GetLoader_Unbound();
+
+    [PreserveSig]
+    int Analyze(out int isSupportedFontType, out uint fontFileType, out uint fontFaceType, out uint numberOfFaces);
+}
+
+[GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16, Options = ComInterfaceOptions.ComObjectWrapper)]
+[Guid("08256209-099a-4b34-b86d-c22b110e7771")]
+internal unsafe partial interface IDWriteLocalizedStrings
+{
+    void GetCount_Unbound();
+
+    [PreserveSig]
+    int FindLocaleName(string localeName, out uint index, out int exists);
+
+    void GetLocaleNameLength_Unbound();
+    void GetLocaleName_Unbound();
+
+    [PreserveSig]
+    int GetStringLength(uint index, out uint length);
+
+    [PreserveSig]
+    int GetString(uint index, char* stringBuffer, uint size);
 }
 
 [GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
-[Guid("d8b768ff-64bc-4e66-982b-ec8e87f693f7")]
-internal unsafe partial interface IDWriteFontFace2 : IDWriteFontFace1
+[Guid("5e7fa7ca-dde3-424c-89f0-9fcd6fed58cd")]
+internal partial interface IDWriteFontFaceReference
 {
-    [PreserveSig]
-    int IsColorFont();
+    void CreateFontFace_Unbound();
 }
 
-[GeneratedComInterface]
-[Guid("eaf3a2da-ecf4-4d24-b644-b34f6842024b")]
-internal partial interface IDWritePixelSnapping
+[GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
+[Guid("53585141-d9f8-4095-8321-d73cf6bd116b")]
+internal partial interface IDWriteFontSet
 {
-    [PreserveSig]
-    int IsPixelSnappingDisabled(nint clientContext, out int isDisabled);
-    [PreserveSig]
-    int GetCurrentTransform(nint clientContext, out Matrix3x2 transform);
-    [PreserveSig]
-    int GetPixelsPerDip(nint clientContext, out float pixelsPerDip);
+    void GetFontCount_Unbound();
 }
 
-[GeneratedComInterface]
-[Guid("ef8a8135-5cc6-45fe-8825-c5a0724eb819")]
-internal partial interface IDWriteTextRenderer : IDWritePixelSnapping
+[GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
+[Guid("2f642afe-9c68-4f40-b8be-457401afcb3d")]
+internal partial interface IDWriteFontSetBuilder
 {
+    void AddFontFaceReferenceWithProperties_Unbound();
+
     [PreserveSig]
-    int DrawGlyphRun(nint clientContext, float x, float y, uint measuringMode, nint glyphRun, nint glyphRunDescription, nint effect);
+    int AddFontFaceReference(IDWriteFontFaceReference fontFaceReference);
+
+    void AddFontSet_Unbound();
+
     [PreserveSig]
-    int DrawUnderline(nint clientContext, float x, float y, nint underline, nint effect);
-    [PreserveSig]
-    int DrawStrikethrough(nint clientContext, float x, float y, nint strikethrough, nint effect);
-    [PreserveSig]
-    int DrawInlineObject(nint clientContext, float x, float y, nint inlineObject, int isSideways, int isRightToLeft, nint effect);
-}
-
-[GeneratedComClass]
-internal sealed unsafe partial class InkBoundsRenderer : IDWriteTextRenderer
-{
-    private readonly ID2D1Factory _factory;
-
-    public bool HasInk { get; private set; }
-    public float Left = float.MaxValue, Top = float.MaxValue, Right = float.MinValue, Bottom = float.MinValue;
-
-    public InkBoundsRenderer(ID2D1Factory factory) => _factory = factory;
-
-    public int IsPixelSnappingDisabled(nint clientContext, out int isDisabled)
-    {
-        isDisabled = 1;
-        return 0;
-    }
-
-    public int GetCurrentTransform(nint clientContext, out Matrix3x2 transform)
-    {
-        transform = new Matrix3x2
-        {
-            M11 = 1,
-            M22 = 1
-        };
-        return 0;
-    }
-
-    public int GetPixelsPerDip(nint clientContext, out float pixelsPerDip)
-    {
-        pixelsPerDip = 1f;
-        return 0;
-    }
-
-    public int DrawGlyphRun(nint clientContext, float x, float y, uint measuringMode, nint glyphRun, nint glyphRunDescription, nint effect)
-    {
-        var run = (GlyphRun*)glyphRun;
-        if (run->GlyphCount == 0) return 0;
-
-        var face = ComInterfaceMarshaller<IDWriteFontFace>.ConvertToManaged((void*)run->FontFace)!;
-        if (((IDWriteFontFace2)face).IsColorFont() != 0) return 0;
-
-        _factory.CreatePathGeometry(out var geometry);
-
-        try
-        {
-            geometry.Open(out var sink);
-            int hr;
-
-            try
-            {
-                hr = face.GetGlyphRunOutline(run->FontEmSize, run->GlyphIndices, run->GlyphAdvances, run->GlyphOffsets,
-                    run->GlyphCount, run->IsSideways, (int)(run->BidiLevel & 1), sink);
-                sink.Close();
-            }
-            finally
-            {
-                Com.Release(sink);
-            }
-
-            if (hr < 0) return 0;
-
-            geometry.GetBounds(nint.Zero, out var b);
-
-            if (!float.IsFinite(b.Left) || !float.IsFinite(b.Right) || b.Right <= b.Left || b.Bottom <= b.Top) return 0;
-
-            HasInk = true;
-            Left = MathF.Min(Left, x + b.Left);
-            Top = MathF.Min(Top, y + b.Top);
-            Right = MathF.Max(Right, x + b.Right);
-            Bottom = MathF.Max(Bottom, y + b.Bottom);
-        }
-        finally
-        {
-            Com.Release(geometry);
-        }
-
-        return 0;
-    }
-
-    public int DrawUnderline(nint clientContext, float x, float y, nint underline, nint effect) => 0;
-
-    public int DrawStrikethrough(nint clientContext, float x, float y, nint strikethrough, nint effect) => 0;
-
-    public int DrawInlineObject(nint clientContext, float x, float y, nint inlineObject, int isSideways, int isRightToLeft, nint effect) => 0;
+    int CreateFontSet(out IDWriteFontSet fontSet);
 }
