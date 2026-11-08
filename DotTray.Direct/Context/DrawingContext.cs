@@ -79,25 +79,38 @@ public sealed class DrawingContext : Context
     /// <summary>
     /// Draws a checkmark inside <paramref name="bounds"/> with <paramref name="brush"/>
     /// </summary>
+    /// <remarks>
+    /// The checkmark is stretched to <paramref name="bounds"/>. It looks best with bounds about 4:3 wide
+    /// </remarks>
     /// <typeparam name="TBrush">The type of brush to use</typeparam>
     /// <param name="bounds">The bounds to draw in</param>
     /// <param name="brush">The brush to use</param>
-    public void DrawCheckmark<TBrush>(Rect bounds, TBrush brush) where TBrush : IDirectBrush
+    /// <param name="thickness">The stroke thickness, or <c>0f</c> to derive it from the size of <paramref name="bounds"/></param>
+    public void DrawCheckmark<TBrush>(Rect bounds, TBrush brush, float thickness = 0f) where TBrush : IDirectBrush
     {
-        var stroke = Math.Max(1.5f, bounds.Height / 8f);
+        var stroke = thickness > 0f ? thickness : Math.Max(1.5f, bounds.Height / 7f);
+        var half = stroke / 2f;
 
-        var x0 = bounds.X + bounds.Width * 0.12f;
-        var y0 = bounds.Y + bounds.Height * 0.52f;
-        var x1 = bounds.X + bounds.Width * 0.40f;
-        var y1 = bounds.Y + bounds.Height * 0.80f;
-        var x2 = bounds.X + bounds.Width * 0.88f;
-        var y2 = bounds.Y + bounds.Height * 0.22f;
+        var left = bounds.X + half;
+        var top = bounds.Y + half;
+        var width = bounds.Width - stroke;
+        var height = bounds.Height - stroke;
+
+        var start = Point(left, top + height * 0.44f);
+        var tip = Point(left + width * 0.35f, top + height);
+        var end = Point(left + width, top);
 
         using (var scope = brush.Create(_brushContext, bounds))
         {
-            _surface.DrawLine(x0, y0, x1, y1, stroke, scope.Native);
-            _surface.DrawLine(x1, y1, x2, y2, stroke, scope.Native);
+            _surface.DrawPolyline([start, tip, end], stroke, scope.Native);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static PointF Point(float x, float y) => new PointF
+        {
+            X = x,
+            Y = y
+        };
     }
 
     /// <summary>

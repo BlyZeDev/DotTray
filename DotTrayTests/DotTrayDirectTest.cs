@@ -22,12 +22,52 @@ public static class DotTrayDirectTest
 
                     using (var icon = await NotifyIcon.RunAsync(tempIcon.FilePath, handler, cts.Token))
                     {
+                        handler.MenuItems.Add<CheckItem>(x =>
+                        {
+                            x.Text = "Eternity";
+                            x.TextInfo = x.TextInfo with
+                            {
+                                Font = new UserFont(@"C:\pixelify.ttf"),
+                                Size = 75f
+                            };
+                            x.Interacted = args =>
+                            {
+                                if (args.Type is ItemInteractionType.MouseLeftUp) args.KeepMenuOpen = Random.Shared.Next(0, 2) == 1;
+
+                                Console.WriteLine(args);
+                            };
+                        });
+                        handler.MenuItems.Add<SeparatorItem>(x =>
+                        {
+                            x.Background = SolidColorBrush.Transparent;
+                            x.Foreground = SolidColorBrush.White;
+                            x.HorizontalPadding = 8;
+                            x.VerticalPadding = 4;
+                            x.Thickness = 4;
+                        });
                         handler.MenuItems.Add<MenuItem>(x =>
                         {
-                            x.Text = "ABC";
-                            x.Interacted = args => Console.WriteLine(args);
+                            x.Text = "DEF";
+                            x.TextInfo = x.TextInfo with { Size = x.TextInfo.Size * 2f };
+                            x.Items.Add<CheckItem>(x => x.Text = "Hello");
+                            x.Items.Add<CheckItem>(x =>
+                            {
+                                x.Text = "Checkable";
+                                x.TextInfo = x.TextInfo with { Size = x.TextInfo.Size * 3f };
+                                x.Interacted = args =>
+                                {
+                                    Console.WriteLine(x.IsChecked);
+                                    args.KeepMenuOpen = true;
+                                };
+                            });
+                            x.Items.Add<CheckItem>(x =>
+                            {
+                                x.Text = "Checkable²";
+                                x.TextInfo = x.TextInfo with { Size = x.TextInfo.Size * 6f };
+                                x.Interacted = args => args.KeepMenuOpen = true;
+                            });
                         });
-                        handler.MenuItems.Add<MenuItem>(x => x.Text = "DEF");
+                        handler.MenuItems.Add<SeparatorItem>();
                         handler.MenuItems.Add<MenuItem>(x =>
                         {
                             x.Text = "Qualle🪼";
@@ -84,6 +124,13 @@ public static class DotTrayDirectTest
                                 Weight = FontWeight.Light,
                                 Align = TextAlign.Center
                             };
+                        });
+                        handler.MenuItems.Add<SeparatorItem>(x =>
+                        {
+                            x.Foreground = SolidColorBrush.Red;
+                            x.IsRounded = false;
+                            x.Thickness = 8;
+                            x.Interacted = args => Console.WriteLine("This should never be fired!");
                         });
                         handler.MenuItems.Add<MenuItem>(x =>
                         {

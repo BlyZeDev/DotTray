@@ -15,10 +15,23 @@ public class MenuItem : MenuItemBase
     private const int ArrowGap = 8;
     private const int ArrowRightPadding = 10;
 
+    private int leadingWidth;
+    private int trailingWidth;
+
     /// <summary>
     /// <see langword="true"/> if this instance is hovered over or focused by the keyboard navigation, otherwise <see langword="false"/>
     /// </summary>
     protected bool isHovering;
+
+    /// <summary>
+    /// The background brush matching the current state (disabled, hovered or normal)
+    /// </summary>
+    protected IDirectBrush CurrentBackground => IsDisabled ? BackgroundDisabled : (isHovering ? BackgroundHover : Background);
+
+    /// <summary>
+    /// The foreground brush matching the current state (disabled, hovered or normal)
+    /// </summary>
+    protected IDirectBrush CurrentForeground => IsDisabled ? ForegroundDisabled : (isHovering ? ForegroundHover : Foreground);
 
     /// <summary>
     /// <inheritdoc/>
@@ -186,47 +199,123 @@ public class MenuItem : MenuItemBase
     /// <inheritdoc/>
     internal protected override void Initialize() => isHovering = false;
 
+    /// <summary>
+    /// Measures the content area, which is the <see cref="Text"/> by default
+    /// </summary>
+    /// <param name="context">Context for measuring this instance</param>
+    /// <returns>The size the content needs, in DIPs</returns>
+    protected virtual Dim MeasureContent(MeasuringContext context)
+    {
+        var text = context.MeasureText(Text, TextInfo);
+        return new Dim((int)MathF.Ceiling(text.Width * 1.05f), (int)MathF.Ceiling(text.Height * 1.05f));
+    }
+
+    /// <summary>
+    /// Measures the leading area, which is the space left of the content
+    /// </summary>
+    /// <remarks>
+    /// Empty by default. The returned width is reserved, the height only contributes to the item's height
+    /// </remarks>
+    /// <param name="context">Context for measuring this instance</param>
+    /// <param name="contentSize">The size measured by <see cref="MeasureContent(MeasuringContext)"/></param>
+    /// <returns>The size the leading area needs, in DIPs</returns>
+    protected virtual Dim MeasureLeading(MeasuringContext context, Dim contentSize) => new(0, 0);
+
+    /// <summary>
+    /// Measures the trailing area, which is the space right of the content
+    /// </summary>
+    /// <remarks>
+    /// By default this reserves space for the submenu arrow if there are <see cref="Items"/>, otherwise it is empty.<br/>
+    /// Override and call the base implementation to keep the arrow, or don't to replace it
+    /// </remarks>
+    /// <param name="context">Context for measuring this instance</param>
+    /// <param name="contentSize">The size measured by <see cref="MeasureContent(MeasuringContext)"/></param>
+    /// <returns>The size the trailing area needs, in DIPs</returns>
+    protected virtual Dim MeasureTrailing(MeasuringContext context, Dim contentSize)
+    {
+        if (SubmenuItems.IsEmpty) return new Dim(0, 0);
+
+        GetArrowSize(contentSize.Height, out var arrowWidth, out _);
+        return new Dim(ArrowGap + arrowWidth + ArrowRightPadding, 0);
+    }
+
+    /// <summary>
+    /// Draws the background of the whole item
+    /// </summary>
+    /// <param name="context">Context for drawing this instance</param>
+    /// <param name="bounds">The bounds of the whole item</param>
+    protected virtual void DrawBackground(DrawingContext context, Rect bounds) => context.FillRect(bounds, CurrentBackground);
+
+    /// <summary>
+    /// Draws the leading area
+    /// </summary>
+    /// <remarks>
+    /// Only called if <see cref="MeasureLeading(MeasuringContext, Dim)"/> reserved a width greater than <c>0</c>
+    /// </remarks>
+    /// <param name="context">Context for drawing this instance</param>
+    /// <param name="bounds">The bounds of the leading area, spanning the full item height</param>
+    protected virtual void DrawLeading(DrawingContext context, Rect bounds) { }
+
+    /// <summary>
+    /// Draws the content area, which is the <see cref="Text"/> by default
+    /// </summary>
+    /// <param name="context">Context for drawing this instance</param>
+    /// <param name="bounds">The bounds of the content area, spanning the full item height</param>
+    protected virtual void DrawContent(DrawingContext context, Rect bounds) => context.WriteRect(bounds, Text, TextInfo, CurrentForeground);
+
+    /// <summary>
+    /// Draws the trailing area
+    /// </summary>
+    /// <remarks>
+    /// Only called if <see cref="MeasureTrailing(MeasuringContext, Dim)"/> reserved a width greater than <c>0</c>.<br/>
+    /// By default this draws the submenu arrow
+    /// </remarks>
+    /// <param name="context">Context for drawing this instance</param>
+    /// <param name="bounds">The bounds of the trailing area, spanning the full item height</param>
+    protected virtual void DrawTrailing(DrawingContext context, Rect bounds)
+    {
+        if (SubmenuItems.IsEmpty) return;
+
+        GetArrowSize(bounds.Height, out var arrowWidth, out var arrowHeight);
+
+        var arrowBounds = new Rect(
+            bounds.Right - ArrowRightPadding - arrowWidth,
+            bounds.Top + (bounds.Height - arrowHeight) / 2,
+            arrowWidth,
+            arrowHeight);
+
+        context.DrawChevron(arrowBounds, CurrentForeground);
+    }
+
     /// <inheritdoc/>
     internal protected override Dim Measure(MeasuringContext context)
     {
-        var text = context.MeasureText(Text, TextInfo);
-        var baseSize = new Dim((int)MathF.Ceiling(text.Width * 1.05f), (int)MathF.Ceiling(text.Height * 1.05f));
+        var content = MeasureContent(context);
+        var leading = MeasureLeading(context, content);
+        var trailing = MeasureTrailing(context, content);
 
-        if (SubmenuItems.IsEmpty) return baseSize;
+        leadingWidth = leading.Width;
+        trailingWidth = trailing.Width;
 
-        var arrowHeight = Math.Max(6, baseSize.Height / ArrowHeightRatio);
-        var arrowWidth = Math.Max(4, arrowHeight * 2 / 3);
-
-        return new Dim(baseSize.Width + ArrowGap + arrowWidth + ArrowRightPadding, baseSize.Height);
+        return new Dim(
+            leading.Width + content.Width + trailing.Width,
+            Math.Max(content.Height, Math.Max(leading.Height, trailing.Height)));
     }
 
     /// <inheritdoc/>
     internal protected override void Draw(DrawingContext context)
     {
-        var background = IsDisabled ? BackgroundDisabled : (isHovering ? BackgroundHover : Background);
-        var foreground = IsDisabled ? ForegroundDisabled : (isHovering ? ForegroundHover : Foreground);
-
         var bounds = context.ItemBounds;
 
-        if (SubmenuItems.IsEmpty)
-        {
-            context.FillRect(bounds, background);
-            context.Write(Text, TextInfo, foreground);
-            return;
-        }
+        var leadingBounds = new Rect(bounds.X, bounds.Y, leadingWidth, bounds.Height);
+        var trailingBounds = new Rect(bounds.Right - trailingWidth, bounds.Y, trailingWidth, bounds.Height);
+        var contentBounds = new Rect(bounds.X + leadingWidth, bounds.Y, bounds.Width - leadingWidth - trailingWidth, bounds.Height);
 
-        var arrowHeight = Math.Max(6, bounds.Height / ArrowHeightRatio);
-        var arrowWidth = Math.Max(4, arrowHeight * 2 / 3);
+        DrawBackground(context, bounds);
 
-        var arrowX = bounds.Right - ArrowRightPadding - arrowWidth;
-        var arrowY = bounds.Top + (bounds.Height - arrowHeight) / 2;
-
-        var textBounds = new Rect(bounds.X, bounds.Y, bounds.Width - arrowWidth - ArrowGap - ArrowRightPadding, bounds.Height);
-        var arrowBounds = new Rect(arrowX, arrowY, arrowWidth, arrowHeight);
-
-        context.FillRect(bounds, background);
-        context.WriteRect(textBounds, Text, TextInfo, foreground);
-        context.DrawChevron(arrowBounds, foreground);
+        if (leadingWidth > 0) DrawLeading(context, leadingBounds);
+        DrawContent(context, contentBounds);
+        if (trailingWidth > 0) DrawTrailing(context, trailingBounds);
     }
 
     /// <inheritdoc/>
@@ -246,5 +335,11 @@ public class MenuItem : MenuItemBase
         }
 
         base.OnInteraction(args);
+    }
+
+    private static void GetArrowSize(int itemHeight, out int width, out int height)
+    {
+        height = Math.Max(6, itemHeight / ArrowHeightRatio);
+        width = Math.Max(4, height * 2 / 3);
     }
 }
