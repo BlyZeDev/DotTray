@@ -144,39 +144,78 @@ internal sealed class DirectSurface : IDisposable
         }
     }
 
-    public void FillRect(Rect rect, ID2D1Brush brush) => _context.FillRectangle(Snap(rect), brush);
+    public void FillRect(RectF rect, ID2D1Brush brush) => _context.FillRectangle(Snap(rect), brush);
 
-    public void FillRoundedRect(Rect rect, float radius, ID2D1Brush brush)
+    public void DrawRect(RectF rect, ID2D1Brush brush, float strokeWidth) => _context.DrawRectangle(Snap(rect), brush, strokeWidth, nint.Zero);
+
+    public void FillRoundedRect(RectF rect, float radius, ID2D1Brush brush)
     {
         _context.FillRoundedRectangle(new RoundedRectF
         { 
             Rect = Snap(rect),
             RadiusX = radius,
             RadiusY = radius
-        }
-        , brush);
+        }, brush);
     }
 
-    public void DrawLine(float x1, float y1, float x2, float y2, float width, ID2D1Brush brush)
+    public void DrawRoundedRect(RectF rect, float radius, ID2D1Brush brush, float strokeWidth)
+    {
+        _context.DrawRoundedRectangle(new RoundedRectF
+        {
+            Rect = Snap(rect),
+            RadiusX = radius,
+            RadiusY = radius
+        }, brush, strokeWidth, nint.Zero);
+    }
+
+    public void FillEllipse(RectF rect, ID2D1Brush brush)
+    {
+        _context.FillEllipse(new EllipseF
+        {
+            Point = new PointF
+            {
+                X = rect.X + rect.Width / 2f,
+                Y = rect.Y + rect.Height / 2f
+            },
+            RadiusX = rect.Width / 2f,
+            RadiusY = rect.Height / 2f
+        }, brush);
+    }
+
+    public void DrawEllipse(RectF rect, ID2D1Brush brush, float strokeWidth)
+    {
+        _context.DrawEllipse(new EllipseF
+        {
+            Point = new PointF
+            {
+                X = rect.X + rect.Width / 2f,
+                Y = rect.Y + rect.Height / 2f
+            },
+            RadiusX = rect.Width / 2f,
+            RadiusY = rect.Height / 2f
+        }, brush, strokeWidth, nint.Zero);
+    }
+
+    public void DrawLine(PosF start, PosF end, float strokeWidth, ID2D1Brush brush)
     {
         _context.DrawLine(new PointF
         {
-            X = x1,
-            Y = y1
+            X = start.X,
+            Y = start.Y
         }, new PointF
         {
-            X = x2,
-            Y = y2
-        }, brush, width, nint.Zero);
+            X = end.X,
+            Y = end.Y
+        }, brush, strokeWidth, nint.Zero);
     }
 
-    public void DrawPolyline(ReadOnlySpan<PointF> points, float width, ID2D1Brush brush)
+    public void DrawPolyline(ReadOnlySpan<PointF> points, float strokeWidth, ID2D1Brush brush)
     {
         var geometry = _device.CreatePolyline(points);
 
         try
         {
-            _context.DrawGeometry(geometry, brush, width, _device.RoundStroke);
+            _context.DrawGeometry(geometry, brush, strokeWidth, _device.RoundStroke);
         }
         finally
         {
@@ -184,7 +223,7 @@ internal sealed class DirectSurface : IDisposable
         }
     }
 
-    public void DrawText(string text, TextInfo font, Rect bounds, IDirectBrush brush, DirectBrushContext context)
+    public void DrawText(string text, TextInfo font, RectF bounds, IDirectBrush brush, DirectBrushContext context)
     {
         if (text.Length == 0) return;
 
@@ -274,7 +313,7 @@ internal sealed class DirectSurface : IDisposable
         }
     }
 
-    private RECTF Snap(Rect rect) => new()
+    private RECTF Snap(RectF rect) => new()
     {
         Left = SnapEdge(rect.Left),
         Top = SnapEdge(rect.Top),
@@ -284,7 +323,7 @@ internal sealed class DirectSurface : IDisposable
 
     private float SnapEdge(float dips) => MathF.Round(dips * Scale) / Scale;
 
-    private static unsafe RectF GetBrushBounds(IDWriteTextLayout layout, Rect bounds, float capHeight)
+    private static unsafe RectF GetBrushBounds(IDWriteTextLayout layout, RectF bounds, float capHeight)
     {
         const int MaxLines = 16;
         

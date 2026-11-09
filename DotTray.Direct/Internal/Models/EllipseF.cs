@@ -5,5 +5,7 @@ using System.Runtime.InteropServices;
 [StructLayout(LayoutKind.Sequential)]
 internal struct EllipseF
 {
-    public float X, Y, RadiusX, RadiusY;
+    public PointF Point;
+    public float RadiusX;
+    public float RadiusY;
 }

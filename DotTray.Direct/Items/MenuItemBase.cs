@@ -61,19 +61,6 @@ public abstract class MenuItemBase
     internal protected abstract Dim Measure(MeasuringContext context);
 
     /// <summary>
-    /// Called after every item in the popup has been measured, to determine the bounds this item
-    /// should draw its content into
-    /// </summary>
-    /// <remarks>
-    /// The default implementation returns <see cref="ArrangingContext.ItemBounds"/> unchanged, so items
-    /// draw across the full width of the popup by default.<br/>
-    /// Override to return a narrower <see cref="Rect"/> and reserve space for extra content
-    /// </remarks>
-    /// <param name="context">Context for arranging this instance</param>
-    /// <returns>The bounds to draw the content into, in DIPs</returns>
-    internal protected virtual Rect Arrange(ArrangingContext context) => context.ItemBounds;
-
-    /// <summary>
     /// Called when this instance needs to be drawn
     /// </summary>
     /// <param name="context">Context for drawing this instance</param>

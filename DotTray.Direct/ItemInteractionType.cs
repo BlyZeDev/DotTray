@@ -7,6 +7,8 @@ using DotTray.Direct.Items;
 /// </summary>
 public enum ItemInteractionType
 {
+    /// <summary>The mouse moved over the item</summary>
+    MouseMove,
     /// <summary>The mouse entered the item</summary>
     MouseEnter,
 

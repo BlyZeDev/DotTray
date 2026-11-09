@@ -3,6 +3,7 @@
 namespace DotTray.Direct.Context;
 
 using DotTray.Direct.Internal.Rendering;
+using System.ComponentModel;
 
 /// <summary>
 /// Represents the context passed into <see cref="IDirectBrush.Create(DirectBrushContext, Primitives.RectF)"/>
@@ -17,6 +18,7 @@ public sealed class DirectBrushContext
     /// <remarks>
     /// The pointer is borrowed: don't release it and don't use it after the draw call
     /// </remarks>
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public nint NativeContext => _surface.GetContextPointer();
 
     internal DirectBrushContext(DirectSurface surface) => _surface = surface;

@@ -142,28 +142,32 @@ internal sealed class PopupMenu
 
         var maxWidth = 0;
         var totalHeight = 0;
-        var measuredSizes = new Dim[items.Length];
+        var heights = new int[items.Length];
 
         for (var i = 0; i < items.Length; i++)
         {
-            measuredSizes[i] = items[i].Measure(measuring);
-            maxWidth = Math.Max(maxWidth, measuredSizes[i].Width);
-            totalHeight += measuredSizes[i].Height;
+            var size = items[i].Measure(measuring);
+
+            heights[i] = size.Height;
+            maxWidth = Math.Max(maxWidth, size.Width);
+            totalHeight += size.Height;
         }
 
-        var size = new Dim(maxWidth, totalHeight);
-        var arranging = new ArrangingContext(_scale, size);
-
-        var arranged = new ItemLayout[items.Length];
+        var layout = new ItemLayout[items.Length];
         var itemTop = 0;
 
         for (var i = 0; i < items.Length; i++)
         {
-            arranged[i] = ArrangeItem(arranging, items[i], new Rect(0, itemTop, maxWidth, measuredSizes[i].Height), measuredSizes[i]);
-            itemTop += measuredSizes[i].Height;
+            layout[i] = new ItemLayout
+            {
+                Item = items[i],
+                Bounds = new Rect(0, itemTop, maxWidth, heights[i])
+            };
+
+            itemTop += heights[i];
         }
 
-        return new WindowLayout(size, arranged);
+        return new WindowLayout(new Dim(maxWidth, totalHeight), layout);
     }
 
     private Pos CalculatePosition(Dim pixelSize)
@@ -181,9 +185,9 @@ internal sealed class PopupMenu
 
         foreach (var entry in windowLayout.Items)
         {
-            using (context.Clip(entry.HitBounds))
+            using (context.Clip(entry.Bounds))
             {
-                context.ItemBounds = entry.ContentBounds;
+                context.ItemBounds = entry.Bounds;
                 entry.Item.Draw(context);
             }
         }
@@ -195,7 +199,7 @@ internal sealed class PopupMenu
         {
             if (entry.Item.IgnoreInteraction) continue;
 
-            var bounds = entry.HitBounds;
+            var bounds = entry.Bounds;
             if (point.X >= bounds.Left && point.X < bounds.Right && point.Y >= bounds.Top && point.Y < bounds.Bottom)
             {
                 return entry;
@@ -264,9 +268,22 @@ internal sealed class PopupMenu
             tracking = true;
         }
 
-        lastPoint = DecodePoint(lParam);
+        var point = DecodePoint(lParam);
+        var moved = point.X != lastPoint.X || point.Y != lastPoint.Y;
+        lastPoint = point;
 
-        SetHotItem(HitTest(lastPoint)?.Item, b => RelativePosition(b, lastPoint), ItemInteractionType.MouseEnter, ItemInteractionType.MouseLeave);
+        var hit = HitTest(point)?.Item;
+
+        SetHotItem(hit, b => RelativePosition(b, lastPoint), ItemInteractionType.MouseEnter, ItemInteractionType.MouseLeave);
+
+        if (hit is not null && moved)
+        {
+            hit.RaiseInteraction(new ItemInteractedEventArgs
+            {
+                Type = ItemInteractionType.MouseMove,
+                Position = RelativePosition(BoundsOf(hit), point)
+            });
+        }
 
         return 0;
     }
@@ -288,7 +305,7 @@ internal sealed class PopupMenu
 
         if (HitTest(point) is { } hit)
         {
-            Interact(hit.Item, RelativePosition(hit.HitBounds, point), type, selectFirstOnSubmenu: false);
+            Interact(hit.Item, RelativePosition(hit.Bounds, point), type, selectFirstOnSubmenu: false);
         }
 
         return 0;
@@ -350,7 +367,7 @@ internal sealed class PopupMenu
         hotItem?.RaiseInteraction(new ItemInteractedEventArgs
         {
             Type = leaveType,
-            Position = positionFor(HitBoundsOf(hotItem))
+            Position = positionFor(BoundsOf(hotItem))
         });
 
         hotItem = newHot;
@@ -365,7 +382,7 @@ internal sealed class PopupMenu
             var args = new ItemInteractedEventArgs
             {
                 Type = enterType,
-                Position = positionFor(HitBoundsOf(newHot))
+                Position = positionFor(BoundsOf(newHot))
             };
             newHot.RaiseInteraction(args);
 
@@ -433,7 +450,7 @@ internal sealed class PopupMenu
     {
         if (hotItem is null) return;
 
-        Interact(hotItem, CenterOf(HitBoundsOf(hotItem)), ItemInteractionType.KeyboardActivate, true);
+        Interact(hotItem, CenterOf(BoundsOf(hotItem)), ItemInteractionType.KeyboardActivate, true);
     }
 
     private void SelectFirstEnabledItem()
@@ -465,7 +482,7 @@ internal sealed class PopupMenu
     {
         if (ReferenceEquals(openSubmenuOwner, submenu)) return;
         
-        openSubmenuHWnd = _tree.OpenChild(HWnd, submenu.SubmenuItems, ToScreenRect(HitBoundsOf(submenu)), selectFirstItem);
+        openSubmenuHWnd = _tree.OpenChild(HWnd, submenu.SubmenuItems, ToScreenRect(BoundsOf(submenu)), selectFirstItem);
         openSubmenuOwner = submenu;
     }
 
@@ -478,11 +495,11 @@ internal sealed class PopupMenu
         openSubmenuHWnd = nint.Zero;
     }
 
-    private Rect HitBoundsOf(MenuItemBase item)
+    private Rect BoundsOf(MenuItemBase item)
     {
         foreach (var entry in windowLayout.Items)
         {
-            if (ReferenceEquals(entry.Item, item)) return entry.HitBounds;
+            if (ReferenceEquals(entry.Item, item)) return entry.Bounds;
         }
 
         return default;
@@ -518,24 +535,6 @@ internal sealed class PopupMenu
         var y = unchecked((short)((value >> 16) & 0xFFFF));
 
         return new Pos((int)MathF.Floor(x / _scale), (int)MathF.Floor(y / _scale));
-    }
-
-    private static ItemLayout ArrangeItem(ArrangingContext context, MenuItemBase item, Rect bounds, Dim measured)
-    {
-        context.ItemBounds = bounds;
-        context.MeasuredItemBounds = bounds with { Width = measured.Width };
-
-        var content = item.Arrange(context);
-
-        var contentWidth = Math.Clamp(content.Width, 0, bounds.Width);
-        var contentX = Math.Clamp(content.X, bounds.X, bounds.X + bounds.Width - contentWidth);
-
-        return new ItemLayout
-        {
-            Item = item,
-            HitBounds = bounds,
-            ContentBounds = new Rect(contentX, bounds.Y, contentWidth, bounds.Height)
-        };
     }
 
     private static int IndexOf(ReadOnlySpan<ItemLayout> items, MenuItemBase? item)
