@@ -1,4 +1,4 @@
-﻿namespace DotTray.Direct.Internal;
+﻿namespace DotTray.Direct.Internal.COM;
 
 using DotTray.Direct.Internal.Models;
 using System.Runtime.InteropServices;

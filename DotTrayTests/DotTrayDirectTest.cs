@@ -3,6 +3,8 @@
 using DotTray;
 using DotTray.Direct;
 using DotTray.Direct.Coloring;
+using DotTray.Direct.Context;
+using DotTray.Direct.Imaging;
 using DotTray.Direct.Items;
 using DotTray.Direct.Primitives;
 using DotTray.Direct.Typography;
@@ -11,182 +13,211 @@ public static class DotTrayDirectTest
 {
     public static async Task TestAsync()
     {
+        TrayTest[] tests =
+        [
+            new(System.Drawing.StockIconId.Application, ConfigureFullMenu),
+            new(System.Drawing.StockIconId.Info, ConfigureSimpleMenu)
+        ];
+
         using (var cts = new CancellationTokenSource())
         {
-            using (var tempIcon = CreateTestIcon(System.Drawing.StockIconId.Application))
+            var disposables = new List<IDisposable>();
+
+            try
             {
-                using (var handler = new DirectPopupMenuHandler())
+                foreach (var test in tests)
                 {
-                    handler.Background = new SolidColorBrush(Rgba.Black with { A = 200 });
-                    handler.Background = LinearGradientBrush.Vertical(Rgba.Blue, Rgba.Green);
+                    var tempIcon = CreateTestIcon(test.Icon);
+                    disposables.Add(tempIcon);
 
-                    using (var icon = await NotifyIcon.RunAsync(tempIcon.FilePath, handler, cts.Token))
+                    var handler = new DirectPopupMenuHandler
                     {
-                        handler.MenuItems.Add<CheckItem>(x =>
-                        {
-                            x.Text = "Eternity";
-                            x.TextInfo = x.TextInfo with
-                            {
-                                Font = new UserFont(@"C:\pixelify.ttf"),
-                                Size = 75f
-                            };
-                            x.Interacted = args =>
-                            {
-                                if (args.Type is ItemInteractionType.MouseLeftUp) args.KeepMenuOpen = Random.Shared.Next(0, 2) == 1;
+                        Background = LinearGradientBrush.Vertical(Rgba.Blue, Rgba.Green)
+                    };
+                    disposables.Add(handler);
 
-                                Console.WriteLine(args);
-                            };
-                        });
-                        handler.MenuItems.Add<SeparatorItem>(x =>
-                        {
-                            x.Background = SolidColorBrush.Transparent;
-                            x.Foreground = SolidColorBrush.White;
-                            x.HorizontalPadding = 8;
-                            x.VerticalPadding = 4;
-                            x.Thickness = 4;
-                        });
-                        handler.MenuItems.Add<MenuItem>(x =>
-                        {
-                            x.Text = "DEF";
-                            x.TextInfo = x.TextInfo with { Size = x.TextInfo.Size * 2f };
-                            x.Items.Add<CheckItem>(x => x.Text = "Hello");
-                            x.Items.Add<CheckItem>(x =>
-                            {
-                                x.Text = "Checkable";
-                                x.TextInfo = x.TextInfo with { Size = x.TextInfo.Size * 3f };
-                                x.Interacted = args =>
-                                {
-                                    Console.WriteLine(x.IsChecked);
-                                    args.KeepMenuOpen = true;
-                                };
-                            });
-                            x.Items.Add<CheckItem>(x =>
-                            {
-                                x.Text = "Checkable²";
-                                x.TextInfo = x.TextInfo with { Size = x.TextInfo.Size * 6f };
-                                x.Interacted = args => args.KeepMenuOpen = true;
-                            });
-                        });
-                        handler.MenuItems.Add<SeparatorItem>();
-                        handler.MenuItems.Add<MenuItem>(x =>
-                        {
-                            x.Text = "Qualle🪼";
-                            x.Background = new SolidColorBrush(Rgba.White);
-                            x.Foreground = LinearGradientBrush.FromAngle(
-                                [
-                                    new GradientStop(Rgba.Red, 0f),
-                                    new GradientStop(Rgba.Green, 1f / 3f),
-                                    new GradientStop(Rgba.Blue, 2f / 3f),
-                                    new GradientStop(Rgba.Black, 1f)
-                                ], 0f);
-                            x.TextInfo = new TextInfo
-                            {
-                                Font = new UserFont(@"C:\NotoColorEmoji-Regular.ttf"),
-                                Size = 150f
-                            };
-                            x.Items.Add<MenuItem>(x =>
-                            {
-                                x.Text = "Hi";
-                                x.TextInfo = new TextInfo
-                                {
-                                    Font = SystemFont.Default,
-                                    Size = 250f
-                                };
-                                x.Background = new RadialGradientBrush(
-                                    [
-                                        new GradientStop(new Rgba(254, 225, 64), 0f),
-                                        new GradientStop(new Rgba(250, 112, 154), 0.5f),
-                                        new GradientStop(new Rgba(127, 0, 255), 1f)
-                                    ], new PosF(0.3f, 0.3f), new PosF(0.85f, 0.85f), new PosF(-0.1f, -0.1f));
-                                x.BackgroundHover = x.Background;
-                            });
-                            x.Items.Add<MenuItem>(x =>
-                            {
-                                x.Text = "This is a test";
-                                x.TextInfo = new TextInfo
-                                {
-                                    Font = new SystemFont("Bahnschrift"),
-                                    Size = 125f,
-                                    Weight = FontWeight.Bold,
-                                    Style = FontStyle.Oblique,
-                                    Align = TextAlign.Center
-                                };
-                            });
-                            x.Interacted = args => Console.WriteLine(args);
-                        });
-                        handler.MenuItems.Add<MenuItem>(x =>
-                        {
-                            x.Text = "JKL 🐖";
-                            x.TextInfo = new TextInfo
-                            {
-                                Font = new SystemFont("Arial"),
-                                Size = 100f,
-                                Weight = FontWeight.Light,
-                                Align = TextAlign.Center
-                            };
-                        });
-                        handler.MenuItems.Add<SeparatorItem>(x =>
-                        {
-                            x.Foreground = SolidColorBrush.Red;
-                            x.IsRounded = false;
-                            x.Thickness = 8;
-                            x.Interacted = args => Console.WriteLine("This should never be fired!");
-                        });
-                        handler.MenuItems.Add<MenuItem>(x =>
-                        {
-                            x.Text = "HHH";
-                            x.Background = new SolidColorBrush(Rgba.White);
-                            x.Foreground = LinearGradientBrush.FromAngle(
-                                [
-                                    new GradientStop(Rgba.Red, 0f),
-                                    new GradientStop(Rgba.Green, 1f / 3f),
-                                    new GradientStop(Rgba.Blue, 2f / 3f),
-                                    new GradientStop(Rgba.Black, 1f)
-                                ], 180f);
-                            x.TextInfo = new TextInfo
-                            {
-                                Font = new SystemFont("Arial"),
-                                Size = 100f,
-                                Weight = FontWeight.Light,
-                                Align = TextAlign.Center
-                            };
-                        });
-                        handler.MenuItems.Add<MenuItem>(x =>
-                        {
-                            x.Text = "🪼🔥 Élite 🔥🪼";
-                            x.ForegroundHover = LinearGradientBrush.FromAngle(
-                                [
-                                    new GradientStop(new Rgba(255, 235, 160), 0f),
-                                    new GradientStop(new Rgba(240, 190, 60), 0.25f),
-                                    new GradientStop(new Rgba(200, 130, 20), 0.5f),
-                                    new GradientStop(new Rgba(150, 80, 10), 0.75f),
-                                    new GradientStop(new Rgba(90, 40, 5), 1f)
-                                ], 135f);
-                            x.TextInfo = new TextInfo
-                            {
-                                Font = new SystemFont("Algerian"),
-                                Size = 111f,
-                                Align = TextAlign.Center,
-                                Language = new LanguageTag("fr-FR")
-                            };
-                        });
+                    var icon = await NotifyIcon.RunAsync(tempIcon.FilePath, handler, cts.Token);
+                    disposables.Add(icon);
 
-                        Console.WriteLine("Direct icon is running");
-
-                        try
-                        {
-                            await Task.Delay(Timeout.Infinite, cts.Token);
-                        }
-                        catch (OperationCanceledException) { }
-                    }
+                    test.Configure(handler);
                 }
+
+                Console.WriteLine($"{tests.Length} direct icon(s) running");
+
+                try
+                {
+                    await Task.Delay(Timeout.Infinite, cts.Token);
+                }
+                catch (OperationCanceledException) { }
+            }
+            finally
+            {
+                for (var i = disposables.Count - 1; i >= 0; i--) disposables[i].Dispose();
             }
         }
     }
 
+    private static void ConfigureSimpleMenu(DirectPopupMenuHandler handler)
+    {
+        handler.MenuItems.Add<ImageItem>();
+    }
+
+    private static void ConfigureFullMenu(DirectPopupMenuHandler handler)
+    {
+        handler.MenuItems.Add<CheckItem>(x =>
+        {
+            x.Text = "Eternity";
+            x.TextInfo = x.TextInfo with
+            {
+                Font = new UserFont(@"C:\pixelify.ttf"),
+                Size = 75f
+            };
+            x.Interacted = args =>
+            {
+                if (args.Type is ItemInteractionType.MouseLeftUp) args.KeepMenuOpen = Random.Shared.Next(0, 2) == 1;
+
+                Console.WriteLine(args);
+            };
+        });
+        handler.MenuItems.Add<SeparatorItem>(x =>
+        {
+            x.Background = new SolidColorBrush(Rgba.White with { A = 64 });
+            x.Foreground = SolidColorBrush.White;
+            x.HorizontalPadding = 8;
+            x.VerticalPadding = 4;
+            x.Thickness = 4;
+        });
+        handler.MenuItems.Add<MenuItem>(x =>
+        {
+            x.Text = "DEF";
+            x.TextInfo = x.TextInfo with { Size = x.TextInfo.Size * 2f };
+            x.Items.Add<CheckItem>(x => x.Text = "Hello");
+            x.Items.Add<CheckItem>(x =>
+            {
+                x.Text = "Checkable";
+                x.TextInfo = x.TextInfo with { Size = x.TextInfo.Size * 3f };
+                x.Interacted = args =>
+                {
+                    Console.WriteLine(x.IsChecked);
+                    args.KeepMenuOpen = true;
+                };
+            });
+            x.Items.Add<CheckItem>(x =>
+            {
+                x.Text = "Checkable²";
+                x.TextInfo = x.TextInfo with { Size = x.TextInfo.Size * 6f };
+                x.Interacted = args => args.KeepMenuOpen = true;
+            });
+        });
+        handler.MenuItems.Add<SeparatorItem>();
+        handler.MenuItems.Add<MenuItem>(x =>
+        {
+            x.Text = "Qualle🪼";
+            x.Background = new SolidColorBrush(Rgba.White);
+            x.Foreground = LinearGradientBrush.FromAngle(
+                [
+                    new GradientStop(Rgba.Red, 0f),
+                    new GradientStop(Rgba.Green, 1f / 3f),
+                    new GradientStop(Rgba.Blue, 2f / 3f),
+                    new GradientStop(Rgba.Black, 1f)
+                ], 0f);
+            x.TextInfo = new TextInfo
+            {
+                Font = new UserFont(@"C:\NotoColorEmoji-Regular.ttf"),
+                Size = 150f
+            };
+            x.Items.Add<MenuItem>(x =>
+            {
+                x.Text = "Hi";
+                x.TextInfo = new TextInfo
+                {
+                    Font = SystemFont.Default,
+                    Size = 250f
+                };
+                x.Background = new RadialGradientBrush(
+                    [
+                        new GradientStop(new Rgba(254, 225, 64), 0f),
+                        new GradientStop(new Rgba(250, 112, 154), 0.5f),
+                        new GradientStop(new Rgba(127, 0, 255), 1f)
+                    ], new PosF(0.3f, 0.3f), new PosF(0.85f, 0.85f), new PosF(-0.1f, -0.1f));
+                x.BackgroundHover = x.Background;
+            });
+            x.Items.Add<MenuItem>(x =>
+            {
+                x.Text = "This is a test";
+                x.TextInfo = new TextInfo
+                {
+                    Font = new SystemFont("Bahnschrift"),
+                    Size = 125f,
+                    Weight = FontWeight.Bold,
+                    Style = FontStyle.Oblique,
+                    Align = TextAlign.Center
+                };
+            });
+            x.Interacted = args => Console.WriteLine(args);
+        });
+        handler.MenuItems.Add<MenuItem>(x =>
+        {
+            x.Text = "JKL 🐖";
+            x.TextInfo = new TextInfo
+            {
+                Font = new SystemFont("Arial"),
+                Size = 100f,
+                Weight = FontWeight.Light,
+                Align = TextAlign.Center
+            };
+        });
+        handler.MenuItems.Add<SeparatorItem>(x =>
+        {
+            x.Foreground = SolidColorBrush.Red;
+            x.IsRounded = false;
+            x.Thickness = 8;
+            x.Interacted = args => Console.WriteLine("This should never be fired!");
+        });
+        handler.MenuItems.Add<MenuItem>(x =>
+        {
+            x.Text = "HHH";
+            x.Background = new SolidColorBrush(Rgba.White);
+            x.Foreground = LinearGradientBrush.FromAngle(
+                [
+                    new GradientStop(Rgba.Red, 0f),
+                    new GradientStop(Rgba.Green, 1f / 3f),
+                    new GradientStop(Rgba.Blue, 2f / 3f),
+                    new GradientStop(Rgba.Black, 1f)
+                ], 180f);
+            x.TextInfo = new TextInfo
+            {
+                Font = new SystemFont("Arial"),
+                Size = 100f,
+                Weight = FontWeight.Light,
+                Align = TextAlign.Center
+            };
+        });
+        handler.MenuItems.Add<MenuItem>(x =>
+        {
+            x.Text = "🪼🔥 Élite 🔥🪼";
+            x.ForegroundHover = LinearGradientBrush.FromAngle(
+                [
+                    new GradientStop(new Rgba(255, 235, 160), 0f),
+                    new GradientStop(new Rgba(240, 190, 60), 0.25f),
+                    new GradientStop(new Rgba(200, 130, 20), 0.5f),
+                    new GradientStop(new Rgba(150, 80, 10), 0.75f),
+                    new GradientStop(new Rgba(90, 40, 5), 1f)
+                ], 135f);
+            x.TextInfo = new TextInfo
+            {
+                Font = new SystemFont("Algerian"),
+                Size = 111f,
+                Align = TextAlign.Center,
+                Language = new LanguageTag("fr-FR")
+            };
+        });
+    }
+
     private static TestIcon CreateTestIcon(System.Drawing.StockIconId id, System.Drawing.StockIconOptions options = System.Drawing.StockIconOptions.ShellIconSize)
     {
-        var tempPath = Path.Combine(Path.GetTempPath(), $"temptesticon.ico");
+        // Unique per icon, so several icons don't overwrite or delete each other's file
+        var tempPath = Path.Combine(Path.GetTempPath(), $"temptesticon_{id}_{Guid.NewGuid():N}.ico");
 
         using (var icon = System.Drawing.SystemIcons.GetStockIcon(id, options))
         {
@@ -216,5 +247,33 @@ public static class DotTrayDirectTest
                 Console.WriteLine("Deleted: " + FilePath);
             }
         }
+    }
+
+    private sealed record TrayTest(System.Drawing.StockIconId Icon, Action<DirectPopupMenuHandler> Configure);
+}
+
+file sealed class ImageItem : MenuItemBase
+{
+    private readonly DirectImage _image;
+    private readonly Dim _actualSize;
+
+    protected override bool IgnoreInteraction => true;
+
+    public ImageItem()
+    {
+        _image = DirectImage.FromFile(@"C:\testimg.jpg");
+        _actualSize = new Dim(_image.Dimensions.Width / 2, _image.Dimensions.Height / 2);
+    }
+
+    protected override Dim Measure(MeasuringContext context) => _actualSize;
+    protected override void Draw(DrawingContext context)
+    {
+        var bounds = context.ItemBounds;
+        var x = bounds.X + (bounds.Width - _actualSize.Width) / 2;
+
+        context.DrawImage(_image, new Rect(new Pos(x, bounds.Y), _actualSize), new ImageOptions
+        {
+            InterpolationMode = InterpolationMode.HighQualityCubic
+        });
     }
 }

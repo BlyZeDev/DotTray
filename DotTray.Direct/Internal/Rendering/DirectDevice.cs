@@ -1,8 +1,11 @@
 ﻿namespace DotTray.Direct.Internal.Rendering;
 
+using DotTray.Direct.Imaging;
+using DotTray.Direct.Internal.COM;
 using DotTray.Direct.Internal.Models;
 using DotTray.Direct.Primitives;
 using DotTray.Direct.Typography;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 
 internal sealed class DirectDevice : IDisposable
@@ -15,8 +18,10 @@ internal sealed class DirectDevice : IDisposable
     private readonly IDWriteFactory3 _dwriteFactory3;
     private readonly IDCompositionDevice _compositionDevice;
     private readonly IDWriteFontCollection _systemCollection;
+    private readonly ID2D1DeviceContext _resourceContext;
     private readonly Dictionary<UserFont, IDWriteFontCollection> _userCollections = [];
     private readonly Dictionary<TextInfo, ResolvedFont> _fonts = [];
+    private readonly Dictionary<DirectImage, nint> _bitmaps = [];
 
     private bool disposed;
 
@@ -41,6 +46,7 @@ internal sealed class DirectDevice : IDisposable
         HR.ThrowIfError(_dwriteFactory.GetSystemFontCollection(out _systemCollection, 0));
 
         HR.ThrowIfError(PInvoke.DCompositionCreateDevice(_dxgiDevice, typeof(IDCompositionDevice).GUID, out _compositionDevice));
+        D2DDevice.CreateDeviceContext(0, out _resourceContext);
     }
 
     public IDXGISwapChain1 CreateSwapChain(uint width, uint height)
@@ -152,6 +158,35 @@ internal sealed class DirectDevice : IDisposable
         }
     }
 
+    public unsafe nint GetBitmap(DirectImage image)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
+        if (_bitmaps.TryGetValue(image, out var cached)) return cached;
+
+        var properties = new BitmapProperties
+        {
+            Format = PInvoke.DXGI_FORMAT_B8G8R8A8_UNORM,
+            AlphaMode = PInvoke.D2D1_ALPHA_MODE_PREMULTIPLIED,
+            DpiX = 96f,
+            DpiY = 96f
+        };
+
+        nint bitmap;
+
+        fixed (byte* pixels = image.Pixels)
+        {
+            _resourceContext.CreateBitmap(new SizeU
+            {
+                Width = (uint)image.Dimensions.Width,
+                Height = (uint)image.Dimensions.Height
+            }, (nint)pixels, (uint)image.Dimensions.Width * 4, in properties, out bitmap);
+        }
+
+        _bitmaps[image] = bitmap;
+        return bitmap;
+    }
+
     public void Dispose()
     {
         if (disposed) return;
@@ -169,6 +204,13 @@ internal sealed class DirectDevice : IDisposable
         }
         _userCollections.Clear();
 
+        foreach (var bitmap in _bitmaps.Values)
+        {
+            Marshal.Release(bitmap);
+        }
+        _bitmaps.Clear();
+
+        Com.Release(_resourceContext);
         Com.Release(_systemCollection);
 
         Com.Release(_dwriteFactory);

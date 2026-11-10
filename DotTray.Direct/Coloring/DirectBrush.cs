@@ -1,6 +1,6 @@
 ﻿namespace DotTray.Direct.Coloring;
 
-using DotTray.Direct.Internal;
+using DotTray.Direct.Internal.COM;
 using DotTray.Direct.Internal.Rendering;
 using System.ComponentModel;
 using System.Runtime.InteropServices.Marshalling;

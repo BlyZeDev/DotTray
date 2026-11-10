@@ -53,8 +53,8 @@ public readonly record struct RectF
     /// </summary>
     /// <param name="x">The X-coordinate of the upper-left corner</param>
     /// <param name="y">The Y-coordinate of the upper-left corner</param>
-    /// <param name="width">The width</param>
-    /// <param name="height">The height</param>
+    /// <param name="width">The width starting from <paramref name="x"/></param>
+    /// <param name="height">The height starting from <paramref name="y"/></param>
     [SetsRequiredMembers]
     public RectF(float x, float y, float width, float height)
     {
@@ -63,6 +63,14 @@ public readonly record struct RectF
         Width = width;
         Height = height;
     }
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="RectF"/>
+    /// </summary>
+    /// <param name="position">The coordinates of the upper-left corner</param>
+    /// <param name="dimensions">The dimensions starting from <paramref name="position"/></param>
+    [SetsRequiredMembers]
+    public RectF(PosF position, DimF dimensions) : this(position.X, position.Y, dimensions.Width, dimensions.Height) { }
 
     /// <summary>
     /// Implicitly converts <see cref="Rect"/> to <see cref="RectF"/>

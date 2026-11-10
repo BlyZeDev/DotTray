@@ -1,5 +1,6 @@
 ﻿namespace DotTray.Direct.Internal;
 
+using DotTray.Direct.Internal.COM;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 

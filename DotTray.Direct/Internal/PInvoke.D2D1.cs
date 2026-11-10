@@ -1,5 +1,6 @@
 ﻿namespace DotTray.Direct.Internal;
 
+using DotTray.Direct.Internal.COM;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 
@@ -23,6 +24,12 @@ internal static partial class PInvoke
     public const uint D2D1_EXTEND_MODE_CLAMP = 0;
     public const uint D2D1_EXTEND_MODE_WRAP = 1;
     public const uint D2D1_EXTEND_MODE_MIRROR = 2;
+    public const uint D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR = 0;
+    public const uint D2D1_INTERPOLATION_MODE_LINEAR = 1;
+    public const uint D2D1_INTERPOLATION_MODE_CUBIC = 2;
+    public const uint D2D1_INTERPOLATION_MODE_MULTI_SAMPLE_LINEAR = 3;
+    public const uint D2D1_INTERPOLATION_MODE_ANISOTROPIC = 4;
+    public const uint D2D1_INTERPOLATION_MODE_HIGH_QUALITY_CUBIC = 5;
 
     [LibraryImport(D2D1)]
     public static partial int D2D1CreateDevice([MarshalUsing(typeof(ComInterfaceMarshaller<IDXGIDevice>))] IDXGIDevice dxgiDevice, nint creationProperties, [MarshalUsing(typeof(ComInterfaceMarshaller<ID2D1Device>))] out ID2D1Device device);

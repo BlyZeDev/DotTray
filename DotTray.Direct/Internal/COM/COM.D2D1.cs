@@ -1,4 +1,4 @@
-﻿namespace DotTray.Direct.Internal;
+﻿namespace DotTray.Direct.Internal.COM;
 
 using DotTray.Direct.Internal.Models;
 using System.Runtime.InteropServices;
@@ -38,7 +38,7 @@ internal partial interface ID2D1SolidColorBrush : ID2D1Brush
 [Guid("2cd90694-12e2-11dc-9fed-001143a055f9")]
 internal unsafe partial interface ID2D1RenderTarget : ID2D1Resource
 {
-    void CreateBitmap_Unbound();
+    void CreateBitmap(SizeU size, nint sourceData, uint pitch, in BitmapProperties properties, out nint bitmap);
     void CreateBitmapFromWicBitmap_Unbound();
     void CreateSharedBitmap_Unbound();
     void CreateBitmapBrush_Unbound();
@@ -73,7 +73,8 @@ internal unsafe partial interface ID2D1RenderTarget : ID2D1Resource
     void FillGeometry_Unbound();
     void FillMesh_Unbound();
     void FillOpacityMask_Unbound();
-    void DrawBitmap_Unbound();
+    [PreserveSig]
+    void DrawBitmap(nint bitmap, in RECTF destination, float opacity, uint interpolationMode, nint sourceRect);
 
     [PreserveSig]
     void DrawText(string text, uint length, IDWriteTextFormat format, in RECTF layoutRect, ID2D1Brush brush, uint options, uint measuringMode);
@@ -147,6 +148,20 @@ internal unsafe partial interface ID2D1DeviceContext : ID2D1RenderTarget
 
     [PreserveSig]
     void SetTarget(nint image);
+
+    void GetTarget_Unbound();
+    void SetRenderingControls_Unbound();
+    void GetRenderingControls_Unbound();
+    void SetPrimitiveBlend_Unbound();
+    void GetPrimitiveBlend_Unbound();
+    void SetUnitMode_Unbound();
+    void GetUnitMode_Unbound();
+    void DrawGlyphRunDc_Unbound();
+    void DrawImage_Unbound();
+    void DrawGdiMetafile_Unbound();
+
+    [PreserveSig]
+    void DrawBitmapDc(nint bitmap, in RECTF destination, float opacity, uint interpolationMode, nint sourceRect, nint perspectiveTransform);
 }
 
 [GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]

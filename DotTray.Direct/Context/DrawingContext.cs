@@ -1,6 +1,7 @@
 ﻿namespace DotTray.Direct.Context;
 
 using DotTray.Direct.Coloring;
+using DotTray.Direct.Imaging;
 using DotTray.Direct.Internal.Models;
 using DotTray.Direct.Internal.Rendering;
 using DotTray.Direct.Items;
@@ -276,6 +277,17 @@ public sealed class DrawingContext : Context
             Y = y
         };
     }
+
+    /// <summary>
+    /// Draws <paramref name="image"/> stretched to <paramref name="bounds"/>
+    /// </summary>
+    /// <remarks>
+    /// The image is not scaled proportionally, use <see cref="DirectImage.Dimensions"/> to compute bounds that keep its aspect ratio
+    /// </remarks>
+    /// <param name="image">The image to draw</param>
+    /// <param name="bounds">The bounds to draw the image into</param>
+    /// <param name="options">The options to draw the image with, or <see langword="null"/> for <see cref="ImageOptions.Default"/></param>
+    public void DrawImage(DirectImage image, RectF bounds, ImageOptions? options = null) => _surface.DrawImage(image, bounds, options ?? ImageOptions.Default);
 
     /// <summary>
     /// Fills the whole <see cref="ItemBounds"/> with <paramref name="text"/> using <paramref name="textInfo"/> and <paramref name="brush"/>

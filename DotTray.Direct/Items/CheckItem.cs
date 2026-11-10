@@ -8,10 +8,10 @@ using DotTray.Direct.Primitives;
 /// </summary>
 public class CheckItem : MenuItem
 {
-    private const int MinCheckHeight = 12;
+    private const int MinCheckHeight = 8;
     private const int MinCheckPadding = 5;
     private const int MinCheckGap = 5;
-    private const float BaselineRatio = 0.8f;
+    private const float BaselineRatio = 0.78f;
 
     /// <summary>
     /// <see langword="true"/> if this instance is checked, otherwise <see langword="false"/>
@@ -79,9 +79,9 @@ public class CheckItem : MenuItem
 
     private static void GetCheckMetrics(int itemHeight, out int width, out int height, out int padding, out int gap)
     {
-        height = Math.Max(MinCheckHeight, itemHeight * 3 / 5);
+        height = Math.Max(MinCheckHeight, itemHeight * 13 / 25);
         width = height * 4 / 3;
-        padding = Math.Max(MinCheckPadding, height * 2 / 5);
-        gap = Math.Max(MinCheckGap, height * 2 / 5);
+        padding = Math.Max(MinCheckPadding, itemHeight * 6 / 25);
+        gap = Math.Max(MinCheckGap, itemHeight * 6 / 25);
     }
 }

@@ -1,6 +1,7 @@
 ﻿namespace DotTray.Direct.Typography;
 
 using DotTray.Direct.Internal;
+using DotTray.Direct.Internal.COM;
 using DotTray.Direct.Internal.Rendering;
 using System.Diagnostics.CodeAnalysis;
 

@@ -6,6 +6,7 @@ using DotTray.Direct.Internal.Rendering;
 using DotTray.Direct.Items;
 using DotTray.Direct.Primitives;
 using System.Runtime.InteropServices;
+using OpenSubmenu = (nint HWnd, DotTray.Direct.Items.MenuItemBase? Owner);
 
 internal sealed class PopupMenu
 {
@@ -27,8 +28,7 @@ internal sealed class PopupMenu
 
     private WindowLayout windowLayout;
     private MenuItemBase? hotItem;
-    private nint openSubmenuHWnd;
-    private MenuItemBase? openSubmenuOwner;
+    private OpenSubmenu openSubmenu;
     private bool submenuTimerActive;
     private bool tracking;
     private Pos lastPoint;
@@ -94,10 +94,9 @@ internal sealed class PopupMenu
 
     public void OnChildDestroyed(nint childHWnd)
     {
-        if (childHWnd != openSubmenuHWnd) return;
+        if (childHWnd != openSubmenu.HWnd) return;
 
-        openSubmenuOwner = null;
-        openSubmenuHWnd = nint.Zero;
+        openSubmenu = (nint.Zero, null);
     }
 
     private nint WndProc(nint hWnd, uint msg, nint wParam, nint lParam)
@@ -292,7 +291,7 @@ internal sealed class PopupMenu
     {
         tracking = false;
 
-        if (openSubmenuOwner is not null) return 0;
+        if (openSubmenu.Owner is not null) return 0;
 
         SetHotItem(null, b => RelativePosition(b, lastPoint), ItemInteractionType.MouseEnter, ItemInteractionType.MouseLeave);
 
@@ -372,7 +371,7 @@ internal sealed class PopupMenu
 
         hotItem = newHot;
 
-        if (!ReferenceEquals(newHot, openSubmenuOwner))
+        if (!ReferenceEquals(newHot, openSubmenu.Owner))
         {
             CloseOpenSubmenu();
         }
@@ -480,19 +479,17 @@ internal sealed class PopupMenu
 
     private void OpenSubmenu(MenuItemBase submenu, bool selectFirstItem)
     {
-        if (ReferenceEquals(openSubmenuOwner, submenu)) return;
-        
-        openSubmenuHWnd = _tree.OpenChild(HWnd, submenu.SubmenuItems, ToScreenRect(BoundsOf(submenu)), selectFirstItem);
-        openSubmenuOwner = submenu;
+        if (ReferenceEquals(openSubmenu.Owner, submenu)) return;
+
+        openSubmenu = (_tree.OpenChild(HWnd, submenu.SubmenuItems, ToScreenRect(BoundsOf(submenu)), selectFirstItem), submenu);
     }
 
     private void CloseOpenSubmenu()
     {
-        if (openSubmenuOwner is null) return;
+        if (openSubmenu.Owner is null) return;
 
         _tree.CloseChildrenOf(HWnd);
-        openSubmenuOwner = null;
-        openSubmenuHWnd = nint.Zero;
+        openSubmenu = (nint.Zero, null);
     }
 
     private Rect BoundsOf(MenuItemBase item)
@@ -549,7 +546,7 @@ internal sealed class PopupMenu
         return -1;
     }
 
-    private static Pos RelativePosition(Rect bounds, Pos point) => new(point.X - bounds.X, point.Y - bounds.Y);
+    private static Pos RelativePosition(Rect bounds, Pos point) => new Pos(point.X - bounds.X, point.Y - bounds.Y);
 
-    private static Pos CenterOf(Rect bounds) => new(bounds.Width / 2, bounds.Height / 2);
+    private static Pos CenterOf(Rect bounds) => new Pos(bounds.Width / 2, bounds.Height / 2);
 }

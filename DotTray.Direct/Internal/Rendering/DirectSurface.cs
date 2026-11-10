@@ -2,10 +2,11 @@
 
 using DotTray.Direct.Coloring;
 using DotTray.Direct.Context;
+using DotTray.Direct.Imaging;
+using DotTray.Direct.Internal.COM;
 using DotTray.Direct.Internal.Models;
 using DotTray.Direct.Primitives;
 using DotTray.Direct.Typography;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 
@@ -13,7 +14,7 @@ internal sealed class DirectSurface : IDisposable
 {
     private const float BaseDpi = 96f;
 
-    private static readonly Guid IID_IDXGISurface = new("cafcb56c-6ac3-4889-bf47-9e23bbd260ec");
+    private static readonly Guid IID_IDXGISurface = new Guid("cafcb56c-6ac3-4889-bf47-9e23bbd260ec");
     private static readonly Matrix3x2 Identity = new Matrix3x2
     {
         M11 = 1,
@@ -221,6 +222,27 @@ internal sealed class DirectSurface : IDisposable
         {
             Com.Release(geometry);
         }
+    }
+
+    public unsafe void DrawImage(DirectImage image, RectF destination, ImageOptions options)
+    {
+        var bitmap = _device.GetBitmap(image);
+        var target = Snap(destination);
+
+        var pSource = nint.Zero;
+        if (options.SourceBounds.HasValue)
+        {
+            var source = new RECTF
+            {
+                Left = options.SourceBounds.Value.Left,
+                Top = options.SourceBounds.Value.Top,
+                Right = options.SourceBounds.Value.Right,
+                Bottom = options.SourceBounds.Value.Bottom
+            };
+            pSource = (nint)(&source);
+        }
+
+        _context.DrawBitmapDc(bitmap, target, options.Opacity, (uint)options.InterpolationMode, pSource, nint.Zero);
     }
 
     public void DrawText(string text, TextInfo font, RectF bounds, IDirectBrush brush, DirectBrushContext context)
