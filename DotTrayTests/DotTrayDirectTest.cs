@@ -59,6 +59,8 @@ public static class DotTrayDirectTest
 
     private static void ConfigureSimpleMenu(DirectPopupMenuHandler handler)
     {
+        handler.Background = SolidColorBrush.Black;
+
         handler.MenuItems.Add<ImageItem>();
     }
 

@@ -15,9 +15,6 @@ public class MenuItem : MenuItemBase
     private const int ArrowGap = 8;
     private const int ArrowRightPadding = 10;
 
-    private int leadingWidth;
-    private int trailingWidth;
-
     /// <summary>
     /// <see langword="true"/> if this instance is hovered over or focused by the keyboard navigation, otherwise <see langword="false"/>
     /// </summary>
@@ -26,32 +23,32 @@ public class MenuItem : MenuItemBase
     /// <summary>
     /// The background brush matching the current state (disabled, hovered or normal)
     /// </summary>
-    protected IDirectBrush CurrentBackground => IsDisabled ? BackgroundDisabled : (isHovering ? BackgroundHover : Background);
+    protected virtual IDirectBrush CurrentBackground => IsDisabled ? BackgroundDisabled : (isHovering ? BackgroundHover : Background);
 
     /// <summary>
     /// The foreground brush matching the current state (disabled, hovered or normal)
     /// </summary>
-    protected IDirectBrush CurrentForeground => IsDisabled ? ForegroundDisabled : (isHovering ? ForegroundHover : Foreground);
+    protected virtual IDirectBrush CurrentForeground => IsDisabled ? ForegroundDisabled : (isHovering ? ForegroundHover : Foreground);
 
     /// <summary>
     /// <inheritdoc/>
     /// </summary>
     /// <remarks>
-    /// This is the same value as <see cref="IsDisabled"/> and therefore can be ignored
+    /// This is the same value as <see cref="IsDisabled"/>
     /// </remarks>
     internal protected sealed override bool IgnoreInteraction => IsDisabled;
     /// <summary>
     /// <inheritdoc/>
     /// </summary>
     /// <remarks>
-    /// This returns the same reference as <see cref="Items"/> and therefore can be ignored
+    /// This value is superseded by <see cref="Items"/>
     /// </remarks>
     internal protected sealed override MenuItemCollection SubmenuItems => base.SubmenuItems;
 
     /// <summary>
     /// The background color
     /// </summary>
-    public IDirectBrush Background
+    public virtual IDirectBrush Background
     {
         get;
         set
@@ -66,7 +63,7 @@ public class MenuItem : MenuItemBase
     /// <summary>
     /// The foreground color
     /// </summary>
-    public IDirectBrush Foreground
+    public virtual IDirectBrush Foreground
     {
         get;
         set
@@ -81,7 +78,7 @@ public class MenuItem : MenuItemBase
     /// <summary>
     /// The background hover color
     /// </summary>
-    public IDirectBrush BackgroundHover
+    public virtual IDirectBrush BackgroundHover
     {
         get;
         set
@@ -96,7 +93,7 @@ public class MenuItem : MenuItemBase
     /// <summary>
     /// The foreground hover color
     /// </summary>
-    public IDirectBrush ForegroundHover
+    public virtual IDirectBrush ForegroundHover
     {
         get;
         set
@@ -111,7 +108,7 @@ public class MenuItem : MenuItemBase
     /// <summary>
     /// The background disabled color
     /// </summary>
-    public IDirectBrush BackgroundDisabled
+    public virtual IDirectBrush BackgroundDisabled
     {
         get;
         set
@@ -126,7 +123,7 @@ public class MenuItem : MenuItemBase
     /// <summary>
     /// The foreground disabled color
     /// </summary>
-    public IDirectBrush ForegroundDisabled
+    public virtual IDirectBrush ForegroundDisabled
     {
         get;
         set
@@ -141,7 +138,7 @@ public class MenuItem : MenuItemBase
     /// <summary>
     /// The displayed text
     /// </summary>
-    public string Text
+    public virtual string Text
     {
         get;
         set
@@ -156,7 +153,7 @@ public class MenuItem : MenuItemBase
     /// <summary>
     /// The text info used to display the text
     /// </summary>
-    public TextInfo TextInfo
+    public virtual TextInfo TextInfo
     {
         get;
         set
@@ -171,7 +168,7 @@ public class MenuItem : MenuItemBase
     /// <summary>
     /// <see langword="true"/> to disable this instance, otherwise <see langword="false"/>
     /// </summary>
-    public bool IsDisabled
+    public virtual bool IsDisabled
     {
         get;
         set
@@ -211,50 +208,11 @@ public class MenuItem : MenuItemBase
     }
 
     /// <summary>
-    /// Measures the leading area, which is the space left of the content
-    /// </summary>
-    /// <remarks>
-    /// Empty by default. The returned width is reserved, the height only contributes to the item's height
-    /// </remarks>
-    /// <param name="context">Context for measuring this instance</param>
-    /// <param name="contentSize">The size measured by <see cref="MeasureContent(MeasuringContext)"/></param>
-    /// <returns>The size the leading area needs, in DIPs</returns>
-    protected virtual Dim MeasureLeading(MeasuringContext context, Dim contentSize) => new(0, 0);
-
-    /// <summary>
-    /// Measures the trailing area, which is the space right of the content
-    /// </summary>
-    /// <remarks>
-    /// By default this reserves space for the submenu arrow if there are <see cref="Items"/>, otherwise it is empty.<br/>
-    /// Override and call the base implementation to keep the arrow, or don't to replace it
-    /// </remarks>
-    /// <param name="context">Context for measuring this instance</param>
-    /// <param name="contentSize">The size measured by <see cref="MeasureContent(MeasuringContext)"/></param>
-    /// <returns>The size the trailing area needs, in DIPs</returns>
-    protected virtual Dim MeasureTrailing(MeasuringContext context, Dim contentSize)
-    {
-        if (SubmenuItems.IsEmpty) return new Dim(0, 0);
-
-        GetArrowSize(contentSize.Height, out var arrowWidth, out _);
-        return new Dim(ArrowGap + arrowWidth + ArrowRightPadding, 0);
-    }
-
-    /// <summary>
     /// Draws the background of the whole item
     /// </summary>
     /// <param name="context">Context for drawing this instance</param>
     /// <param name="bounds">The bounds of the whole item</param>
     protected virtual void DrawBackground(DrawingContext context, Rect bounds) => context.FillRect(bounds, CurrentBackground);
-
-    /// <summary>
-    /// Draws the leading area
-    /// </summary>
-    /// <remarks>
-    /// Only called if <see cref="MeasureLeading(MeasuringContext, Dim)"/> reserved a width greater than <c>0</c>
-    /// </remarks>
-    /// <param name="context">Context for drawing this instance</param>
-    /// <param name="bounds">The bounds of the leading area, spanning the full item height</param>
-    protected virtual void DrawLeading(DrawingContext context, Rect bounds) { }
 
     /// <summary>
     /// Draws the content area, which is the <see cref="Text"/> by default
@@ -263,59 +221,44 @@ public class MenuItem : MenuItemBase
     /// <param name="bounds">The bounds of the content area, spanning the full item height</param>
     protected virtual void DrawContent(DrawingContext context, Rect bounds) => context.WriteRect(bounds, Text, TextInfo, CurrentForeground);
 
-    /// <summary>
-    /// Draws the trailing area
-    /// </summary>
-    /// <remarks>
-    /// Only called if <see cref="MeasureTrailing(MeasuringContext, Dim)"/> reserved a width greater than <c>0</c>.<br/>
-    /// By default this draws the submenu arrow
-    /// </remarks>
-    /// <param name="context">Context for drawing this instance</param>
-    /// <param name="bounds">The bounds of the trailing area, spanning the full item height</param>
-    protected virtual void DrawTrailing(DrawingContext context, Rect bounds)
-    {
-        if (SubmenuItems.IsEmpty) return;
-
-        GetArrowSize(bounds.Height, out var arrowWidth, out var arrowHeight);
-
-        var arrowBounds = new Rect(
-            bounds.Right - ArrowRightPadding - arrowWidth,
-            bounds.Top + (bounds.Height - arrowHeight) / 2,
-            arrowWidth,
-            arrowHeight);
-
-        context.DrawChevron(arrowBounds, CurrentForeground);
-    }
-
     /// <inheritdoc/>
+    /// <remarks>
+    /// The size is <see cref="MeasureContent(MeasuringContext)"/> plus the space of the submenu arrow, if there is one
+    /// </remarks>
     internal protected override Dim Measure(MeasuringContext context)
     {
         var content = MeasureContent(context);
-        var leading = MeasureLeading(context, content);
-        var trailing = MeasureTrailing(context, content);
+        if (SubmenuItems.IsEmpty) return content;
 
-        leadingWidth = leading.Width;
-        trailingWidth = trailing.Width;
-
-        return new Dim(
-            leading.Width + content.Width + trailing.Width,
-            Math.Max(content.Height, Math.Max(leading.Height, trailing.Height)));
+        GetArrowSize(content.Height, out var arrowWidth, out _);
+        return new Dim(content.Width + ArrowGap + arrowWidth + ArrowRightPadding, content.Height);
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Draws the background, then the content into the bounds left over by the submenu arrow, then the arrow
+    /// </remarks>
     internal protected override void Draw(DrawingContext context)
     {
         var bounds = context.ItemBounds;
 
-        var leadingBounds = new Rect(bounds.X, bounds.Y, leadingWidth, bounds.Height);
-        var trailingBounds = new Rect(bounds.Right - trailingWidth, bounds.Y, trailingWidth, bounds.Height);
-        var contentBounds = new Rect(bounds.X + leadingWidth, bounds.Y, bounds.Width - leadingWidth - trailingWidth, bounds.Height);
-
         DrawBackground(context, bounds);
 
-        if (leadingWidth > 0) DrawLeading(context, leadingBounds);
-        DrawContent(context, contentBounds);
-        if (trailingWidth > 0) DrawTrailing(context, trailingBounds);
+        if (SubmenuItems.IsEmpty)
+        {
+            DrawContent(context, bounds);
+            return;
+        }
+
+        GetArrowSize(bounds.Height, out var arrowWidth, out var arrowHeight);
+
+        DrawContent(context, new Rect(bounds.X, bounds.Y, bounds.Width - ArrowGap - arrowWidth - ArrowRightPadding, bounds.Height));
+
+        context.DrawChevron(new Rect(
+            bounds.Right - ArrowRightPadding - arrowWidth,
+            bounds.Top + (bounds.Height - arrowHeight) / 2,
+            arrowWidth,
+            arrowHeight), CurrentForeground);
     }
 
     /// <inheritdoc/>

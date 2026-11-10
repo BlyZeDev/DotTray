@@ -16,7 +16,7 @@ public class CheckItem : MenuItem
     /// <summary>
     /// <see langword="true"/> if this instance is checked, otherwise <see langword="false"/>
     /// </summary>
-    public bool IsChecked
+    public virtual bool IsChecked
     {
         get;
         set
@@ -44,29 +44,41 @@ public class CheckItem : MenuItem
     /// <returns><see langword="true"/> to toggle <see cref="IsChecked"/>, otherwise <see langword="false"/></returns>
     protected virtual bool ShouldToggle(ItemInteractedEventArgs args) => args.Type is ItemInteractionType.MouseLeftUp or ItemInteractionType.KeyboardActivate;
 
+    /// <summary>
+    /// Draws the indicator that is shown while this instance is checked, which is a checkmark by default
+    /// </summary>
+    /// <remarks>
+    /// The box is sized from the item height and its bottom sits on the text baseline
+    /// </remarks>
+    /// <param name="context">Context for drawing this instance</param>
+    /// <param name="box">The bounds of the indicator</param>
+    protected virtual void DrawIndicator(DrawingContext context, Rect box) => context.DrawCheckmark(box, CurrentForeground);
+
     /// <inheritdoc/>
-    protected override Dim MeasureLeading(MeasuringContext context, Dim contentSize)
+    /// <remarks>
+    /// Adds the space of the indicator in front of the text, which is reserved even while unchecked
+    /// </remarks>
+    protected override Dim MeasureContent(MeasuringContext context)
     {
-        GetCheckMetrics(contentSize.Height, out var width, out var height, out var padding, out var gap);
-        return new Dim(padding + width + gap, height);
+        var content = base.MeasureContent(context);
+
+        GetCheckMetrics(content.Height, out var width, out var height, out var padding, out var gap);
+        return new Dim(padding + width + gap + content.Width, Math.Max(content.Height, height));
     }
 
     /// <inheritdoc/>
-    protected override void DrawLeading(DrawingContext context, Rect bounds)
+    protected override void DrawContent(DrawingContext context, Rect bounds)
     {
-        if (!IsChecked) return;
+        GetCheckMetrics(bounds.Height, out var width, out var height, out var padding, out var gap);
 
-        GetCheckMetrics(bounds.Height, out var width, out var height, out var padding, out _);
+        if (IsChecked)
+        {
+            var baseline = bounds.Y + (int)MathF.Round(bounds.Height * BaselineRatio);
+            DrawIndicator(context, new Rect(bounds.X + padding, baseline - height, width, height));
+        }
 
-        var baseline = bounds.Y + (int)MathF.Round(bounds.Height * BaselineRatio);
-
-        var checkBounds = new Rect(
-            bounds.X + padding,
-            baseline - height,
-            width,
-            height);
-
-        context.DrawCheckmark(checkBounds, CurrentForeground);
+        var offset = padding + width + gap;
+        base.DrawContent(context, new Rect(bounds.X + offset, bounds.Y, bounds.Width - offset, bounds.Height));
     }
 
     /// <inheritdoc/>
