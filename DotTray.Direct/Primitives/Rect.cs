@@ -32,6 +32,15 @@ public readonly record struct Rect
     public required readonly int Height { get; init; }
 
     /// <summary>
+    /// The position of this <see cref="Rect"/> instance
+    /// </summary>
+    public readonly Pos Position => new Pos(X, Y);
+    /// <summary>
+    /// The dimensions of this <see cref="Rect"/> instance
+    /// </summary>
+    public readonly Dim Dimensions => new Dim(Width, Height);
+
+    /// <summary>
     /// <inheritdoc cref="X"/>
     /// </summary>
     public readonly int Left => X;

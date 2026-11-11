@@ -117,7 +117,7 @@ public class SeparatorItem : MenuItemBase
     public SeparatorItem() { }
 
     /// <inheritdoc/>
-    internal protected override Dim Measure(MeasuringContext context) => new(0, Thickness + VerticalPadding * 2);
+    internal protected override Dim Measure(MeasuringContext context) => new Dim(0, Thickness + VerticalPadding * 2);
 
     /// <inheritdoc/>
     internal protected override void Draw(DrawingContext context)
@@ -126,13 +126,11 @@ public class SeparatorItem : MenuItemBase
 
         context.FillRect(bounds, Background);
 
-        var lineBounds = new Rect(
-            bounds.X + HorizontalPadding,
-            bounds.Y + (bounds.Height - Thickness) / 2,
-            Math.Max(0, bounds.Width - HorizontalPadding * 2),
-            Thickness);
+        var px = Math.Max(1f, MathF.Round(Thickness * context.Scale));
+        var top = bounds.Y + MathF.Floor((bounds.Height * context.Scale - px) / 2f) / context.Scale;
+        var line = new RectF(bounds.X + HorizontalPadding, top, Math.Max(0, bounds.Width - HorizontalPadding * 2), px / context.Scale);
 
-        if (IsRounded) context.FillRoundedRect(lineBounds, Thickness / 2f, Foreground);
-        else context.FillRect(lineBounds, Foreground);
+        if (IsRounded) context.FillRoundedRect(line, Thickness / 2f, Foreground);
+        else context.FillRect(line, Foreground);
     }
 }

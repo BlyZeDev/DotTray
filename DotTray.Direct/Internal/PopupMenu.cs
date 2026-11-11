@@ -6,7 +6,7 @@ using DotTray.Direct.Internal.Rendering;
 using DotTray.Direct.Items;
 using DotTray.Direct.Primitives;
 using System.Runtime.InteropServices;
-using OpenSubmenu = (nint HWnd, DotTray.Direct.Items.MenuItemBase? Owner);
+using OpenSubmenu = (nint HWnd, Items.MenuItemBase? Owner);
 
 internal sealed class PopupMenu
 {
@@ -180,7 +180,9 @@ internal sealed class PopupMenu
 
     private void DrawWindow(DrawingContext context)
     {
-        context.FillRect(new Rect(0, 0, context.WindowSize.Width, context.WindowSize.Height), _tree.Owner.Background);
+        var width = ToPixels(context.WindowSize.Width) / _scale;
+        var height = ToPixels(context.WindowSize.Height) / _scale;
+        context.FillRect(new RectF(0, 0, width, height), _tree.Owner.Background);
 
         foreach (var entry in windowLayout.Items)
         {

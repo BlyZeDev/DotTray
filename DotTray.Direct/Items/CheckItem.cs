@@ -52,7 +52,14 @@ public class CheckItem : MenuItem
     /// </remarks>
     /// <param name="context">Context for drawing this instance</param>
     /// <param name="box">The bounds of the indicator</param>
-    protected virtual void DrawIndicator(DrawingContext context, Rect box) => context.DrawCheckmark(box, CurrentForeground);
+    protected virtual void DrawCheckedIndicator(DrawingContext context, Rect box) => context.DrawCheckmark(box, CurrentForeground);
+
+    /// <summary>
+    /// Draws the indicator that is shown while this instance is not checked, which is nothing by default
+    /// </summary>
+    /// <param name="context">Context for drawing this instance</param>
+    /// <param name="box">The bounds of the indicator, same as for <see cref="DrawCheckedIndicator"/></param>
+    protected virtual void DrawUncheckedIndicator(DrawingContext context, Rect box) { }
 
     /// <inheritdoc/>
     /// <remarks>
@@ -71,11 +78,11 @@ public class CheckItem : MenuItem
     {
         GetCheckMetrics(bounds.Height, out var width, out var height, out var padding, out var gap);
 
-        if (IsChecked)
-        {
-            var baseline = bounds.Y + (int)MathF.Round(bounds.Height * BaselineRatio);
-            DrawIndicator(context, new Rect(bounds.X + padding, baseline - height, width, height));
-        }
+        var baseline = bounds.Y + (int)MathF.Round(bounds.Height * BaselineRatio);
+        var box = new Rect(bounds.X + padding, baseline - height, width, height);
+
+        if (IsChecked) DrawCheckedIndicator(context, box);
+        else DrawUncheckedIndicator(context, box);
 
         var offset = padding + width + gap;
         base.DrawContent(context, new Rect(bounds.X + offset, bounds.Y, bounds.Width - offset, bounds.Height));

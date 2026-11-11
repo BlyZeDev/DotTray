@@ -7,6 +7,11 @@ using System.Globalization;
 /// </summary>
 public sealed record TextInfo
 {
+    /// <summary>The smallest accepted size in DIPs</summary>
+    public const float MinSize = 1f;
+    /// <summary>The largest accepted size in DIPs</summary>
+    public const float MaxSize = 1000f;
+
     /// <summary>
     /// Segoe UI Emoji, 16 DIPs
     /// </summary>
@@ -24,7 +29,15 @@ public sealed record TextInfo
     /// <summary>
     /// The size in DIPs
     /// </summary>
-    public required float Size { get; init; }
+    /// <remarks>
+    /// This value is clamped between <c><see cref="MinSize"/></c> and <c><see cref="MaxSize"/></c><br/>
+    /// <c><see cref="float.NaN"/></c> becomes <c><see cref="MinSize"/></c>
+    /// </remarks>
+    public required float Size
+    {
+        get;
+        init => field = float.IsNaN(value) ? MinSize : Math.Clamp(value, MinSize, MaxSize);
+    }
 
     /// <summary>
     /// The weight of the font
@@ -34,17 +47,41 @@ public sealed record TextInfo
     /// <summary>
     /// The style of the font
     /// </summary>
-    public FontStyle Style { get; init; } = FontStyle.Normal;
+    /// <remarks>
+    /// Throws an <see cref="ArgumentOutOfRangeException"/> if the value is not a defined <see cref="FontStyle"/>
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    public FontStyle Style
+    {
+        get;
+        init => field = Enum.IsDefined(value) ? value : throw new ArgumentOutOfRangeException(nameof(value), "Invalid enum value");
+    } = FontStyle.Normal;
 
     /// <summary>
     /// The stretching of the font
     /// </summary>
-    public FontStretch Stretch { get; init; } = FontStretch.Normal;
+    /// <remarks>
+    /// Throws an <see cref="ArgumentOutOfRangeException"/> if the value is not a defined <see cref="FontStretch"/>
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    public FontStretch Stretch
+    {
+        get;
+        init => field = Enum.IsDefined(value) ? value : throw new ArgumentOutOfRangeException(nameof(value), "Invalid enum value");
+    } = FontStretch.Normal;
 
     /// <summary>
     /// The alignment of the text
     /// </summary>
-    public TextAlign Align { get; init; } = TextAlign.Left;
+    /// <remarks>
+    /// Throws an <see cref="ArgumentOutOfRangeException"/> if the value is not a defined <see cref="TextAlign"/>
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    public TextAlign Align
+    {
+        get;
+        init => field = Enum.IsDefined(value) ? value : throw new ArgumentOutOfRangeException(nameof(value), "Invalid enum value");
+    } = TextAlign.Left;
 
     /// <summary>
     /// The language used for text formatting and glyph selection

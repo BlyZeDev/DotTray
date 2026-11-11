@@ -16,7 +16,8 @@ public static class DotTrayDirectTest
         TrayTest[] tests =
         [
             new(System.Drawing.StockIconId.Application, ConfigureFullMenu),
-            new(System.Drawing.StockIconId.Info, ConfigureSimpleMenu)
+            new(System.Drawing.StockIconId.Info, ConfigureSimpleMenu),
+            new(System.Drawing.StockIconId.Delete, ConfigureBoundsMenu)
         ];
 
         using (var cts = new CancellationTokenSource())
@@ -57,11 +58,126 @@ public static class DotTrayDirectTest
         }
     }
 
+    private static void ConfigureBoundsMenu(DirectPopupMenuHandler handler)
+    {
+        handler.Background = SolidColorBrush.Black;
+
+        handler.MenuItems.Add<MenuItem>(x =>
+        {
+            x.Text = "Min - MenuItem";
+            x.TextInfo = x.TextInfo with
+            {
+                Size = float.MinValue
+            };
+        });
+        handler.MenuItems.Add<MenuItem>(x =>
+        {
+            x.Text = "Max - MenuItem";
+            x.TextInfo = x.TextInfo with
+            {
+                //Size = float.MaxValue
+            };
+        });
+        handler.MenuItems.Add<SeparatorItem>(x =>
+        {
+            x.Thickness = int.MinValue;
+            x.HorizontalPadding = int.MinValue;
+            x.VerticalPadding = int.MinValue;
+            x.IsRounded = true;
+        });
+        handler.MenuItems.Add<CheckItem>(x =>
+        {
+            x.Text = "Min - CheckTest";
+            x.TextInfo = x.TextInfo with
+            {
+                Size = float.MinValue
+            };
+        });
+        handler.MenuItems.Add<CheckItem>(x =>
+        {
+            x.Text = "Max - CheckTest";
+            x.TextInfo = x.TextInfo with
+            {
+                //Size = float.MaxValue
+            };
+        });
+        handler.MenuItems.Add<RadioItem>(x =>
+        {
+            x.Text = "Min - RadioTest";
+            x.TextInfo = x.TextInfo with
+            {
+                Size = float.MinValue
+            };
+        });
+        handler.MenuItems.Add<RadioItem>(x =>
+        {
+            x.Text = "Max - RadioTest";
+            x.TextInfo = x.TextInfo with
+            {
+                //Size = float.MaxValue
+            };
+        });
+    }
+
     private static void ConfigureSimpleMenu(DirectPopupMenuHandler handler)
     {
         handler.Background = SolidColorBrush.Black;
 
         handler.MenuItems.Add<ImageItem>();
+
+        var group = new RadioItemGroup();
+        group.SelectionChanged += args => Console.WriteLine((args?.Text ?? "<NULL>") + "is not selected");
+
+        handler.MenuItems.Add<MenuItem>(x =>
+        {
+            x.Text = "Add/Remove Radio Item";
+            x.TextInfo = x.TextInfo with
+            {
+                Align = TextAlign.Center,
+                Stretch = FontStretch.Expanded,
+                Weight = FontWeight.Bold
+            };
+            x.Interacted = args =>
+            {
+                args.KeepMenuOpen = true;
+                if (args.Type is ItemInteractionType.MouseLeftUp)
+                {
+                    handler.MenuItems.Insert<RadioItem>(handler.MenuItems.Count - 1, x =>
+                    {
+                        x.Text = "Radio " + Random.Shared.Next(100_000).ToString();
+                        x.Group = group;
+                        x.Interacted = args => args.KeepMenuOpen = true;
+                    });
+                }
+                else if (args.Type is ItemInteractionType.MouseRightUp)
+                {
+                    foreach (var item in handler.MenuItems.OfType<RadioItem>())
+                    {
+                        group.Remove(item);
+                        handler.MenuItems.Remove(item);
+                    }
+                }
+            };
+        });
+
+        handler.MenuItems.Add<MenuItem>(x =>
+        {
+            x.Text = "Clear Selection";
+            x.TextInfo = x.TextInfo with
+            {
+                Align = TextAlign.Center,
+                Stretch = FontStretch.Expanded,
+                Weight = FontWeight.SemiBold,
+                Style = FontStyle.Italic
+            };
+            x.Interacted = args =>
+            {
+                args.KeepMenuOpen = true;
+                if (args.Type is not ItemInteractionType.MouseLeftUp) return;
+                
+                group.ClearSelection();
+            };
+        });
     }
 
     private static void ConfigureFullMenu(DirectPopupMenuHandler handler)
@@ -71,7 +187,8 @@ public static class DotTrayDirectTest
             x.Text = "Eternity";
             x.TextInfo = x.TextInfo with
             {
-                Font = new UserFont(@"C:\pixelify.ttf"),
+                //Font = new UserFont(@"C:\pixelify.ttf"),
+                Font = new UserFont(@"C:\Users\leschi\Downloads\honk.ttf"),
                 Size = 75f
             };
             x.Interacted = args =>
@@ -125,7 +242,8 @@ public static class DotTrayDirectTest
                 ], 0f);
             x.TextInfo = new TextInfo
             {
-                Font = new UserFont(@"C:\NotoColorEmoji-Regular.ttf"),
+                //Font = new UserFont(@"C:\NotoColorEmoji-Regular.ttf"),
+                Font = SystemFont.Default,
                 Size = 150f
             };
             x.Items.Add<MenuItem>(x =>
@@ -218,7 +336,6 @@ public static class DotTrayDirectTest
 
     private static TestIcon CreateTestIcon(System.Drawing.StockIconId id, System.Drawing.StockIconOptions options = System.Drawing.StockIconOptions.ShellIconSize)
     {
-        // Unique per icon, so several icons don't overwrite or delete each other's file
         var tempPath = Path.Combine(Path.GetTempPath(), $"temptesticon_{id}_{Guid.NewGuid():N}.ico");
 
         using (var icon = System.Drawing.SystemIcons.GetStockIcon(id, options))
@@ -263,7 +380,9 @@ file sealed class ImageItem : MenuItemBase
 
     public ImageItem()
     {
-        _image = DirectImage.FromFile(@"C:\testimg.jpg");
+
+        //_image = DirectImage.FromFile(@"C:\testimg.jpg");
+        _image = DirectImage.FromFile(@"C:\Users\leschi\Downloads\le kirky.png");
         _actualSize = new Dim(_image.Dimensions.Width / 2, _image.Dimensions.Height / 2);
     }
 
@@ -275,6 +394,7 @@ file sealed class ImageItem : MenuItemBase
 
         context.DrawImage(_image, new Rect(new Pos(x, bounds.Y), _actualSize), new ImageOptions
         {
+            Opacity = 0.9f,
             InterpolationMode = InterpolationMode.HighQualityCubic
         });
     }

@@ -11,7 +11,11 @@ public sealed record ItemInteractedEventArgs
     /// <summary>
     /// The kind of interaction
     /// </summary>
-    public ItemInteractionType Type { get; init; }
+    public ItemInteractionType Type
+    {
+        get;
+        init => field = Enum.IsDefined(value) ? value : throw new ArgumentOutOfRangeException(nameof(value), "Invalid enum value");
+    }
 
     /// <summary>
     /// The position of the interaction relative to the top left of the item, in DIPs

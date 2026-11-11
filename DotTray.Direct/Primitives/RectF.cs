@@ -32,6 +32,15 @@ public readonly record struct RectF
     public required readonly float Height { get; init; }
 
     /// <summary>
+    /// The position of this <see cref="RectF"/> instance
+    /// </summary>
+    public readonly PosF Position => new PosF(X, Y);
+    /// <summary>
+    /// The dimensions of this <see cref="RectF"/> instance
+    /// </summary>
+    public readonly DimF Dimensions => new DimF(Width, Height);
+
+    /// <summary>
     /// <inheritdoc cref="X"/>
     /// </summary>
     public readonly float Left => X;
