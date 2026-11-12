@@ -71,7 +71,6 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
         if (MenuItems.IsEmpty) return;
 
         PopupMenuTree? active;
-
         lock (_lock)
         {
             if (disposed) return;
@@ -82,7 +81,6 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
         active?.Dispose();
 
         var tree = new PopupMenuTree(this, MenuItems);
-
         tree.Disposed += () => Untrack(owner, tree);
 
         lock (_lock)

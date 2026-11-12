@@ -1,6 +1,5 @@
 ﻿namespace DotTray.Direct.Internal.Rendering;
 
-using DotTray.Direct.Context;
 using DotTray.Direct.Imaging;
 using DotTray.Direct.Internal.COM;
 using DotTray.Direct.Internal.Models;
@@ -11,7 +10,7 @@ using ResolvedFont = (COM.IDWriteTextFormat Format, Typography.FontMetrics Metri
 
 internal sealed class DirectDevice : IDisposable
 {
-    private const float FallbackCapHeightRatio = 0.78f;
+    private const float FallbackCapHeightRatio = 0.7f;
 
     private readonly ID3D11Device _d3dDevice;
     private readonly ID2D1Device _d2dDevice;
@@ -50,6 +49,8 @@ internal sealed class DirectDevice : IDisposable
 
     public ID2D1DeviceContext CreateDeviceContext()
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
         _d2dDevice.CreateDeviceContext(0, out var context);
         return context;
     }

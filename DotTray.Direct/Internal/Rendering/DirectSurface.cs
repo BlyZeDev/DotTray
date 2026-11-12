@@ -27,24 +27,24 @@ internal sealed class DirectSurface : IDisposable
     private readonly IDCompositionTarget _compositionTarget;
     private readonly IDCompositionVisual _compositionVisual;
 
-    private uint width;
-    private uint height;
+    private uint curPixWidth;
+    private uint curPixHeight;
     private float dpi;
     private bool disposed;
 
     public float Scale => dpi / BaseDpi;
 
-    public DirectSurface(DirectDevice device, nint hWnd, int width, int height, float dpi)
+    public DirectSurface(DirectDevice device, nint hWnd, int pixelWidth, int pixelHeight, float dpi)
     {
         _device = device;
-        this.width = ToPixels(width);
-        this.height = ToPixels(height);
+        curPixWidth = ToPixels(pixelWidth);
+        curPixHeight = ToPixels(pixelHeight);
         this.dpi = dpi;
 
         _context = _device.CreateDeviceContext();
         _context.SetTextAntialiasMode(PInvoke.D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
 
-        _swapChain = _device.CreateSwapChain(this.width, this.height);
+        _swapChain = _device.CreateSwapChain(curPixWidth, curPixHeight);
         (_compositionTarget, _compositionVisual) = _device.CreateComposition(hWnd, _swapChain);
 
         CreateTarget();
@@ -83,10 +83,10 @@ internal sealed class DirectSurface : IDisposable
 
         var width = ToPixels(pixelWidth);
         var height = ToPixels(pixelHeight);
-        if (width == this.width && height == this.height && dpi == this.dpi) return;
+        if (width == curPixWidth && height == curPixHeight && dpi == this.dpi) return;
 
-        this.width = width;
-        this.height = height;
+        curPixWidth = width;
+        curPixHeight = height;
         this.dpi = dpi;
 
         _context.SetTarget(nint.Zero);
@@ -229,10 +229,11 @@ internal sealed class DirectSurface : IDisposable
         var bitmap = _device.GetBitmap(image);
         var target = Snap(destination);
 
+        var source = default(RECTF);
         var pSource = nint.Zero;
         if (options.SourceBounds.HasValue)
         {
-            var source = new RECTF
+            source = new RECTF
             {
                 Left = options.SourceBounds.Value.Left,
                 Top = options.SourceBounds.Value.Top,

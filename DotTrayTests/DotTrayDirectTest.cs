@@ -187,8 +187,8 @@ public static class DotTrayDirectTest
             x.Text = "Eternity";
             x.TextInfo = x.TextInfo with
             {
-                //Font = new UserFont(@"C:\pixelify.ttf"),
-                Font = new UserFont(@"C:\Users\leschi\Downloads\honk.ttf"),
+                Font = new UserFont(@"C:\pixelify.ttf"),
+                //Font = new UserFont(@"C:\Users\leschi\Downloads\honk.ttf"),
                 Size = 75f
             };
             x.Interacted = args =>
@@ -242,8 +242,8 @@ public static class DotTrayDirectTest
                 ], 0f);
             x.TextInfo = new TextInfo
             {
-                //Font = new UserFont(@"C:\NotoColorEmoji-Regular.ttf"),
-                Font = SystemFont.Default,
+                Font = new UserFont(@"C:\NotoColorEmoji-Regular.ttf"),
+                //Font = SystemFont.Default,
                 Size = 150f
             };
             x.Items.Add<MenuItem>(x =>
@@ -381,8 +381,8 @@ file sealed class ImageItem : MenuItemBase
     public ImageItem()
     {
 
-        //_image = DirectImage.FromFile(@"C:\testimg.jpg");
-        _image = DirectImage.FromFile(@"C:\Users\leschi\Downloads\le kirky.png");
+        _image = DirectImage.FromFile(@"C:\testimg.jpg");
+        //_image = DirectImage.FromFile(@"C:\Users\leschi\Downloads\le kirky.png");
         _actualSize = new Dim(_image.Dimensions.Width / 2, _image.Dimensions.Height / 2);
     }
 
