@@ -41,7 +41,7 @@ internal sealed class DirectSurface : IDisposable
         this.height = ToPixels(height);
         this.dpi = dpi;
 
-        _device.D2DDevice.CreateDeviceContext(0, out _context);
+        _context = _device.CreateDeviceContext();
         _context.SetTextAntialiasMode(PInvoke.D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
 
         _swapChain = _device.CreateSwapChain(this.width, this.height);
@@ -245,15 +245,32 @@ internal sealed class DirectSurface : IDisposable
         _context.DrawBitmapDc(bitmap, target, options.Opacity, (uint)options.InterpolationMode, pSource, nint.Zero);
     }
 
-    public void DrawText(string text, TextInfo font, RectF bounds, IDirectBrush brush, DirectBrushContext context)
-    {
-        if (text.Length == 0) return;
+    public FontMetrics GetFontMetrics(TextInfo info) => _device.GetFontMetrics(info);
 
-        var layout = _device.CreateTextLayout(text, font, bounds.Width, bounds.Height);
+    public DimF MeasureText(string text, TextInfo info)
+    {
+        var layout = _device.CreateTextLayout(text, info);
 
         try
         {
-            var textBounds = GetBrushBounds(layout, bounds, _device.GetCapHeight(font));
+            layout.GetMetrics(out var metrics);
+            return new DimF(metrics.Width, metrics.Height);
+        }
+        finally
+        {
+            Com.Release(layout);
+        }
+    }
+
+    public void DrawText(string text, TextInfo info, RectF bounds, IDirectBrush brush, DirectBrushContext context)
+    {
+        if (text.Length == 0) return;
+
+        var layout = _device.CreateTextLayout(text, info, bounds.Width, bounds.Height);
+
+        try
+        {
+            var textBounds = GetBrushBounds(layout, bounds, _device.GetFontMetrics(info).CapHeight);
 
             using (var native = brush.Create(context, textBounds))
             {

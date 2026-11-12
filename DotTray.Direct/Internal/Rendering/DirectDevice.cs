@@ -1,52 +1,57 @@
 ﻿namespace DotTray.Direct.Internal.Rendering;
 
+using DotTray.Direct.Context;
 using DotTray.Direct.Imaging;
 using DotTray.Direct.Internal.COM;
 using DotTray.Direct.Internal.Models;
-using DotTray.Direct.Primitives;
 using DotTray.Direct.Typography;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
+using ResolvedFont = (COM.IDWriteTextFormat Format, Typography.FontMetrics Metrics);
 
 internal sealed class DirectDevice : IDisposable
 {
-    private const float FallbackCapHeightRatio = 0.7f;
+    private const float FallbackCapHeightRatio = 0.78f;
 
     private readonly ID3D11Device _d3dDevice;
+    private readonly ID2D1Device _d2dDevice;
+    private readonly ID2D1Factory _d2dFactory;
     private readonly IDXGIDevice _dxgiDevice;
     private readonly IDWriteFactory _dwriteFactory;
     private readonly IDWriteFactory3 _dwriteFactory3;
     private readonly IDCompositionDevice _compositionDevice;
     private readonly IDWriteFontCollection _systemCollection;
     private readonly ID2D1DeviceContext _resourceContext;
+
     private readonly Dictionary<UserFont, IDWriteFontCollection> _userCollections = [];
     private readonly Dictionary<TextInfo, ResolvedFont> _fonts = [];
     private readonly Dictionary<DirectImage, nint> _bitmaps = [];
 
     private bool disposed;
 
-    public ID2D1Device D2DDevice { get; }
-    public ID2D1Factory D2DFactory { get; }
-
     public ID2D1StrokeStyle RoundStroke { get; }
-
-    private sealed record ResolvedFont(IDWriteTextFormat Format, float CapHeight);
 
     public DirectDevice()
     {
         _d3dDevice = CreateD3DDevice();
         _dxgiDevice = (IDXGIDevice)_d3dDevice;
-        D2DDevice = CreateD2DDevice(_dxgiDevice);
+        _d2dDevice = CreateD2DDevice(_dxgiDevice);
 
-        D2DFactory = GetFactory(D2DDevice);
-        RoundStroke = CreateRoundStroke(D2DFactory);
+        _d2dFactory = GetFactory(_d2dDevice);
+        RoundStroke = CreateRoundStroke(_d2dFactory);
 
         HR.ThrowIfError(PInvoke.DWriteCreateFactory(0, typeof(IDWriteFactory).GUID, out _dwriteFactory));
         _dwriteFactory3 = (IDWriteFactory3)_dwriteFactory;
         HR.ThrowIfError(_dwriteFactory.GetSystemFontCollection(out _systemCollection, 0));
 
         HR.ThrowIfError(PInvoke.DCompositionCreateDevice(_dxgiDevice, typeof(IDCompositionDevice).GUID, out _compositionDevice));
-        D2DDevice.CreateDeviceContext(0, out _resourceContext);
+        _d2dDevice.CreateDeviceContext(0, out _resourceContext);
+    }
+
+    public ID2D1DeviceContext CreateDeviceContext()
+    {
+        _d2dDevice.CreateDeviceContext(0, out var context);
+        return context;
     }
 
     public IDXGISwapChain1 CreateSwapChain(uint width, uint height)
@@ -105,28 +110,13 @@ internal sealed class DirectDevice : IDisposable
         return layout;
     }
 
-    public DimF MeasureText(string text, TextInfo info)
-    {
-        var layout = CreateTextLayout(text, info);
-
-        try
-        {
-            layout.GetMetrics(out var metrics);
-            return new DimF(metrics.Width, metrics.Height);
-        }
-        finally
-        {
-            Com.Release(layout);
-        }
-    }
-
-    public float GetCapHeight(TextInfo info) => Resolve(info).CapHeight;
+    public FontMetrics GetFontMetrics(TextInfo info) => Resolve(info).Metrics;
 
     public ID2D1PathGeometry CreatePolyline(ReadOnlySpan<PointF> points)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
 
-        D2DFactory.CreatePathGeometry(out var geometry);
+        _d2dFactory.CreatePathGeometry(out var geometry);
 
         try
         {
@@ -216,8 +206,8 @@ internal sealed class DirectDevice : IDisposable
         Com.Release(_dwriteFactory);
         Com.Release(_compositionDevice);
         Com.Release(RoundStroke);
-        Com.Release(D2DFactory);
-        Com.Release(D2DDevice);
+        Com.Release(_d2dFactory);
+        Com.Release(_d2dDevice);
         Com.Release(_dxgiDevice);
         Com.Release(_d3dDevice);
     }
@@ -241,7 +231,7 @@ internal sealed class DirectDevice : IDisposable
             format.SetParagraphAlignment(PInvoke.DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
             format.SetWordWrapping(PInvoke.DWRITE_WORD_WRAPPING_NO_WRAP);
 
-            var resolved = new ResolvedFont(format, capHeight);
+            var resolved = new ResolvedFont(format, ReadFontMetrics(format, capHeight, info.Size));
             _fonts[info] = resolved;
 
             return resolved;
@@ -249,6 +239,24 @@ internal sealed class DirectDevice : IDisposable
         finally
         {
             Com.Release(family);
+        }
+    }
+
+    private unsafe FontMetrics ReadFontMetrics(IDWriteTextFormat format, float capHeight, float size)
+    {
+        _dwriteFactory.CreateTextLayout("H", 1, format, float.MaxValue, float.MaxValue, out var layout);
+
+        try
+        {
+            var line = stackalloc LineMetrics[1];
+
+            return layout.GetLineMetrics(line, 1, out _) < 0
+                ? new FontMetrics(size * 1.2f, size, capHeight)
+                : new FontMetrics(line->Height, line->Baseline, capHeight);
+        }
+        finally
+        {
+            Com.Release(layout);
         }
     }
 

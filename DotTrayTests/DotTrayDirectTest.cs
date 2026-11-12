@@ -126,7 +126,7 @@ public static class DotTrayDirectTest
         handler.MenuItems.Add<ImageItem>();
 
         var group = new RadioItemGroup();
-        group.SelectionChanged += args => Console.WriteLine((args?.Text ?? "<NULL>") + "is not selected");
+        group.SelectionChanged += args => Console.WriteLine((args?.Text ?? "<NULL>") + " is now selected");
 
         handler.MenuItems.Add<MenuItem>(x =>
         {
