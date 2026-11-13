@@ -29,17 +29,19 @@ internal sealed class DirectSurface : IDisposable
 
     private uint curPixWidth;
     private uint curPixHeight;
-    private float dpi;
+    private float curDpi;
     private bool disposed;
 
-    public float Scale => dpi / BaseDpi;
+    public float Scale => curDpi / BaseDpi;
+
+    public bool IsLost => _device.IsLost;
 
     public DirectSurface(DirectDevice device, nint hWnd, int pixelWidth, int pixelHeight, float dpi)
     {
         _device = device;
         curPixWidth = ToPixels(pixelWidth);
         curPixHeight = ToPixels(pixelHeight);
-        this.dpi = dpi;
+        curDpi = dpi;
 
         _context = _device.CreateDeviceContext();
         _context.SetTextAntialiasMode(PInvoke.D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
@@ -52,6 +54,8 @@ internal sealed class DirectSurface : IDisposable
 
     public unsafe nint GetContextPointer()
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
         var pointer = ComInterfaceMarshaller<ID2D1DeviceContext>.ConvertToUnmanaged(_context);
         ComInterfaceMarshaller<ID2D1DeviceContext>.Free(pointer);
 
@@ -71,8 +75,12 @@ internal sealed class DirectSurface : IDisposable
 
     public void EndDraw()
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
         var hr = _context.EndDraw(nint.Zero, nint.Zero);
         if (hr >= 0) hr = _swapChain.Present(1, 0);
+
+        if (_device.TryMarkLost(hr)) return;
 
         HR.ThrowIfError(hr);
     }
@@ -83,76 +91,58 @@ internal sealed class DirectSurface : IDisposable
 
         var width = ToPixels(pixelWidth);
         var height = ToPixels(pixelHeight);
-        if (width == curPixWidth && height == curPixHeight && dpi == this.dpi) return;
+        if (width == curPixWidth && height == curPixHeight && dpi == curDpi) return;
 
         curPixWidth = width;
         curPixHeight = height;
-        this.dpi = dpi;
+        curDpi = dpi;
 
-        _context.SetTarget(nint.Zero);
-        _swapChain.ResizeBuffers(0, width, height, 0, 0);
+        try
+        {
+            _context.SetTarget(nint.Zero);
+            _swapChain.ResizeBuffers(0, width, height, 0, 0);
 
-        CreateTarget();
+            CreateTarget();
+        }
+        catch (COMException ex) when (_device.TryMarkLost(ex.HResult)) { }
     }
 
     public ID2D1Brush CreateSolidBrush(Rgba color)
     {
-        _context.CreateSolidColorBrush(ToColorF(color), nint.Zero, out var brush);
-        return brush;
+        ObjectDisposedException.ThrowIf(disposed, this);
+        return _device.CreateSolidBrush(color);
     }
 
     public ID2D1Brush CreateLinearGradientBrush(ReadOnlySpan<GradientStop> stops, PointF start, PointF end, GradientExtendMode extendMode)
     {
-        var collection = CreateStopCollection(stops, extendMode);
-
-        try
-        {
-            var properties = new LinearGradientBrushProperties
-            {
-                StartPoint = start,
-                EndPoint = end
-            };
-
-            HR.ThrowIfError(_context.CreateLinearGradientBrush(properties, nint.Zero, collection, out var brush));
-            return brush;
-        }
-        finally
-        {
-            Marshal.Release(collection);
-        }
+        ObjectDisposedException.ThrowIf(disposed, this);
+        return _device.CreateLinearGradientBrush(stops, start, end, extendMode);
     }
 
     public ID2D1Brush CreateRadialGradientBrush(ReadOnlySpan<GradientStop> stops, PointF center, PointF originOffset, float radiusX, float radiusY, GradientExtendMode extendMode)
     {
-        var collection = CreateStopCollection(stops, extendMode);
-
-        try
-        {
-            var properties = new RadialGradientBrushProperties
-            {
-                Center = center,
-                GradientOriginOffset = originOffset,
-                RadiusX = radiusX,
-                RadiusY = radiusY
-            };
-
-            HR.ThrowIfError(_context.CreateRadialGradientBrush(properties, nint.Zero, collection, out var brush));
-            return brush;
-        }
-        finally
-        {
-            Marshal.Release(collection);
-        }
+        ObjectDisposedException.ThrowIf(disposed, this);
+        return _device.CreateRadialGradientBrush(stops, center, originOffset, radiusX, radiusY, extendMode);
     }
 
-    public void FillRect(RectF rect, ID2D1Brush brush) => _context.FillRectangle(Snap(rect), brush);
+    public void FillRect(RectF rect, ID2D1Brush brush)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        _context.FillRectangle(Snap(rect), brush);
+    }
 
-    public void DrawRect(RectF rect, ID2D1Brush brush, float strokeWidth) => _context.DrawRectangle(Snap(rect), brush, strokeWidth, nint.Zero);
+    public void DrawRect(RectF rect, ID2D1Brush brush, float strokeWidth)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        _context.DrawRectangle(Snap(rect), brush, strokeWidth, nint.Zero);
+    }
 
     public void FillRoundedRect(RectF rect, float radius, ID2D1Brush brush)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
         _context.FillRoundedRectangle(new RoundedRectF
-        { 
+        {
             Rect = Snap(rect),
             RadiusX = radius,
             RadiusY = radius
@@ -161,6 +151,8 @@ internal sealed class DirectSurface : IDisposable
 
     public void DrawRoundedRect(RectF rect, float radius, ID2D1Brush brush, float strokeWidth)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
         _context.DrawRoundedRectangle(new RoundedRectF
         {
             Rect = Snap(rect),
@@ -171,6 +163,8 @@ internal sealed class DirectSurface : IDisposable
 
     public void FillEllipse(RectF rect, ID2D1Brush brush)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
         _context.FillEllipse(new EllipseF
         {
             Point = new PointF
@@ -185,6 +179,8 @@ internal sealed class DirectSurface : IDisposable
 
     public void DrawEllipse(RectF rect, ID2D1Brush brush, float strokeWidth)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
         _context.DrawEllipse(new EllipseF
         {
             Point = new PointF
@@ -199,6 +195,8 @@ internal sealed class DirectSurface : IDisposable
 
     public void DrawLine(PosF start, PosF end, float strokeWidth, ID2D1Brush brush)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
         _context.DrawLine(new PointF
         {
             X = start.X,
@@ -212,6 +210,8 @@ internal sealed class DirectSurface : IDisposable
 
     public void DrawPolyline(ReadOnlySpan<PointF> points, float strokeWidth, ID2D1Brush brush)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
         var geometry = _device.CreatePolyline(points);
 
         try
@@ -226,14 +226,15 @@ internal sealed class DirectSurface : IDisposable
 
     public unsafe void DrawImage(DirectImage image, RectF destination, ImageOptions options)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
         var bitmap = _device.GetBitmap(image);
         var target = Snap(destination);
 
-        var source = default(RECTF);
         var pSource = nint.Zero;
         if (options.SourceBounds.HasValue)
         {
-            source = new RECTF
+            var source = new RECTF
             {
                 Left = options.SourceBounds.Value.Left,
                 Top = options.SourceBounds.Value.Top,
@@ -246,41 +247,38 @@ internal sealed class DirectSurface : IDisposable
         _context.DrawBitmapDc(bitmap, target, options.Opacity, (uint)options.InterpolationMode, pSource, nint.Zero);
     }
 
-    public FontMetrics GetFontMetrics(TextInfo info) => _device.GetFontMetrics(info);
+    public FontMetrics GetFontMetrics(TextInfo info)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        return _device.GetFontMetrics(info);
+    }
 
     public DimF MeasureText(string text, TextInfo info)
     {
-        var layout = _device.CreateTextLayout(text, info);
-
-        try
-        {
-            layout.GetMetrics(out var metrics);
-            return new DimF(metrics.Width, metrics.Height);
-        }
-        finally
-        {
-            Com.Release(layout);
-        }
+        ObjectDisposedException.ThrowIf(disposed, this);
+        return _device.MeasureText(text, info);
     }
 
     public void DrawText(string text, TextInfo info, RectF bounds, IDirectBrush brush, DirectBrushContext context)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
         if (text.Length == 0) return;
 
         var layout = _device.CreateTextLayout(text, info, bounds.Width, bounds.Height);
 
         try
         {
-            var textBounds = GetBrushBounds(layout, bounds, _device.GetFontMetrics(info).CapHeight);
+            var brushBounds = _device.GetBrushBounds(layout, info);
+            var textBounds = new RectF(bounds.X + brushBounds.X, bounds.Y + brushBounds.Y, brushBounds.Width, brushBounds.Height);
 
-            using (var native = brush.Create(context, textBounds))
+            using var native = brush.Create(context, textBounds);
+
+            _context.DrawTextLayout(new PointF
             {
-                _context.DrawTextLayout(new PointF
-                {
-                    X = bounds.X,
-                    Y = bounds.Y
-                }, layout, native.Native, PInvoke.D2D1_DRAW_TEXT_OPTIONS_CLIP | PInvoke.D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
-            }
+                X = bounds.X,
+                Y = bounds.Y
+            }, layout, native.Native, PInvoke.D2D1_DRAW_TEXT_OPTIONS_CLIP | PInvoke.D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
         }
         finally
         {
@@ -288,9 +286,17 @@ internal sealed class DirectSurface : IDisposable
         }
     }
 
-    public void PushClip(Rect rect) => _context.PushAxisAlignedClip(Snap(rect), PInvoke.D2D1_ANTIALIAS_MODE_ALIASED);
+    public void PushClip(Rect rect)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        _context.PushAxisAlignedClip(Snap(rect), PInvoke.D2D1_ANTIALIAS_MODE_ALIASED);
+    }
 
-    public void PopClip() => _context.PopAxisAlignedClip();
+    public void PopClip()
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        _context.PopAxisAlignedClip();
+    }
 
     public void Dispose()
     {
@@ -316,8 +322,8 @@ internal sealed class DirectSurface : IDisposable
             {
                 Format = PInvoke.DXGI_FORMAT_B8G8R8A8_UNORM,
                 AlphaMode = PInvoke.D2D1_ALPHA_MODE_PREMULTIPLIED,
-                DpiX = dpi,
-                DpiY = dpi,
+                DpiX = curDpi,
+                DpiY = curDpi,
                 Options = PInvoke.D2D1_BITMAP_OPTIONS_TARGET | PInvoke.D2D1_BITMAP_OPTIONS_CANNOT_DRAW
             };
 
@@ -330,27 +336,7 @@ internal sealed class DirectSurface : IDisposable
             Marshal.Release(surface);
         }
 
-        _context.SetDpi(dpi, dpi);
-    }
-
-    private unsafe nint CreateStopCollection(ReadOnlySpan<GradientStop> stops, GradientExtendMode extendMode)
-    {
-        Span<GradientStopF> native = stops.Length <= 16 ? stackalloc GradientStopF[stops.Length] : new GradientStopF[stops.Length];
-
-        for (var i = 0; i < stops.Length; i++)
-        {
-            native[i] = new GradientStopF
-            {
-                Position = stops[i].Offset,
-                Color = ToColorF(stops[i].Color)
-            };
-        }
-
-        fixed (GradientStopF* pointer = native)
-        {
-            HR.ThrowIfError(_context.CreateGradientStopCollection(pointer, (uint)native.Length, 0, (uint)extendMode, out var collection));
-            return collection;
-        }
+        _context.SetDpi(curDpi, curDpi);
     }
 
     private RECTF Snap(RectF rect) => new()
@@ -363,41 +349,5 @@ internal sealed class DirectSurface : IDisposable
 
     private float SnapEdge(float dips) => MathF.Round(dips * Scale) / Scale;
 
-    private static unsafe RectF GetBrushBounds(IDWriteTextLayout layout, RectF bounds, float capHeight)
-    {
-        const int MaxLines = 16;
-        
-        layout.GetMetrics(out var metrics);
-
-        var left = bounds.X + metrics.Left;
-        var top = bounds.Y + metrics.Top;
-        var lineBox = new RectF(left, top, metrics.Width, metrics.Height);
-
-        if (capHeight <= 0f) return lineBox;
-
-        var lines = stackalloc LineMetrics[MaxLines];
-        if (layout.GetLineMetrics(lines, MaxLines, out var count) < 0 || count == 0) return lineBox;
-
-        var first = top + lines[0].Baseline - capHeight;
-        var y = top;
-        var last = first;
-
-        for (var i = 0; i < count; i++)
-        {
-            last = y + lines[i].Baseline;
-            y += lines[i].Height;
-        }
-
-        return new RectF(left, first, metrics.Width, last - first);
-    }
-
     private static uint ToPixels(int value) => (uint)int.Max(1, value);
-
-    private static ColorF ToColorF(Rgba color) => new ColorF
-    {
-        R = color.R / (float)byte.MaxValue,
-        G = color.G / (float)byte.MaxValue,
-        B = color.B / (float)byte.MaxValue,
-        A = color.A / (float)byte.MaxValue
-    };
 }

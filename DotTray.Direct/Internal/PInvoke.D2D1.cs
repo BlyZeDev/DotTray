@@ -31,6 +31,8 @@ internal static partial class PInvoke
     public const uint D2D1_INTERPOLATION_MODE_ANISOTROPIC = 4;
     public const uint D2D1_INTERPOLATION_MODE_HIGH_QUALITY_CUBIC = 5;
 
+    public const uint D2DERR_RECREATE_TARGET = 0x8899000C;
+
     [LibraryImport(D2D1)]
     public static partial int D2D1CreateDevice([MarshalUsing(typeof(ComInterfaceMarshaller<IDXGIDevice>))] IDXGIDevice dxgiDevice, nint creationProperties, [MarshalUsing(typeof(ComInterfaceMarshaller<ID2D1Device>))] out ID2D1Device device);
 }

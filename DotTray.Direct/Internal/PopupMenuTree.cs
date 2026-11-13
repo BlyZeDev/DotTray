@@ -20,7 +20,6 @@ internal sealed class PopupMenuTree : IDisposable
     private bool disposed;
 
     public DirectPopupMenuHandler Owner { get; }
-    public DirectDevice Device { get; }
 
     public event Action? Disposed;
 
@@ -30,17 +29,7 @@ internal sealed class PopupMenuTree : IDisposable
 
         PInvoke.SetThreadDpiAwarenessContext(PInvoke.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
-        Device = new DirectDevice();
-
-        try
-        {
-            _rootHWnd = CreatePopup(nint.Zero, items, null, false).HWnd;
-        }
-        catch
-        {
-            Device.Dispose();
-            throw;
-        }
+        _rootHWnd = CreatePopup(nint.Zero, items, null, false).HWnd;
 
         _pMouseHook = LowLevelMouseProcFunc;
         _hMouseHook = PInvoke.SetWindowsHookEx(PInvoke.WH_MOUSE_LL, Marshal.GetFunctionPointerForDelegate(_pMouseHook), nint.Zero, 0);
@@ -106,7 +95,6 @@ internal sealed class PopupMenuTree : IDisposable
         if (_popups.Remove(hWnd, out var popup) && _popups.TryGetValue(popup.OwnerHWnd, out var owner)) owner.OnChildDestroyed(hWnd);
 
         if (hWnd == _rootHWnd) DisposeCore();
-        if (_popups.Count == 0) Device.Dispose();
     }
 
     private PopupMenu CreatePopup(nint ownerHWnd, MenuItemCollection items, Rect? anchorScreenRect, bool selectFirstItem)

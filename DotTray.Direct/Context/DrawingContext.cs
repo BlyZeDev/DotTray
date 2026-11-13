@@ -15,17 +15,7 @@ using System.Runtime.CompilerServices;
 /// </summary>
 public sealed class DrawingContext : Context
 {
-    private readonly DirectSurface _surface;
     private readonly DirectBrushContext _brushContext;
-
-    /// <summary>
-    /// The native <c>ID2D1DeviceContext*</c> the window is drawn on
-    /// </summary>
-    /// <remarks>
-    /// The pointer is borrowed: don't release it and don't use it after the draw call
-    /// </remarks>
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public nint NativeContext => _surface.GetContextPointer();
 
     /// <summary>
     /// The size of the window that contains this item
@@ -40,9 +30,8 @@ public sealed class DrawingContext : Context
     /// </remarks>
     public Rect ItemBounds { get; internal set; }
 
-    internal DrawingContext(DirectSurface surface, float scale, Dim windowSize) : base(scale)
+    internal DrawingContext(DirectSurface surface, Dim windowSize) : base(surface)
     {
-        _surface = surface;
         _brushContext = new DirectBrushContext(_surface);
         WindowSize = windowSize;
     }

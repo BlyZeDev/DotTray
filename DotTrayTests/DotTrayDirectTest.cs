@@ -187,8 +187,9 @@ public static class DotTrayDirectTest
             x.Text = "Eternity";
             x.TextInfo = x.TextInfo with
             {
-                Font = new UserFont(@"C:\pixelify.ttf"),
-                //Font = new UserFont(@"C:\Users\leschi\Downloads\honk.ttf"),
+                Font = UserFont.TryCreate(@"C:\Users\leschi\Downloads\honk.ttf", out var font)
+                    ? font : UserFont.TryCreate(@"C:\pixelify.ttf", out font)
+                    ? font : SystemFont.Default,
                 Size = 75f
             };
             x.Interacted = args =>
@@ -242,8 +243,7 @@ public static class DotTrayDirectTest
                 ], 0f);
             x.TextInfo = new TextInfo
             {
-                Font = new UserFont(@"C:\NotoColorEmoji-Regular.ttf"),
-                //Font = SystemFont.Default,
+                Font = UserFont.TryCreate(@"C:\NotoColorEmoji-Regular.ttf", out var font) ? font : SystemFont.Default,
                 Size = 150f
             };
             x.Items.Add<MenuItem>(x =>
@@ -326,7 +326,7 @@ public static class DotTrayDirectTest
                 ], 135f);
             x.TextInfo = new TextInfo
             {
-                Font = new SystemFont("Algerian"),
+                Font = SystemFont.TryCreate("Algerian", out var font) ? font : SystemFont.Default,
                 Size = 111f,
                 Align = TextAlign.Center,
                 Language = new LanguageTag("fr-FR")
@@ -380,9 +380,8 @@ file sealed class ImageItem : MenuItemBase
 
     public ImageItem()
     {
-
-        _image = DirectImage.FromFile(@"C:\testimg.jpg");
-        //_image = DirectImage.FromFile(@"C:\Users\leschi\Downloads\le kirky.png");
+        //_image = DirectImage.FromFile(@"C:\testimg.jpg");
+        _image = DirectImage.FromFile(@"C:\Users\leschi\Downloads\le kirk.png");
         _actualSize = new Dim(_image.Dimensions.Width / 2, _image.Dimensions.Height / 2);
     }
 

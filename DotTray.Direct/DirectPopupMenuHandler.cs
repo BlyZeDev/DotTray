@@ -3,6 +3,7 @@
 using DotTray;
 using DotTray.Direct.Coloring;
 using DotTray.Direct.Internal;
+using DotTray.Direct.Internal.Rendering;
 
 /// <summary>
 /// The default popup behaviour handler, rendering with Direct2D and DirectWrite
@@ -16,6 +17,8 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
     private readonly Dictionary<object, PopupMenuTree> _activeTrees;
 
     private bool disposed;
+
+    internal DirectDevice Device { get; }
 
     /// <summary>
     /// The background color of the popup windows
@@ -35,6 +38,7 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
         _lock = new Lock();
         _activeTrees = new Dictionary<object, PopupMenuTree>(ReferenceEqualityComparer.Instance);
 
+        Device = new DirectDevice();
         MenuItems = [];
     }
 
@@ -64,6 +68,8 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
         }
 
         foreach (var tree in trees) tree.Dispose();
+
+        Device.Dispose();
     }
 
     private void ShowRoot(object owner)

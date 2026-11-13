@@ -70,8 +70,9 @@ internal sealed class PopupMenu
             var borderColor = PInvoke.DWMWA_COLOR_NONE;
             PInvoke.DwmSetWindowAttribute(HWnd, PInvoke.DWMWA_BORDER_COLOR, ref borderColor, sizeof(uint));
 
+            _surface = new DirectSurface(_tree.Owner.Device, HWnd, 1, 1, _dpi);
             var bounds = ComputeLayout();
-            _surface = new DirectSurface(_tree.Device, HWnd, bounds.Width, bounds.Height, _dpi);
+            _surface.Resize(bounds.Width, bounds.Height, _dpi);
 
             _wndProc = new PInvoke.WndProc(WndProc);
             PInvoke.SetWindowLongPtr(HWnd, PInvoke.GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProc));
@@ -87,6 +88,7 @@ internal sealed class PopupMenu
         catch
         {
             _items.Updated -= RequestRedraw;
+            _surface?.Dispose();
             PInvoke.DestroyWindow(HWnd);
             throw;
         }
@@ -137,11 +139,11 @@ internal sealed class PopupMenu
 
     private WindowLayout CalculateWindow(ReadOnlySpan<MenuItemBase> items)
     {
-        var measuring = new MeasuringContext(_tree.Device, _scale);
+        var measuring = new MeasuringContext(_surface);
 
         var maxWidth = 0;
         var totalHeight = 0;
-        var heights = new int[items.Length];
+        Span<int> heights = items.Length > 16 ? new int[items.Length] : stackalloc int[items.Length];
 
         for (var i = 0; i < items.Length; i++)
         {
@@ -240,7 +242,7 @@ internal sealed class PopupMenu
 
         try
         {
-            var context = new DrawingContext(_surface, _scale, windowLayout.Size);
+            var context = new DrawingContext(_surface, windowLayout.Size);
 
             using (_surface.BeginDraw())
             {

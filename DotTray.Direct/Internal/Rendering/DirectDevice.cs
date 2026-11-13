@@ -1,16 +1,23 @@
 ﻿namespace DotTray.Direct.Internal.Rendering;
 
+using DotTray.Direct.Coloring;
 using DotTray.Direct.Imaging;
 using DotTray.Direct.Internal.COM;
 using DotTray.Direct.Internal.Models;
+using DotTray.Direct.Primitives;
 using DotTray.Direct.Typography;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 using ResolvedFont = (COM.IDWriteTextFormat Format, Typography.FontMetrics Metrics);
 
 internal sealed class DirectDevice : IDisposable
 {
-    private const float FallbackCapHeightRatio = 0.7f;
+    private const float FallbackCapHeightRatio = 0.78f;
+    private const int UserFontCacheCapacity = 32;
+    private const int FontCacheCapacity = 128;
+    private const int BitmapCacheCapacity = 256;
+    private const int MaxBrushLines = 16;
 
     private readonly ID3D11Device _d3dDevice;
     private readonly ID2D1Device _d2dDevice;
@@ -22,11 +29,13 @@ internal sealed class DirectDevice : IDisposable
     private readonly IDWriteFontCollection _systemCollection;
     private readonly ID2D1DeviceContext _resourceContext;
 
-    private readonly Dictionary<UserFont, IDWriteFontCollection> _userCollections = [];
-    private readonly Dictionary<TextInfo, ResolvedFont> _fonts = [];
-    private readonly Dictionary<DirectImage, nint> _bitmaps = [];
+    private readonly LruCache<UserFont, IDWriteFontCollection> _userCollections;
+    private readonly LruCache<TextInfo, ResolvedFont> _fonts;
+    private readonly LruCache<DirectImage, nint> _bitmaps;
 
     private bool disposed;
+
+    public bool IsLost { get; private set; }
 
     public ID2D1StrokeStyle RoundStroke { get; }
 
@@ -45,6 +54,18 @@ internal sealed class DirectDevice : IDisposable
 
         HR.ThrowIfError(PInvoke.DCompositionCreateDevice(_dxgiDevice, typeof(IDCompositionDevice).GUID, out _compositionDevice));
         _d2dDevice.CreateDeviceContext(0, out _resourceContext);
+
+        _userCollections = new LruCache<UserFont, IDWriteFontCollection>(UserFontCacheCapacity, onRemoved: static (_, collection) => Com.Release(collection));
+        _fonts = new LruCache<TextInfo, ResolvedFont>(FontCacheCapacity, onRemoved: static (_, font) => Com.Release(font.Format));
+        _bitmaps = new LruCache<DirectImage, nint>(BitmapCacheCapacity, onRemoved: static (_, bitmap) => Marshal.Release(bitmap));
+    }
+
+    public bool TryMarkLost(int hr)
+    {
+        if (!IsDeviceLoss(hr)) return false;
+
+        IsLost = true;
+        return true;
     }
 
     public ID2D1DeviceContext CreateDeviceContext()
@@ -103,15 +124,71 @@ internal sealed class DirectDevice : IDisposable
         return (target, visual);
     }
 
+    public ID2D1Brush CreateSolidBrush(Rgba color)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
+        _resourceContext.CreateSolidColorBrush(ToColorF(color), nint.Zero, out var brush);
+        return brush;
+    }
+
+    public ID2D1Brush CreateLinearGradientBrush(ReadOnlySpan<GradientStop> stops, PointF start, PointF end, GradientExtendMode extendMode)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
+        var collection = CreateStopCollection(stops, extendMode);
+
+        try
+        {
+            var properties = new LinearGradientBrushProperties
+            {
+                StartPoint = start,
+                EndPoint = end
+            };
+
+            HR.ThrowIfError(_resourceContext.CreateLinearGradientBrush(properties, nint.Zero, collection, out var brush));
+            return brush;
+        }
+        finally
+        {
+            Marshal.Release(collection);
+        }
+    }
+
+    public ID2D1Brush CreateRadialGradientBrush(ReadOnlySpan<GradientStop> stops, PointF center, PointF originOffset, float radiusX, float radiusY, GradientExtendMode extendMode)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
+        var collection = CreateStopCollection(stops, extendMode);
+
+        try
+        {
+            var properties = new RadialGradientBrushProperties
+            {
+                Center = center,
+                GradientOriginOffset = originOffset,
+                RadiusX = radiusX,
+                RadiusY = radiusY
+            };
+
+            HR.ThrowIfError(_resourceContext.CreateRadialGradientBrush(properties, nint.Zero, collection, out var brush));
+            return brush;
+        }
+        finally
+        {
+            Marshal.Release(collection);
+        }
+    }
+
     public IDWriteTextLayout CreateTextLayout(string text, TextInfo info, float maxWidth = float.MaxValue, float maxHeight = float.MaxValue)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
         var format = Resolve(info).Format;
 
         _dwriteFactory.CreateTextLayout(text, (uint)text.Length, format, maxWidth, maxHeight, out var layout);
         return layout;
     }
-
-    public FontMetrics GetFontMetrics(TextInfo info) => Resolve(info).Metrics;
 
     public ID2D1PathGeometry CreatePolyline(ReadOnlySpan<PointF> points)
     {
@@ -149,11 +226,62 @@ internal sealed class DirectDevice : IDisposable
         }
     }
 
+    public FontMetrics GetFontMetrics(TextInfo info)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
+        return Resolve(info).Metrics;
+    }
+
+    public DimF MeasureText(string text, TextInfo info)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
+        var layout = CreateTextLayout(text, info);
+
+        try
+        {
+            layout.GetMetrics(out var metrics);
+            return new DimF(metrics.Width, metrics.Height);
+        }
+        finally
+        {
+            Com.Release(layout);
+        }
+    }
+
+    public unsafe RectF GetBrushBounds(IDWriteTextLayout layout, TextInfo info)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
+        var capHeight = Resolve(info).Metrics.CapHeight;
+
+        layout.GetMetrics(out var metrics);
+
+        var lineBox = new RectF(metrics.Left, metrics.Top, metrics.Width, metrics.Height);
+        if (capHeight <= 0f) return lineBox;
+
+        var lines = stackalloc LineMetrics[MaxBrushLines];
+        if (layout.GetLineMetrics(lines, MaxBrushLines, out var count) < 0 || count == 0) return lineBox;
+
+        var first = metrics.Top + lines[0].Baseline - capHeight;
+        var y = metrics.Top;
+        var last = first;
+
+        for (var i = 0; i < count; i++)
+        {
+            last = y + lines[i].Baseline;
+            y += lines[i].Height;
+        }
+
+        return new RectF(metrics.Left, first, metrics.Width, last - first);
+    }
+
     public unsafe nint GetBitmap(DirectImage image)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
 
-        if (_bitmaps.TryGetValue(image, out var cached)) return cached;
+        if (_bitmaps.TryGet(image, out var cached)) return cached;
 
         var properties = new BitmapProperties
         {
@@ -174,7 +302,7 @@ internal sealed class DirectDevice : IDisposable
             }, (nint)pixels, (uint)image.Dimensions.Width * 4, in properties, out bitmap);
         }
 
-        _bitmaps[image] = bitmap;
+        _bitmaps.Add(image, bitmap);
         return bitmap;
     }
 
@@ -183,22 +311,8 @@ internal sealed class DirectDevice : IDisposable
         if (disposed) return;
         disposed = true;
 
-        foreach (var resolved in _fonts.Values)
-        {
-            Com.Release(resolved.Format);
-        }
         _fonts.Clear();
-
-        foreach (var collection in _userCollections.Values)
-        {
-            Com.Release(collection);
-        }
         _userCollections.Clear();
-
-        foreach (var bitmap in _bitmaps.Values)
-        {
-            Marshal.Release(bitmap);
-        }
         _bitmaps.Clear();
 
         Com.Release(_resourceContext);
@@ -215,9 +329,7 @@ internal sealed class DirectDevice : IDisposable
 
     private ResolvedFont Resolve(TextInfo info)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
-
-        if (_fonts.TryGetValue(info, out var cached)) return cached;
+        if (_fonts.TryGet(info, out var cached)) return cached;
 
         var collection = GetCollection(info.Font);
 
@@ -228,14 +340,23 @@ internal sealed class DirectDevice : IDisposable
             var capHeight = ReadCapHeight(family, info);
 
             _dwriteFactory.CreateTextFormat(info.Font.Family, collection, info.Weight.Value, (int)info.Style, (int)info.Stretch, info.Size, info.Language.Value, out var format);
-            format.SetTextAlignment((uint)info.Align);
-            format.SetParagraphAlignment(PInvoke.DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-            format.SetWordWrapping(PInvoke.DWRITE_WORD_WRAPPING_NO_WRAP);
 
-            var resolved = new ResolvedFont(format, ReadFontMetrics(format, capHeight, info.Size));
-            _fonts[info] = resolved;
+            try
+            {
+                format.SetTextAlignment((uint)info.Align);
+                format.SetParagraphAlignment(PInvoke.DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+                format.SetWordWrapping(PInvoke.DWRITE_WORD_WRAPPING_NO_WRAP);
 
-            return resolved;
+                var resolved = new ResolvedFont(format, ReadFontMetrics(format, capHeight, info.Size));
+                _fonts.Add(info, resolved);
+
+                return resolved;
+            }
+            catch
+            {
+                Com.Release(format);
+                throw;
+            }
         }
         finally
         {
@@ -264,20 +385,47 @@ internal sealed class DirectDevice : IDisposable
     private IDWriteFontCollection GetCollection(Font font)
     {
         if (font is not UserFont user) return _systemCollection;
-        if (_userCollections.TryGetValue(user, out var cached)) return cached;
+        if (_userCollections.TryGet(user, out var cached)) return cached;
 
         if (!Font.TryCreateCollection(_dwriteFactory3, [.. user.Paths], out var collection))
         {
             throw new InvalidDataException($"Failed to load font '{user.Family}'");
         }
 
-        _userCollections[user] = collection;
+        _userCollections.Add(user, collection);
         return collection;
     }
 
-    private static bool TryGetFamily(IDWriteFontCollection collection, string name, out IDWriteFontFamily family)
+    private unsafe nint CreateStopCollection(ReadOnlySpan<GradientStop> stops, GradientExtendMode extendMode)
     {
-        family = null!;
+        Span<GradientStopF> native = stops.Length <= 16 ? stackalloc GradientStopF[stops.Length] : new GradientStopF[stops.Length];
+
+        for (var i = 0; i < stops.Length; i++)
+        {
+            native[i] = new GradientStopF
+            {
+                Position = stops[i].Offset,
+                Color = ToColorF(stops[i].Color)
+            };
+        }
+
+        fixed (GradientStopF* pointer = native)
+        {
+            HR.ThrowIfError(_resourceContext.CreateGradientStopCollection(pointer, (uint)native.Length, 0, (uint)extendMode, out var collection));
+            return collection;
+        }
+    }
+
+    private static bool IsDeviceLoss(int hr) => (uint)hr is
+        PInvoke.DXGI_ERROR_DEVICE_REMOVED or
+        PInvoke.DXGI_ERROR_DEVICE_HUNG or
+        PInvoke.DXGI_ERROR_DEVICE_RESET or
+        PInvoke.DXGI_ERROR_DRIVER_INTERNAL_ERROR or
+        PInvoke.D2DERR_RECREATE_TARGET;
+
+    private static bool TryGetFamily(IDWriteFontCollection collection, string name, [NotNullWhen(true)] out IDWriteFontFamily? family)
+    {
+        family = null;
 
         return !HR.IsError(collection.FindFamilyName(name, out var index, out var exists))
             && exists != 0
@@ -348,4 +496,12 @@ internal sealed class DirectDevice : IDisposable
         factory.CreateStrokeStyle(properties, nint.Zero, 0, out var stroke);
         return stroke;
     }
+
+    private static ColorF ToColorF(Rgba color) => new ColorF
+    {
+        R = color.R / (float)byte.MaxValue,
+        G = color.G / (float)byte.MaxValue,
+        B = color.B / (float)byte.MaxValue,
+        A = color.A / (float)byte.MaxValue
+    };
 }
