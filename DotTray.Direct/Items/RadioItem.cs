@@ -12,8 +12,6 @@ using DotTray.Direct.Primitives;
 /// </remarks>
 public class RadioItem : CheckItem
 {
-    private const float OutlineRatio = 0.1f;
-    private const float MinOutline = 1f;
     private const float HoleRatio = 0.4f;
 
     /// <summary>
@@ -67,31 +65,41 @@ public class RadioItem : CheckItem
     protected override bool ShouldToggle(ItemInteractedEventArgs args) => !IsChecked && base.ShouldToggle(args);
 
     /// <summary>
-    /// Draws the indicator that is shown while this instance is checked, which is a filled dot by default
+    /// Draws the indicator that is shown while this instance is checked, which is a thick circle around an empty center by default
     /// </summary>
     /// <param name="context">Context for drawing this instance</param>
-    /// <param name="box">The bounds of the indicator, the dot is centered inside</param>
-    protected override void DrawCheckedIndicator(DrawingContext context, Rect box) => DrawCircle(context, box, (1f - HoleRatio) / 2f);
+    /// <param name="box">The bounds of the indicator, the circle is centered inside</param>
+    protected override void DrawCheckedIndicator(DrawingContext context, RectF box)
+    {
+        var diameter = MathF.Min(box.Width, box.Height);
+        var stroke = context.GetFontMetrics(TextInfo).StrokeThicknessOrEstimate;
+
+        DrawCircle(context, box, MathF.Max(stroke, diameter * (1f - HoleRatio) / 2f));
+    }
 
     /// <summary>
     /// Draws the indicator that is shown while this instance is not checked, which is a thin circle outline by default
     /// </summary>
+    /// <remarks>
+    /// The outline has the stroke weight of the font
+    /// </remarks>
     /// <param name="context">Context for drawing this instance</param>
     /// <param name="box">The bounds of the indicator, the circle is centered inside</param>
-    protected override void DrawUncheckedIndicator(DrawingContext context, Rect box) => DrawCircle(context, box, OutlineRatio);
+    protected override void DrawUncheckedIndicator(DrawingContext context, RectF box)
+        => DrawCircle(context, box, context.GetFontMetrics(TextInfo).StrokeThicknessOrEstimate);
 
     internal void ApplyChecked(bool value) => base.IsChecked = value;
 
-    private void DrawCircle(DrawingContext context, Rect box, float thicknessRatio)
+    private void DrawCircle(DrawingContext context, RectF box, float requestedThickness)
     {
-        var diameter = box.Height;
-        var thickness = MathF.Max(MinOutline, diameter * thicknessRatio);
+        var diameter = MathF.Min(box.Width, box.Height);
 
+        var thickness = MathF.Min(requestedThickness, diameter / 2f);
         var inset = thickness / 2f;
 
         context.DrawEllipse(new RectF(
             box.X + (box.Width - diameter) / 2f + inset,
-            box.Y + inset,
+            box.Y + (box.Height - diameter) / 2f + inset,
             diameter - thickness,
             diameter - thickness), CurrentForeground, thickness);
     }

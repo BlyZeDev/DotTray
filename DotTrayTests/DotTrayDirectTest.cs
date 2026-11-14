@@ -69,6 +69,7 @@ public static class DotTrayDirectTest
             {
                 Size = float.MinValue
             };
+            x.Items.Add<SeparatorItem>();
         });
         handler.MenuItems.Add<MenuItem>(x =>
         {
@@ -77,6 +78,7 @@ public static class DotTrayDirectTest
             {
                 //Size = float.MaxValue
             };
+            x.Items.Add<SeparatorItem>();
         });
         handler.MenuItems.Add<SeparatorItem>(x =>
         {
@@ -380,8 +382,10 @@ file sealed class ImageItem : MenuItemBase
 
     public ImageItem()
     {
-        //_image = DirectImage.FromFile(@"C:\testimg.jpg");
-        _image = DirectImage.FromFile(@"C:\Users\leschi\Downloads\le kirk.png");
+        _image = !DirectImage.TryFromFile(@"C:\testimg.jpg", out var image)
+            ? DirectImage.FromFile(@"C:\Users\leschi\Downloads\le kirk.png")
+            : image;
+
         _actualSize = new Dim(_image.Dimensions.Width / 2, _image.Dimensions.Height / 2);
     }
 

@@ -2,6 +2,7 @@
 
 using DotTray.Direct.Internal;
 using DotTray.Direct.Primitives;
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// Represents a decoded image that can be drawn with <see cref="Context.DrawingContext.DrawImage(DirectImage, RectF, ImageOptions)"/>
@@ -32,6 +33,7 @@ public sealed class DirectImage
     /// </remarks>
     /// <param name="path">The path to the image file</param>
     /// <returns><see cref="DirectImage"/></returns>
+    /// <exception cref="ArgumentException"></exception>
     /// <exception cref="FileNotFoundException"></exception>
     /// <exception cref="InvalidDataException"></exception>
     public static DirectImage FromFile(string path)
@@ -43,5 +45,25 @@ public sealed class DirectImage
 
         var pixels = WicImageLoader.Load(fullPath, out var width, out var height);
         return new DirectImage(pixels, width, height);
+    }
+
+    /// <summary>
+    /// Tries to load an image from <paramref name="path"/>
+    /// </summary>
+    /// <param name="path">The path to the image file</param>
+    /// <param name="image">The image or <see langword="null"/> if it could not be created</param>
+    /// <returns><see cref="bool"/></returns>
+    public static bool TryFromFile(string path, [NotNullWhen(true)] out DirectImage? image)
+    {
+        try
+        {
+            image = FromFile(path);
+            return true;
+        }
+        catch (Exception)
+        {
+            image = null;
+            return false;
+        }
     }
 }

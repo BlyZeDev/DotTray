@@ -20,12 +20,14 @@ internal sealed class PopupMenuTree : IDisposable
     private bool disposed;
 
     public DirectPopupMenuHandler Owner { get; }
+    public DirectDevice Device { get; }
 
     public event Action? Disposed;
 
-    public PopupMenuTree(DirectPopupMenuHandler owner, MenuItemCollection items)
+    public PopupMenuTree(DirectPopupMenuHandler owner, DirectDevice device, MenuItemCollection items)
     {
         Owner = owner;
+        Device = device;
 
         PInvoke.SetThreadDpiAwarenessContext(PInvoke.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
@@ -153,7 +155,14 @@ internal sealed class PopupMenuTree : IDisposable
         PInvoke.UnhookWindowsHookEx(_hMouseHook);
         PInvoke.UnhookWindowsHookEx(_hKeyHook);
 
-        Disposed?.Invoke();
+        try
+        {
+            Disposed?.Invoke();
+        }
+        finally
+        {
+            Device.Dispose();
+        }
     }
 
     private static bool IsNavigationKey(int vkCode) => vkCode is

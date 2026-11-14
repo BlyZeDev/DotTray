@@ -70,7 +70,7 @@ internal sealed class PopupMenu
             var borderColor = PInvoke.DWMWA_COLOR_NONE;
             PInvoke.DwmSetWindowAttribute(HWnd, PInvoke.DWMWA_BORDER_COLOR, ref borderColor, sizeof(uint));
 
-            _surface = new DirectSurface(_tree.Owner.Device, HWnd, 1, 1, _dpi);
+            _surface = new DirectSurface(_tree.Device, HWnd, 1, 1, _dpi);
             var bounds = ComputeLayout();
             _surface.Resize(bounds.Width, bounds.Height, _dpi);
 
@@ -230,6 +230,13 @@ internal sealed class PopupMenu
         var bounds = ComputeLayout();
 
         _surface.Resize(bounds.Width, bounds.Height, _dpi);
+
+        if (_surface.IsLost)
+        {
+            _tree.Dispose();
+            return nint.Zero;
+        }
+
         ApplyWindowPos(bounds);
         PInvoke.InvalidateRect(HWnd, nint.Zero, false);
 
@@ -242,12 +249,20 @@ internal sealed class PopupMenu
 
         try
         {
+            if (_surface.IsLost)
+            {
+                _tree.Dispose();
+                return 0;
+            }
+
             var context = new DrawingContext(_surface, windowLayout.Size);
 
             using (_surface.BeginDraw())
             {
                 DrawWindow(context);
             }
+
+            if (_surface.IsLost) _tree.Dispose();
         }
         finally
         {

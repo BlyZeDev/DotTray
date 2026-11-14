@@ -13,7 +13,6 @@ using ResolvedFont = (COM.IDWriteTextFormat Format, Typography.FontMetrics Metri
 
 internal sealed class DirectDevice : IDisposable
 {
-    private const float FallbackCapHeightRatio = 0.78f;
     private const int UserFontCacheCapacity = 32;
     private const int FontCacheCapacity = 128;
     private const int BitmapCacheCapacity = 256;
@@ -33,7 +32,7 @@ internal sealed class DirectDevice : IDisposable
     private readonly LruCache<TextInfo, ResolvedFont> _fonts;
     private readonly LruCache<DirectImage, nint> _bitmaps;
 
-    private bool disposed;
+    private int referenceCount;
 
     public bool IsLost { get; private set; }
 
@@ -58,6 +57,22 @@ internal sealed class DirectDevice : IDisposable
         _userCollections = new LruCache<UserFont, IDWriteFontCollection>(UserFontCacheCapacity, onRemoved: static (_, collection) => Com.Release(collection));
         _fonts = new LruCache<TextInfo, ResolvedFont>(FontCacheCapacity, onRemoved: static (_, font) => Com.Release(font.Format));
         _bitmaps = new LruCache<DirectImage, nint>(BitmapCacheCapacity, onRemoved: static (_, bitmap) => Marshal.Release(bitmap));
+
+        referenceCount = 1;
+    }
+
+    public DirectDevice Retain()
+    {
+        int current;
+
+        do
+        {
+            current = Volatile.Read(ref referenceCount);
+            ObjectDisposedException.ThrowIf(current <= 0, this);
+        }
+        while (Interlocked.CompareExchange(ref referenceCount, current + 1, current) != current);
+
+        return this;
     }
 
     public bool TryMarkLost(int hr)
@@ -70,7 +85,7 @@ internal sealed class DirectDevice : IDisposable
 
     public ID2D1DeviceContext CreateDeviceContext()
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ThrowIfDisposed();
 
         _d2dDevice.CreateDeviceContext(0, out var context);
         return context;
@@ -78,7 +93,7 @@ internal sealed class DirectDevice : IDisposable
 
     public IDXGISwapChain1 CreateSwapChain(uint width, uint height)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ThrowIfDisposed();
 
         HR.ThrowIfError(PInvoke.CreateDXGIFactory2(0, typeof(IDXGIFactory2).GUID, out var factory));
 
@@ -112,7 +127,7 @@ internal sealed class DirectDevice : IDisposable
 
     public (IDCompositionTarget Target, IDCompositionVisual Visual) CreateComposition(nint hWnd, IDXGISwapChain1 swapChain)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ThrowIfDisposed();
 
         _compositionDevice.CreateTargetForHwnd(hWnd, 1, out var target);
         _compositionDevice.CreateVisual(out var visual);
@@ -126,7 +141,7 @@ internal sealed class DirectDevice : IDisposable
 
     public ID2D1Brush CreateSolidBrush(Rgba color)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ThrowIfDisposed();
 
         _resourceContext.CreateSolidColorBrush(ToColorF(color), nint.Zero, out var brush);
         return brush;
@@ -134,7 +149,7 @@ internal sealed class DirectDevice : IDisposable
 
     public ID2D1Brush CreateLinearGradientBrush(ReadOnlySpan<GradientStop> stops, PointF start, PointF end, GradientExtendMode extendMode)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ThrowIfDisposed();
 
         var collection = CreateStopCollection(stops, extendMode);
 
@@ -157,7 +172,7 @@ internal sealed class DirectDevice : IDisposable
 
     public ID2D1Brush CreateRadialGradientBrush(ReadOnlySpan<GradientStop> stops, PointF center, PointF originOffset, float radiusX, float radiusY, GradientExtendMode extendMode)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ThrowIfDisposed();
 
         var collection = CreateStopCollection(stops, extendMode);
 
@@ -182,7 +197,7 @@ internal sealed class DirectDevice : IDisposable
 
     public IDWriteTextLayout CreateTextLayout(string text, TextInfo info, float maxWidth = float.MaxValue, float maxHeight = float.MaxValue)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ThrowIfDisposed();
 
         var format = Resolve(info).Format;
 
@@ -192,7 +207,7 @@ internal sealed class DirectDevice : IDisposable
 
     public ID2D1PathGeometry CreatePolyline(ReadOnlySpan<PointF> points)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ThrowIfDisposed();
 
         _d2dFactory.CreatePathGeometry(out var geometry);
 
@@ -228,14 +243,14 @@ internal sealed class DirectDevice : IDisposable
 
     public FontMetrics GetFontMetrics(TextInfo info)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ThrowIfDisposed();
 
         return Resolve(info).Metrics;
     }
 
     public DimF MeasureText(string text, TextInfo info)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ThrowIfDisposed();
 
         var layout = CreateTextLayout(text, info);
 
@@ -252,19 +267,19 @@ internal sealed class DirectDevice : IDisposable
 
     public unsafe RectF GetBrushBounds(IDWriteTextLayout layout, TextInfo info)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ThrowIfDisposed();
 
-        var capHeight = Resolve(info).Metrics.CapHeight;
+        var capHeight = GetFontMetrics(info).CapHeight;
 
         layout.GetMetrics(out var metrics);
 
         var lineBox = new RectF(metrics.Left, metrics.Top, metrics.Width, metrics.Height);
-        if (capHeight <= 0f) return lineBox;
+        if (capHeight is not { } cap) return lineBox;
 
         var lines = stackalloc LineMetrics[MaxBrushLines];
         if (layout.GetLineMetrics(lines, MaxBrushLines, out var count) < 0 || count == 0) return lineBox;
 
-        var first = metrics.Top + lines[0].Baseline - capHeight;
+        var first = metrics.Top + lines[0].Baseline - cap;
         var y = metrics.Top;
         var last = first;
 
@@ -279,7 +294,7 @@ internal sealed class DirectDevice : IDisposable
 
     public unsafe nint GetBitmap(DirectImage image)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ThrowIfDisposed();
 
         if (_bitmaps.TryGet(image, out var cached)) return cached;
 
@@ -308,8 +323,7 @@ internal sealed class DirectDevice : IDisposable
 
     public void Dispose()
     {
-        if (disposed) return;
-        disposed = true;
+        if (Interlocked.Decrement(ref referenceCount) != 0) return;
 
         _fonts.Clear();
         _userCollections.Clear();
@@ -337,8 +351,6 @@ internal sealed class DirectDevice : IDisposable
 
         try
         {
-            var capHeight = ReadCapHeight(family, info);
-
             _dwriteFactory.CreateTextFormat(info.Font.Family, collection, info.Weight.Value, (int)info.Style, (int)info.Stretch, info.Size, info.Language.Value, out var format);
 
             try
@@ -347,7 +359,7 @@ internal sealed class DirectDevice : IDisposable
                 format.SetParagraphAlignment(PInvoke.DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
                 format.SetWordWrapping(PInvoke.DWRITE_WORD_WRAPPING_NO_WRAP);
 
-                var resolved = new ResolvedFont(format, ReadFontMetrics(format, capHeight, info.Size));
+                var resolved = new ResolvedFont(format, ReadFontMetrics(family, format, info));
                 _fonts.Add(info, resolved);
 
                 return resolved;
@@ -364,17 +376,49 @@ internal sealed class DirectDevice : IDisposable
         }
     }
 
-    private unsafe FontMetrics ReadFontMetrics(IDWriteTextFormat format, float capHeight, float size)
+    private unsafe FontMetrics ReadFontMetrics(IDWriteFontFamily family, IDWriteTextFormat format, TextInfo info)
     {
+        var size = info.Size;
+
+        float? ascent = null, descent = null, lineGap = null, capHeight = null, xHeight = null, stroke = null, underline = null, strikethrough = null;
+
+        if (!HR.IsError(family.GetFirstMatchingFont((uint)info.Weight.Value, (uint)info.Stretch, (uint)info.Style, out var match)))
+        {
+            try
+            {
+                match.GetMetrics(out var face);
+
+                if (face.DesignUnitsPerEm != 0)
+                {
+                    var scale = size / face.DesignUnitsPerEm;
+
+                    ascent = Scaled(face.Ascent);
+                    descent = Scaled(face.Descent);
+                    lineGap = face.LineGap * scale;
+                    capHeight = Scaled(face.CapHeight);
+                    xHeight = Scaled(face.XHeight);
+                    stroke = Scaled(face.UnderlineThickness);
+                    underline = Offset(face.UnderlinePosition);
+                    strikethrough = Offset(face.StrikethroughPosition);
+
+                    float? Scaled(float units) => units > 0f ? units * scale : null;
+                    float? Offset(float units) => units != 0f ? units * scale : null;
+                }
+            }
+            finally
+            {
+                Com.Release(match);
+            }
+        }
+
         _dwriteFactory.CreateTextLayout("H", 1, format, float.MaxValue, float.MaxValue, out var layout);
 
         try
         {
             var line = stackalloc LineMetrics[1];
+            HR.ThrowIfError(layout.GetLineMetrics(line, 1, out _));
 
-            return layout.GetLineMetrics(line, 1, out _) < 0
-                ? new FontMetrics(size * 1.2f, size, capHeight)
-                : new FontMetrics(line->Height, line->Baseline, capHeight);
+            return new FontMetrics(size, line->Height, line->Baseline, ascent, descent, lineGap, capHeight, xHeight, stroke, underline, strikethrough);
         }
         finally
         {
@@ -416,6 +460,8 @@ internal sealed class DirectDevice : IDisposable
         }
     }
 
+    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(Volatile.Read(ref referenceCount) <= 0, this);
+
     private static bool IsDeviceLoss(int hr) => (uint)hr is
         PInvoke.DXGI_ERROR_DEVICE_REMOVED or
         PInvoke.DXGI_ERROR_DEVICE_HUNG or
@@ -430,26 +476,6 @@ internal sealed class DirectDevice : IDisposable
         return !HR.IsError(collection.FindFamilyName(name, out var index, out var exists))
             && exists != 0
             && !HR.IsError(collection.GetFontFamily(index, out family));
-    }
-
-    private static float ReadCapHeight(IDWriteFontFamily family, TextInfo info)
-    {
-        var fallback = info.Size * FallbackCapHeightRatio;
-
-        if (HR.IsError(family.GetFirstMatchingFont((uint)info.Weight.Value, (uint)info.Stretch, (uint)info.Style, out var match))) return fallback;
-
-        try
-        {
-            match.GetMetrics(out var metrics);
-            if (metrics.DesignUnitsPerEm == 0) return fallback;
-
-            var units = metrics.CapHeight != 0 ? metrics.CapHeight : metrics.Ascent;
-            return units * info.Size / metrics.DesignUnitsPerEm;
-        }
-        finally
-        {
-            Com.Release(match);
-        }
     }
 
     private static ID3D11Device CreateD3DDevice()

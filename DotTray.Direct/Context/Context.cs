@@ -35,6 +35,13 @@ public abstract class Context
     internal Context(DirectSurface surface) => _surface = surface;
 
     /// <summary>
+    /// Fetches the metrics <paramref name="textInfo"/>
+    /// </summary>
+    /// <param name="textInfo">The text information to get the font metrics for</param>
+    /// <returns><see cref="FontMetrics"/></returns>
+    public FontMetrics GetFontMetrics(TextInfo textInfo) => _surface.GetFontMetrics(textInfo);
+
+    /// <summary>
     /// Measures the size, in DIPs, required to render <paramref name="text"/> with <paramref name="textInfo"/>
     /// </summary>
     /// <param name="text">The text to measure</param>

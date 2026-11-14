@@ -15,10 +15,9 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
 {
     private readonly Lock _lock;
     private readonly Dictionary<object, PopupMenuTree> _activeTrees;
+    private readonly ThreadLocal<DirectDevice?> _devices;
 
     private bool disposed;
-
-    internal DirectDevice Device { get; }
 
     /// <summary>
     /// The background color of the popup windows
@@ -37,8 +36,8 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
     {
         _lock = new Lock();
         _activeTrees = new Dictionary<object, PopupMenuTree>(ReferenceEqualityComparer.Instance);
+        _devices = new ThreadLocal<DirectDevice?>(true);
 
-        Device = new DirectDevice();
         MenuItems = [];
     }
 
@@ -57,6 +56,7 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
     public void Dispose()
     {
         PopupMenuTree[] trees;
+        DirectDevice?[] devices;
 
         lock (_lock)
         {
@@ -65,11 +65,13 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
 
             trees = [.. _activeTrees.Values];
             _activeTrees.Clear();
+
+            devices = [.. _devices.Values];
+            _devices.Dispose();
         }
 
         foreach (var tree in trees) tree.Dispose();
-
-        Device.Dispose();
+        foreach (var device in devices) device?.Dispose();
     }
 
     private void ShowRoot(object owner)
@@ -86,7 +88,20 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
 
         active?.Dispose();
 
-        var tree = new PopupMenuTree(this, MenuItems);
+        var device = AcquireDevice();
+        if (device is null) return;
+
+        PopupMenuTree tree;
+        try
+        {
+            tree = new PopupMenuTree(this, device, MenuItems);
+        }
+        catch
+        {
+            device.Dispose();
+            throw;
+        }
+
         tree.Disposed += () => Untrack(owner, tree);
 
         lock (_lock)
@@ -99,7 +114,33 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
         }
 
         tree.Dispose();
+
     }
+
+    private DirectDevice? AcquireDevice()
+    {
+        lock (_lock)
+        {
+            if (disposed) return null;
+
+            var device = _devices.Value;
+
+            if (device is null || device.IsLost)
+            {
+                if (device is not null)
+                {
+                    _devices.Value = null;
+                    device.Dispose();
+                }
+
+                device = new DirectDevice();
+                _devices.Value = device;
+            }
+
+            return device.Retain();
+        }
+    }
+
 
     private void Untrack(object owner, PopupMenuTree tree)
     {

@@ -11,9 +11,9 @@ using System;
 /// </summary>
 public class MenuItem : MenuItemBase
 {
-    private const int ArrowHeightRatio = 3;
-    private const int ArrowGap = 8;
-    private const int ArrowRightPadding = 10;
+    private const float ArrowWidthRatio = 2f / 3f;
+    private const float ArrowGapRatio = 1f;
+    private const float ArrowRightPaddingRatio = 1f;
 
     /// <summary>
     /// <see langword="true"/> if this instance is hovered over or focused by the keyboard navigation, otherwise <see langword="false"/>
@@ -230,8 +230,7 @@ public class MenuItem : MenuItemBase
         var content = MeasureContent(context);
         if (SubmenuItems.IsEmpty) return content;
 
-        GetArrowSize(content.Height, out var arrowWidth, out _);
-        return new Dim(content.Width + ArrowGap + arrowWidth + ArrowRightPadding, content.Height);
+        return new Dim(content.Width + GetArrowReservedWidth(context.GetFontMetrics(TextInfo)), content.Height);
     }
 
     /// <inheritdoc/>
@@ -250,15 +249,17 @@ public class MenuItem : MenuItemBase
             return;
         }
 
-        GetArrowSize(bounds.Height, out var arrowWidth, out var arrowHeight);
+        var metrics = context.GetFontMetrics(TextInfo);
+        GetArrowMetrics(metrics, out var arrowWidth, out var arrowHeight, out _, out var padding);
 
-        DrawContent(context, new Rect(bounds.X, bounds.Y, bounds.Width - ArrowGap - arrowWidth - ArrowRightPadding, bounds.Height));
+        var contentWidth = bounds.Width - GetArrowReservedWidth(metrics);
+        DrawContent(context, new Rect(bounds.X, bounds.Y, contentWidth, bounds.Height));
 
-        context.DrawChevron(new Rect(
-            bounds.Right - ArrowRightPadding - arrowWidth,
-            bounds.Top + (bounds.Height - arrowHeight) / 2,
+        context.DrawChevron(new RectF(
+            bounds.Right - padding - arrowWidth,
+            bounds.Top + metrics.CapCenterIn(bounds.Height) - arrowHeight / 2f,
             arrowWidth,
-            arrowHeight), CurrentForeground);
+            arrowHeight), CurrentForeground, thickness: metrics.StrokeThicknessOrEstimate);
     }
 
     /// <inheritdoc/>
@@ -280,9 +281,19 @@ public class MenuItem : MenuItemBase
         base.OnInteraction(args);
     }
 
-    private static void GetArrowSize(int itemHeight, out int width, out int height)
+    private static int GetArrowReservedWidth(FontMetrics metrics)
     {
-        height = Math.Max(6, itemHeight / ArrowHeightRatio);
-        width = Math.Max(4, height * 2 / 3);
+        GetArrowMetrics(metrics, out var width, out _, out var gap, out var padding);
+        return (int)MathF.Ceiling(gap + width + padding);
+    }
+
+    private static void GetArrowMetrics(FontMetrics metrics, out float width, out float height, out float gap, out float padding)
+    {
+        var cap = metrics.CapHeightOrEstimate;
+
+        height = cap;
+        width = height * ArrowWidthRatio;
+        gap = cap * ArrowGapRatio;
+        padding = cap * ArrowRightPaddingRatio;
     }
 }

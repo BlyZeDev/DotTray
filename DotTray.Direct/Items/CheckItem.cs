@@ -2,16 +2,16 @@
 
 using DotTray.Direct.Context;
 using DotTray.Direct.Primitives;
+using DotTray.Direct.Typography;
 
 /// <summary>
 /// Represents a popup menu item that can be checked
 /// </summary>
 public class CheckItem : MenuItem
 {
-    private const int MinCheckHeight = 8;
-    private const int MinCheckPadding = 5;
-    private const int MinCheckGap = 5;
-    private const float BaselineRatio = 0.78f;
+    private const float WidthRatio = 4f / 3f;
+    private const float PaddingRatio = 0.5f;
+    private const float GapRatio = 0.5f;
 
     /// <summary>
     /// <see langword="true"/> if this instance is checked, otherwise <see langword="false"/>
@@ -48,18 +48,19 @@ public class CheckItem : MenuItem
     /// Draws the indicator that is shown while this instance is checked, which is a checkmark by default
     /// </summary>
     /// <remarks>
-    /// The box is sized from the item height and its bottom sits on the text baseline
+    /// The box is as tall as the capital letters of the text and its bottom sits on the text baseline
     /// </remarks>
     /// <param name="context">Context for drawing this instance</param>
     /// <param name="box">The bounds of the indicator</param>
-    protected virtual void DrawCheckedIndicator(DrawingContext context, Rect box) => context.DrawCheckmark(box, CurrentForeground);
+    protected virtual void DrawCheckedIndicator(DrawingContext context, RectF box)
+        => context.DrawCheckmark(box, CurrentForeground, context.GetFontMetrics(TextInfo).StrokeThicknessOrEstimate);
 
     /// <summary>
     /// Draws the indicator that is shown while this instance is not checked, which is nothing by default
     /// </summary>
     /// <param name="context">Context for drawing this instance</param>
     /// <param name="box">The bounds of the indicator, same as for <see cref="DrawCheckedIndicator"/></param>
-    protected virtual void DrawUncheckedIndicator(DrawingContext context, Rect box) { }
+    protected virtual void DrawUncheckedIndicator(DrawingContext context, RectF box) { }
 
     /// <inheritdoc/>
     /// <remarks>
@@ -69,22 +70,22 @@ public class CheckItem : MenuItem
     {
         var content = base.MeasureContent(context);
 
-        GetCheckMetrics(content.Height, out var width, out var height, out var padding, out var gap);
-        return new Dim(padding + width + gap + content.Width, Math.Max(content.Height, height));
+        return new Dim(GetIndicatorOffset(context.GetFontMetrics(TextInfo)) + content.Width, content.Height);
     }
 
     /// <inheritdoc/>
     protected override void DrawContent(DrawingContext context, Rect bounds)
     {
-        GetCheckMetrics(bounds.Height, out var width, out var height, out var padding, out var gap);
+        var metrics = context.GetFontMetrics(TextInfo);
+        GetIndicatorMetrics(metrics, out var width, out var height, out var padding, out _);
 
-        var baseline = bounds.Y + (int)MathF.Round(bounds.Height * BaselineRatio);
-        var box = new Rect(bounds.X + padding, baseline - height, width, height);
+        var baseline = bounds.Y + metrics.BaselineIn(bounds.Height);
+        var box = new RectF(bounds.X + padding, baseline - height, width, height);
 
         if (IsChecked) DrawCheckedIndicator(context, box);
         else DrawUncheckedIndicator(context, box);
 
-        var offset = padding + width + gap;
+        var offset = GetIndicatorOffset(metrics);
         base.DrawContent(context, new Rect(bounds.X + offset, bounds.Y, bounds.Width - offset, bounds.Height));
     }
 
@@ -96,11 +97,17 @@ public class CheckItem : MenuItem
         base.OnInteraction(args);
     }
 
-    private static void GetCheckMetrics(int itemHeight, out int width, out int height, out int padding, out int gap)
+    private static int GetIndicatorOffset(FontMetrics metrics)
     {
-        height = Math.Max(MinCheckHeight, itemHeight * 13 / 25);
-        width = height * 4 / 3;
-        padding = Math.Max(MinCheckPadding, itemHeight * 6 / 25);
-        gap = Math.Max(MinCheckGap, itemHeight * 6 / 25);
+        GetIndicatorMetrics(metrics, out var width, out _, out var padding, out var gap);
+        return (int)MathF.Ceiling(padding + width + gap);
+    }
+
+    private static void GetIndicatorMetrics(FontMetrics metrics, out float width, out float height, out float padding, out float gap)
+    {
+        height = metrics.CapHeightOrEstimate;
+        width = height * WidthRatio;
+        padding = height * PaddingRatio;
+        gap = height * GapRatio;
     }
 }
