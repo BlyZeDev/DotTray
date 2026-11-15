@@ -1,5 +1,7 @@
 ﻿namespace DotTray.Direct.Imaging;
 
+using DotTray.Direct.Coloring;
+using DotTray.Direct.Internal;
 using DotTray.Direct.Primitives;
 
 /// <summary>
@@ -24,7 +26,19 @@ public sealed record ImageOptions
     /// <summary>
     /// The interpolation mode used when the image is scaled
     /// </summary>
-    public InterpolationMode InterpolationMode { get; init; } = InterpolationMode.Linear;
+    public InterpolationMode InterpolationMode
+    {
+        get;
+        init => field = Ensure.EnumIsValid(value);
+    } = InterpolationMode.Linear;
+
+    /// <summary>
+    /// The brush the image is filled with, using the image's alpha as the shape, or <see langword="null"/> to draw the image as is
+    /// </summary>
+    /// <remarks>
+    /// <see cref="InterpolationMode"/> is not applied while tinting
+    /// </remarks>
+    public IDirectBrush? Tint { get; init; }
 
     /// <summary>
     /// The part of the image to draw, in image pixels, or <see langword="null"/> to draw the whole image

@@ -13,7 +13,8 @@ public class MenuItem : MenuItemBase
 {
     private const float ArrowWidthRatio = 2f / 3f;
     private const float ArrowGapRatio = 1f;
-    private const float ArrowRightPaddingRatio = 1f;
+    private const float ArrowRightPaddingRatio = 0.2f;
+    private const float StrokeScale = 1.5f;
 
     /// <summary>
     /// <see langword="true"/> if this instance is hovered over or focused by the keyboard navigation, otherwise <see langword="false"/>
@@ -259,7 +260,7 @@ public class MenuItem : MenuItemBase
             bounds.Right - padding - arrowWidth,
             bounds.Top + metrics.CapCenterIn(bounds.Height) - arrowHeight / 2f,
             arrowWidth,
-            arrowHeight), CurrentForeground, thickness: metrics.StrokeThicknessOrEstimate);
+            arrowHeight), CurrentForeground, Direction.Right, metrics.StrokeThicknessOrEstimate * StrokeScale);
     }
 
     /// <inheritdoc/>

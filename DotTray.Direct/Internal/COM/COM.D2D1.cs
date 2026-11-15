@@ -162,6 +162,14 @@ internal unsafe partial interface ID2D1DeviceContext : ID2D1RenderTarget
 
     [PreserveSig]
     void DrawBitmapDc(nint bitmap, in RECTF destination, float opacity, uint interpolationMode, nint sourceRect, nint perspectiveTransform);
+    void PushLayerDc_Unbound();
+    void InvalidateEffectInputRectangle_Unbound();
+    void GetEffectInvalidRectangleCount_Unbound();
+    void GetEffectInvalidRectangles_Unbound();
+    void GetEffectRequiredInputRectangles_Unbound();
+
+    [PreserveSig]
+    void FillOpacityMask(nint opacityMask, ID2D1Brush brush, in RECTF destination, nint sourceRect);
 }
 
 [GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]

@@ -19,7 +19,7 @@ public sealed class DirectImage
     /// </summary>
     public Dim Dimensions { get; }
 
-    private DirectImage(byte[] pixels, int width, int height)
+    internal DirectImage(byte[] pixels, int width, int height)
     {
         Pixels = pixels;
         Dimensions = new Dim(width, height);
@@ -38,12 +38,7 @@ public sealed class DirectImage
     /// <exception cref="InvalidDataException"></exception>
     public static DirectImage FromFile(string path)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
-
-        var fullPath = Path.GetFullPath(path);
-        if (!File.Exists(fullPath)) throw new FileNotFoundException("The image file was not found", fullPath);
-
-        var pixels = WicImageLoader.Load(fullPath, out var width, out var height);
+        var pixels = LoadPixels(path, out var width, out var height);
         return new DirectImage(pixels, width, height);
     }
 
@@ -65,5 +60,15 @@ public sealed class DirectImage
             image = null;
             return false;
         }
+    }
+
+    internal static byte[] LoadPixels(string path, out int width, out int height)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        var fullPath = Path.GetFullPath(path);
+        if (!File.Exists(fullPath)) throw new FileNotFoundException("The image file was not found", fullPath);
+
+        return WicImageLoader.Load(fullPath, out width, out height);
     }
 }

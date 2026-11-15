@@ -147,6 +147,7 @@ public static class DotTrayDirectTest
                     handler.MenuItems.Insert<RadioItem>(handler.MenuItems.Count - 1, x =>
                     {
                         x.Text = "Radio " + Random.Shared.Next(100_000).ToString();
+                        x.TextInfo = x.TextInfo with { Size = Random.Shared.Next(100, 300) };
                         x.Group = group;
                         x.Interacted = args => args.KeepMenuOpen = true;
                     });
@@ -162,8 +163,13 @@ public static class DotTrayDirectTest
             };
         });
 
-        handler.MenuItems.Add<MenuItem>(x =>
+        handler.MenuItems.Add<IconItem>(x =>
         {
+            x.Icon = DirectImage.FromFile(@"C:\trashicon.png");
+            x.IconSize = 32;
+            x.IconOptions = ImageOptions.Default with { InterpolationMode = InterpolationMode.HighQualityCubic };
+            x.Background = SolidColorBrush.Red;
+            x.Foreground = SolidColorBrush.Black;
             x.Text = "Clear Selection";
             x.TextInfo = x.TextInfo with
             {
@@ -398,7 +404,8 @@ file sealed class ImageItem : MenuItemBase
         context.DrawImage(_image, new Rect(new Pos(x, bounds.Y), _actualSize), new ImageOptions
         {
             Opacity = 0.9f,
-            InterpolationMode = InterpolationMode.HighQualityCubic
+            InterpolationMode = InterpolationMode.HighQualityCubic,
+            //Tint = SolidColorBrush.Green // Needs FIX
         });
     }
 }

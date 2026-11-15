@@ -10,8 +10,9 @@ using DotTray.Direct.Typography;
 public class CheckItem : MenuItem
 {
     private const float WidthRatio = 4f / 3f;
-    private const float PaddingRatio = 0.5f;
-    private const float GapRatio = 0.5f;
+    private const float PaddingRatio = 0.3f;
+    private const float GapRatio = 0.3f;
+    private const float StrokeScale = 1.75f;
 
     /// <summary>
     /// <see langword="true"/> if this instance is checked, otherwise <see langword="false"/>
@@ -53,7 +54,7 @@ public class CheckItem : MenuItem
     /// <param name="context">Context for drawing this instance</param>
     /// <param name="box">The bounds of the indicator</param>
     protected virtual void DrawCheckedIndicator(DrawingContext context, RectF box)
-        => context.DrawCheckmark(box, CurrentForeground, context.GetFontMetrics(TextInfo).StrokeThicknessOrEstimate);
+        => context.DrawCheckmark(box, CurrentForeground, context.GetFontMetrics(TextInfo).StrokeThicknessOrEstimate * StrokeScale);
 
     /// <summary>
     /// Draws the indicator that is shown while this instance is not checked, which is nothing by default

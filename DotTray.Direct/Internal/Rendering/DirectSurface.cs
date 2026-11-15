@@ -224,7 +224,7 @@ internal sealed class DirectSurface : IDisposable
         }
     }
 
-    public unsafe void DrawImage(DirectImage image, RectF destination, ImageOptions options)
+    public unsafe void DrawImage(DirectImage image, RectF destination, ImageOptions options, DirectBrushContext brushContext)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
 
@@ -244,13 +244,29 @@ internal sealed class DirectSurface : IDisposable
             pSource = (nint)(&source);
         }
 
-        _context.DrawBitmapDc(bitmap, target, options.Opacity, (uint)options.InterpolationMode, pSource, nint.Zero);
+        if (options.Tint is null)
+        {
+            _context.DrawBitmapDc(bitmap, target, options.Opacity, (uint)options.InterpolationMode, pSource, nint.Zero);
+            return;
+        }
+
+        using (var brush = options.Tint.Create(brushContext, new RectF(target.Left, target.Top, target.Right - target.Left, target.Bottom - target.Top)))
+        {
+            brush.Native.SetOpacity(options.Opacity);
+            _context.FillOpacityMask(bitmap, brush.Native, target, pSource);
+        }
     }
 
     public FontMetrics GetFontMetrics(TextInfo info)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         return _device.GetFontMetrics(info);
+    }
+
+    public RectF SnapToPixels(RectF rect)
+    {
+        var snapped = Snap(rect);
+        return new RectF(snapped.Left, snapped.Top, snapped.Right - snapped.Left, snapped.Bottom - snapped.Top);
     }
 
     public DimF MeasureText(string text, TextInfo info)
@@ -264,6 +280,8 @@ internal sealed class DirectSurface : IDisposable
         ObjectDisposedException.ThrowIf(disposed, this);
 
         if (text.Length == 0) return;
+
+        bounds = SnapToPixels(bounds);
 
         var layout = _device.CreateTextLayout(text, info, bounds.Width, bounds.Height);
 
@@ -339,7 +357,7 @@ internal sealed class DirectSurface : IDisposable
         _context.SetDpi(curDpi, curDpi);
     }
 
-    private RECTF Snap(RectF rect) => new()
+    private RECTF Snap(RectF rect) => new RECTF
     {
         Left = SnapEdge(rect.Left),
         Top = SnapEdge(rect.Top),
@@ -347,7 +365,7 @@ internal sealed class DirectSurface : IDisposable
         Bottom = SnapEdge(rect.Bottom)
     };
 
-    private float SnapEdge(float dips) => MathF.Round(dips * Scale) / Scale;
+    private float SnapEdge(float dips) => PixelGrid.Snap(dips, Scale);
 
     private static uint ToPixels(int value) => (uint)int.Max(1, value);
 }

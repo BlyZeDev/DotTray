@@ -2,6 +2,7 @@
 
 using DotTray.Direct.Coloring;
 using DotTray.Direct.Context;
+using DotTray.Direct.Internal.Rendering;
 using DotTray.Direct.Primitives;
 using System;
 
@@ -126,11 +127,14 @@ public class SeparatorItem : MenuItemBase
 
         context.FillRect(bounds, Background);
 
-        var px = Math.Max(1f, MathF.Round(Thickness * context.Scale));
-        var top = bounds.Y + MathF.Floor((bounds.Height * context.Scale - px) / 2f) / context.Scale;
-        var line = new RectF(bounds.X + HorizontalPadding, top, Math.Max(0, bounds.Width - HorizontalPadding * 2), px / context.Scale);
+        var topPx = context.ToPixels(bounds.Top);
+        var heightPx = Math.Max(1, context.ToPixels(bounds.Bottom) - topPx);
+        var linePx = Math.Clamp(context.ToPixels(Thickness), 1, heightPx);
+        var lineTopPx = topPx + (heightPx - linePx) / 2;
 
-        if (IsRounded) context.FillRoundedRect(line, Thickness / 2f, Foreground);
+        var line = new RectF(bounds.X + HorizontalPadding, lineTopPx / context.Scale, Math.Max(0, bounds.Width - HorizontalPadding * 2), linePx / context.Scale);
+
+        if (IsRounded) context.FillRoundedRect(line, linePx / context.Scale / 2f, Foreground);
         else context.FillRect(line, Foreground);
     }
 }

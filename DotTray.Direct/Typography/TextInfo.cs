@@ -1,5 +1,6 @@
 ﻿namespace DotTray.Direct.Typography;
 
+using DotTray.Direct.Internal;
 using System.Globalization;
 
 /// <summary>
@@ -54,7 +55,7 @@ public sealed record TextInfo
     public FontStyle Style
     {
         get;
-        init => field = Enum.IsDefined(value) ? value : throw new ArgumentOutOfRangeException(nameof(value), "Invalid enum value");
+        init => field = Ensure.EnumIsValid(value);
     } = FontStyle.Normal;
 
     /// <summary>
@@ -67,7 +68,7 @@ public sealed record TextInfo
     public FontStretch Stretch
     {
         get;
-        init => field = Enum.IsDefined(value) ? value : throw new ArgumentOutOfRangeException(nameof(value), "Invalid enum value");
+        init => field = Ensure.EnumIsValid(value);
     } = FontStretch.Normal;
 
     /// <summary>
@@ -80,7 +81,7 @@ public sealed record TextInfo
     public TextAlign Align
     {
         get;
-        init => field = Enum.IsDefined(value) ? value : throw new ArgumentOutOfRangeException(nameof(value), "Invalid enum value");
+        init => field = Ensure.EnumIsValid(value);
     } = TextAlign.Left;
 
     /// <summary>

@@ -182,9 +182,7 @@ internal sealed class PopupMenu
 
     private void DrawWindow(DrawingContext context)
     {
-        var width = ToPixels(context.WindowSize.Width) / _scale;
-        var height = ToPixels(context.WindowSize.Height) / _scale;
-        context.FillRect(new RectF(0, 0, width, height), _tree.Owner.Background);
+        context.FillRect(new RectF(0, 0, context.WindowSize.Width, context.WindowSize.Height), _tree.Owner.Background);
 
         foreach (var entry in windowLayout.Items)
         {
@@ -196,17 +194,15 @@ internal sealed class PopupMenu
         }
     }
 
-    private ItemLayout? HitTest(Pos point)
+    private ItemLayout? HitTest(Pos pixel)
     {
         foreach (var entry in windowLayout.Items)
         {
             if (entry.Item.IgnoreInteraction) continue;
 
             var bounds = entry.Bounds;
-            if (point.X >= bounds.Left && point.X < bounds.Right && point.Y >= bounds.Top && point.Y < bounds.Bottom)
-            {
-                return entry;
-            }
+            if (pixel.X >= ToPixels(bounds.Left) && pixel.X < ToPixels(bounds.Right) &&
+                pixel.Y >= ToPixels(bounds.Top) && pixel.Y < ToPixels(bounds.Bottom)) return entry;
         }
 
         return null;
@@ -286,11 +282,12 @@ internal sealed class PopupMenu
             tracking = true;
         }
 
-        var point = DecodePoint(lParam);
+        var pixel = DecodePixelPoint(lParam);
+        var point = ToDipPoint(pixel);
         var moved = point.X != lastPoint.X || point.Y != lastPoint.Y;
         lastPoint = point;
 
-        var hit = HitTest(point)?.Item;
+        var hit = HitTest(pixel)?.Item;
 
         SetHotItem(hit, b => RelativePosition(b, lastPoint), ItemInteractionType.MouseEnter, ItemInteractionType.MouseLeave);
 
@@ -319,11 +316,13 @@ internal sealed class PopupMenu
 
     private nint HandleMouseButton(nint lParam, ItemInteractionType type)
     {
-        var point = DecodePoint(lParam);
+        var pixel = DecodePixelPoint(lParam);
+        var point = ToDipPoint(pixel);
 
-        if (HitTest(point) is { } hit)
+        var layout = HitTest(pixel);
+        if (layout.HasValue)
         {
-            Interact(hit.Item, RelativePosition(hit.Bounds, point), type, selectFirstOnSubmenu: false);
+            Interact(layout.Value.Item, RelativePosition(layout.Value.Bounds, point), type, false);
         }
 
         return 0;
@@ -525,13 +524,13 @@ internal sealed class PopupMenu
     {
         var topLeft = new POINT
         {
-            X = ToPixelsRounded(localDips.Left),
-            Y = ToPixelsRounded(localDips.Top)
+            X = ToPixels(localDips.Left),
+            Y = ToPixels(localDips.Top)
         };
         var bottomRight = new POINT
         {
-            X = ToPixelsRounded(localDips.Right),
-            Y = ToPixelsRounded(localDips.Bottom)
+            X = ToPixels(localDips.Right),
+            Y = ToPixels(localDips.Bottom)
         };
 
         PInvoke.ClientToScreen(HWnd, ref topLeft);
@@ -540,18 +539,7 @@ internal sealed class PopupMenu
         return new Rect(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y);
     }
 
-    private int ToPixels(int dips) => (int)MathF.Ceiling(dips * _scale - 0.001f);
-
-    private int ToPixelsRounded(int dips) => (int)MathF.Round(dips * _scale);
-
-    private Pos DecodePoint(nint lParam)
-    {
-        var value = (int)lParam.ToInt64();
-        var x = unchecked((short)(value & 0xFFFF));
-        var y = unchecked((short)((value >> 16) & 0xFFFF));
-
-        return new Pos((int)MathF.Floor(x / _scale), (int)MathF.Floor(y / _scale));
-    }
+    private int ToPixels(int dips) => PixelGrid.ToPixel(dips, _scale);
 
     private static int IndexOf(ReadOnlySpan<ItemLayout> items, MenuItemBase? item)
     {
@@ -568,4 +556,15 @@ internal sealed class PopupMenu
     private static Pos RelativePosition(Rect bounds, Pos point) => new Pos(point.X - bounds.X, point.Y - bounds.Y);
 
     private static Pos CenterOf(Rect bounds) => new Pos(bounds.Width / 2, bounds.Height / 2);
+
+    private static Pos DecodePixelPoint(nint lParam)
+    {
+        var value = (int)lParam.ToInt64();
+        var x = unchecked((short)(value & 0xFFFF));
+        var y = unchecked((short)((value >> 16) & 0xFFFF));
+
+        return new Pos(x, y);
+    }
+
+    private Pos ToDipPoint(Pos pixel) => new Pos(PixelGrid.ToDip(pixel.X, _scale), PixelGrid.ToDip(pixel.Y, _scale));
 }

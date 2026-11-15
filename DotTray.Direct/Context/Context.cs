@@ -35,6 +35,27 @@ public abstract class Context
     internal Context(DirectSurface surface) => _surface = surface;
 
     /// <summary>
+    /// Snaps <paramref name="dips"/> to the nearest physical pixel edge, returned in DIPs
+    /// </summary>
+    /// <param name="dips">The value to snap</param>
+    /// <returns><see cref="float"/></returns>
+    public float SnapToPixel(float dips) => PixelGrid.Snap(dips, Scale);
+
+    /// <summary>
+    /// Snaps all edges of <paramref name="bounds"/> to the physical pixel grid, returned in DIPs
+    /// </summary>
+    /// <param name="bounds">The bounds to snap the edges of</param>
+    /// <returns><see cref="RectF"/></returns>
+    public RectF SnapToPixels(RectF bounds) => _surface.SnapToPixels(bounds);
+
+    /// <summary>
+    /// Converts <paramref name="dips"/> to physical pixels
+    /// </summary>
+    /// <param name="dips">The value to convert</param>
+    /// <returns><see cref="int"/></returns>
+    public int ToPixels(float dips) => PixelGrid.ToPixel(dips, Scale);
+
+    /// <summary>
     /// Fetches the metrics <paramref name="textInfo"/>
     /// </summary>
     /// <param name="textInfo">The text information to get the font metrics for</param>

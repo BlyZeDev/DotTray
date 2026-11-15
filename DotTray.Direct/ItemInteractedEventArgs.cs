@@ -1,5 +1,6 @@
 ﻿namespace DotTray.Direct;
 
+using DotTray.Direct.Internal;
 using DotTray.Direct.Items;
 using DotTray.Direct.Primitives;
 
@@ -14,7 +15,7 @@ public sealed record ItemInteractedEventArgs
     public ItemInteractionType Type
     {
         get;
-        init => field = Enum.IsDefined(value) ? value : throw new ArgumentOutOfRangeException(nameof(value), "Invalid enum value");
+        init => field = Ensure.EnumIsValid(value);
     }
 
     /// <summary>

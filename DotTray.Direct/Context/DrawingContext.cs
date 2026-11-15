@@ -7,7 +7,6 @@ using DotTray.Direct.Internal.Rendering;
 using DotTray.Direct.Items;
 using DotTray.Direct.Primitives;
 using DotTray.Direct.Typography;
-using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 /// <summary>
@@ -55,6 +54,8 @@ public sealed class DrawingContext : Context
     /// <param name="brush">The brush to use</param>
     public void FillRect<TBrush>(RectF bounds, TBrush brush) where TBrush : IDirectBrush
     {
+        bounds = _surface.SnapToPixels(bounds);
+
         using (var scope = brush.Create(_brushContext, bounds))
         {
             _surface.FillRect(bounds, scope.Native);
@@ -70,6 +71,8 @@ public sealed class DrawingContext : Context
     /// <param name="thickness">The border thickness, in DIPs</param>
     public void DrawRect<TBrush>(RectF bounds, TBrush brush, float thickness = 1f) where TBrush : IDirectBrush
     {
+        bounds = _surface.SnapToPixels(bounds);
+
         using (var scope = brush.Create(_brushContext, bounds))
         {
             _surface.DrawRect(bounds, scope.Native, thickness);
@@ -85,6 +88,8 @@ public sealed class DrawingContext : Context
     /// <param name="brush">The brush to use</param>
     public void FillRoundedRect<TBrush>(RectF bounds, float radius, TBrush brush) where TBrush : IDirectBrush
     {
+        bounds = _surface.SnapToPixels(bounds);
+
         using (var scope = brush.Create(_brushContext, bounds))
         {
             _surface.FillRoundedRect(bounds, radius, scope.Native);
@@ -101,6 +106,8 @@ public sealed class DrawingContext : Context
     /// <param name="thickness">The border thickness, in DIPs</param>
     public void DrawRoundedRect<TBrush>(RectF bounds, float radius, TBrush brush, float thickness = 1f) where TBrush : IDirectBrush
     {
+        bounds = _surface.SnapToPixels(bounds);
+
         using (var scope = brush.Create(_brushContext, bounds))
         {
             _surface.DrawRoundedRect(bounds, radius, scope.Native, thickness);
@@ -276,7 +283,7 @@ public sealed class DrawingContext : Context
     /// <param name="image">The image to draw</param>
     /// <param name="bounds">The bounds to draw the image into</param>
     /// <param name="options">The options to draw the image with, or <see langword="null"/> for <see cref="ImageOptions.Default"/></param>
-    public void DrawImage(DirectImage image, RectF bounds, ImageOptions? options = null) => _surface.DrawImage(image, bounds, options ?? ImageOptions.Default);
+    public void DrawImage(DirectImage image, RectF bounds, ImageOptions? options = null) => _surface.DrawImage(image, bounds, options ?? ImageOptions.Default, _brushContext);
 
     /// <summary>
     /// Fills the whole <see cref="ItemBounds"/> with <paramref name="text"/> using <paramref name="textInfo"/> and <paramref name="brush"/>
