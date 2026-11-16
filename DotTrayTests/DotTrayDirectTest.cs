@@ -392,6 +392,15 @@ file sealed class ImageItem : MenuItemBase
             ? DirectImage.FromFile(@"C:\Users\leschi\Downloads\le kirk.png")
             : image;
 
+        var canvas = _image.ToCanvas();
+
+        canvas.Pad(10);
+        canvas.Blur(10);
+        canvas.Tint(Rgba.Green with { A = 100 });
+        canvas.RoundCorners(50);
+
+        _image = canvas.ToImage();
+
         _actualSize = new Dim(_image.Dimensions.Width / 2, _image.Dimensions.Height / 2);
     }
 
@@ -403,9 +412,9 @@ file sealed class ImageItem : MenuItemBase
 
         context.DrawImage(_image, new Rect(new Pos(x, bounds.Y), _actualSize), new ImageOptions
         {
-            Opacity = 0.9f,
+            //Opacity = 0.9f,
             InterpolationMode = InterpolationMode.HighQualityCubic,
-            //Tint = SolidColorBrush.Green // Needs FIX
+            //Tint = new RadialGradientBrush([new GradientStop(Rgba.Red with { A = 100 }, 0), new GradientStop(Rgba.Blue with { A = 100 }, 1)])
         });
     }
 }

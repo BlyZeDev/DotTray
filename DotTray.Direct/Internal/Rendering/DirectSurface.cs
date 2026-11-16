@@ -244,16 +244,23 @@ internal sealed class DirectSurface : IDisposable
             pSource = (nint)(&source);
         }
 
-        if (options.Tint is null)
-        {
-            _context.DrawBitmapDc(bitmap, target, options.Opacity, (uint)options.InterpolationMode, pSource, nint.Zero);
-            return;
-        }
+        _context.DrawBitmapDc(bitmap, target, options.Opacity, (uint)options.InterpolationMode, pSource, nint.Zero);
+
+        if (options.Tint is null) return;
 
         using (var brush = options.Tint.Create(brushContext, new RectF(target.Left, target.Top, target.Right - target.Left, target.Bottom - target.Top)))
         {
             brush.Native.SetOpacity(options.Opacity);
-            _context.FillOpacityMask(bitmap, brush.Native, target, pSource);
+
+            try
+            {
+                _context.SetAntialiasMode(PInvoke.D2D1_ANTIALIAS_MODE_ALIASED);
+                _context.FillOpacityMask(bitmap, brush.Native, target, pSource);
+            }
+            finally
+            {
+                _context.SetAntialiasMode(PInvoke.D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+            }
         }
     }
 

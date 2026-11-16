@@ -26,6 +26,34 @@ public sealed class DirectImage
     }
 
     /// <summary>
+    /// Creates a new image by applying <paramref name="edit"/> to a copy of this one
+    /// </summary>
+    /// <remarks>
+    /// For complex editing use <see cref="ToCanvas"/> to create an actual <see cref="DirectCanvas"/>.<br/>
+    /// This <see cref="DirectImage"/> instance is not changed. For several edits in a row, use the chained methods of the canvas inside <paramref name="edit"/>
+    /// </remarks>
+    /// <param name="edit">The edit to apply</param>
+    /// <returns><see cref="DirectImage"/></returns>
+    public DirectImage QuickEdit(Action<DirectCanvas> edit)
+    {
+        ArgumentNullException.ThrowIfNull(edit);
+
+        var canvas = ToCanvas();
+        edit(canvas);
+
+        return canvas.ToImage();
+    }
+
+    /// <summary>
+    /// Creates an editable <see cref="DirectCanvas"/> with a copy of the pixels of this image
+    /// </summary>
+    /// <remarks>
+    /// Edits of the canvas do not change this image
+    /// </remarks>
+    /// <returns><see cref="DirectCanvas"/></returns>
+    public DirectCanvas ToCanvas() => DirectCanvas.FromImage(this);
+
+    /// <summary>
     /// Loads an image from <paramref name="path"/>
     /// </summary>
     /// <remarks>
