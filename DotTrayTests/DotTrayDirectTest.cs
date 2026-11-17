@@ -402,6 +402,7 @@ file sealed class ImageItem : MenuItemBase
         canvas.Contrast(1.1f);
 
         _image = canvas.ToImage();
+        _image.SaveToFile(@"C:\Users\leons\Downloads\img.png"); // FIX
 
         _actualSize = new Dim(_image.Dimensions.Width / 2, _image.Dimensions.Height / 2);
     }

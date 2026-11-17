@@ -1,5 +1,6 @@
 ﻿namespace DotTray.Direct.Imaging;
 
+using DotTray.Direct.Coloring;
 using DotTray.Direct.Internal;
 using DotTray.Direct.Primitives;
 using System.Diagnostics.CodeAnalysis;
@@ -54,6 +55,18 @@ public sealed class DirectImage
     public DirectCanvas ToCanvas() => DirectCanvas.FromImage(this);
 
     /// <summary>
+    /// Saves the image to a file
+    /// </summary>
+    /// <remarks>
+    /// The format is chosen by the extension of <paramref name="path"/>.<br/>
+    /// Supported formats are <c>.png</c>, <c>.jpg</c>, <c>.jpeg</c> and <c>.bmp</c>.<br/>
+    /// For formats other than <c>.png</c>, <paramref name="background"/> is used to fill the transparent parts
+    /// </remarks>
+    /// <param name="path">The path of the file</param>
+    /// <param name="background">The color transparent parts are drawn over for formats without transparency, or <see langword="null"/> for <see cref="Rgba.White"/></param>
+    public void SaveToFile(string path, Rgba? background = null) => Wic.Save(path, Pixels, Dimensions.Width, Dimensions.Height, background);
+
+    /// <summary>
     /// Loads an image from <paramref name="path"/>
     /// </summary>
     /// <remarks>
@@ -97,6 +110,6 @@ public sealed class DirectImage
         var fullPath = Path.GetFullPath(path);
         if (!File.Exists(fullPath)) throw new FileNotFoundException("The image file was not found", fullPath);
 
-        return WicImageLoader.Load(fullPath, out width, out height);
+        return Wic.Load(fullPath, out width, out height);
     }
 }

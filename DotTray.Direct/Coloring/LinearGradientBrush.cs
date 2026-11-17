@@ -13,6 +13,11 @@ public sealed class LinearGradientBrush : IDirectBrush
     private readonly GradientStop[] _stops;
 
     /// <summary>
+    /// Collection of <see cref="GradientStop"/> sorted by <see cref="GradientStop.Offset"/>
+    /// </summary>
+    public IReadOnlyList<GradientStop> Stops => _stops;
+
+    /// <summary>
     /// Start point relative to the bounds <c>(0..1)</c>
     /// </summary>
     public PosF Start { get; }
