@@ -394,10 +394,12 @@ file sealed class ImageItem : MenuItemBase
 
         var canvas = _image.ToCanvas();
 
-        canvas.Pad(10);
-        canvas.Blur(10);
         canvas.Tint(Rgba.Green with { A = 100 });
-        canvas.RoundCorners(50);
+        canvas.RoundCorners(float.MaxValue);
+        canvas.Pad(25, Rgba.Green);
+        canvas.RoundCorners(50f);
+        canvas.Brightness(1.1f);
+        canvas.Contrast(1.1f);
 
         _image = canvas.ToImage();
 

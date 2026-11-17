@@ -265,20 +265,21 @@ public sealed class DirectCanvas
         if (!float.IsFinite(factor) || factor < 0f) throw new ArgumentOutOfRangeException(nameof(factor));
         if (factor == 1f) return this;
 
-        var fixedPoint = (uint)MathF.Round(MathF.Min(factor, 255f) * 256f);
+        var fixedPoint = (int)ToFixedPoint(factor);
+        if (fixedPoint == 256) return this;
 
         return Apply(region, row =>
         {
             for (var i = 0; i < row.Length; i++)
             {
                 var p = row[i];
-                var a = p >>> 24;
+                var a = (int)(p >>> 24);
 
                 var r = Math.Min(a, ((((p >>> 16) & 0xFF) * fixedPoint) + 128) >>> 8);
                 var g = Math.Min(a, ((((p >>> 8) & 0xFF) * fixedPoint) + 128) >>> 8);
                 var b = Math.Min(a, (((p & 0xFF) * fixedPoint) + 128) >>> 8);
 
-                row[i] = (a << 24) | (r << 16) | (g << 8) | b;
+                row[i] = ((uint)a << 24) | ((uint)r << 16) | ((uint)g << 8) | (uint)b;
             }
         });
     }
@@ -510,8 +511,7 @@ public sealed class DirectCanvas
     /// Makes the corners of the canvas transparent and round with smooth edges, with a separate radius for every corner
     /// </summary>
     /// <remarks>
-    /// If the radii of two neighboring corners are larger than the side between them, all radii are scaled down by the same factor until they fit.<br/>
-    /// A radius of <c>0</c> leaves the corner as it is
+    /// To make the image completely round just use <see cref="float.MaxValue"/>
     /// </remarks>
     /// <param name="topLeft">The radius of the top left corner, in pixels</param>
     /// <param name="topRight">The radius of the top right corner, in pixels</param>
@@ -550,7 +550,7 @@ public sealed class DirectCanvas
     /// Makes the corners of the canvas transparent and round with smooth edges
     /// </summary>
     /// <remarks>
-    /// A radius of half the width or height or more makes the shortest side fully round, which gives a circle for a square canvas
+    /// To make the image completely round just use <see cref="float.MaxValue"/>
     /// </remarks>
     /// <param name="radius">The radius of the corners, in pixels</param>
     /// <returns><see cref="DirectCanvas"/></returns>

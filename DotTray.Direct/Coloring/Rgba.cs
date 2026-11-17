@@ -110,6 +110,19 @@ public readonly record struct Rgba
     }
 
     /// <summary>
+    /// Generates a random color, optionally with random alpha
+    /// </summary>
+    /// <param name="includeAlpha"><see langword="true"/> if alpha should be random as well, otherwise alpha will be <see cref="byte.MaxValue"/></param>
+    /// <returns><see cref="Rgba"/></returns>
+    public static Rgba Random(bool includeAlpha = false)
+    {
+        Span<byte> buffer = stackalloc byte[4];
+        System.Random.Shared.NextBytes(buffer);
+
+        return new Rgba(buffer[0], buffer[1], buffer[2], includeAlpha ? buffer[3] : Max);
+    }
+
+    /// <summary>
     /// Creates a <see cref="Rgba"/> value from a HEX value
     /// </summary>
     /// <remarks>
