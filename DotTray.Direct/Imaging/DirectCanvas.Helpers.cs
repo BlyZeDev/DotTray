@@ -1,19 +1,23 @@
 ﻿namespace DotTray.Direct.Imaging;
 
-using DotTray.Direct.Coloring;
+using DotTray.Direct.Internal;
 using DotTray.Direct.Primitives;
 using System.Runtime.InteropServices;
 
 public sealed partial class DirectCanvas
 {
+    private const int FixedShift = 16;
+    private const long FixedHalf = 1L << (FixedShift - 1);
+    private const long FixedOne = 1L << FixedShift;
+
     private DirectCanvas Apply(Rect? region, RowAction action, bool parallel = true)
     {
         lock (_lock)
         {
-            if (!Clip(width, height, region, out var area)) return this;
+            if (!Clip(curWidth, curHeight, region, out var area)) return this;
 
-            var data = pixels;
-            var stride = width;
+            var data = curPixels;
+            var stride = curWidth;
 
             void Process(int i) => action(Row(data, stride, area.X, area.Y + i, area.Width));
 
@@ -30,7 +34,7 @@ public sealed partial class DirectCanvas
         }
     }
 
-    private void RoundCorner(Span<uint> data, int originX, int originY, int directionX, int directionY, float radius)
+    private void RoundCorner(Span<Pbgra32> data, int originX, int originY, int directionX, int directionY, float radius)
     {
         var size = (int)MathF.Ceiling(radius);
 
@@ -44,35 +48,35 @@ public sealed partial class DirectCanvas
                 var coverage = Math.Clamp(radius - MathF.Sqrt(dx * dx + dy * dy) + 0.5f, 0f, 1f);
                 if (coverage >= 1f) continue;
 
-                var index = (originY + y * directionY) * width + originX + x * directionX;
-                data[index] = Scale(data[index], (uint)MathF.Round(coverage * 255f));
+                var index = (originY + y * directionY) * curWidth + originX + x * directionX;
+                data[index] = data[index].Scale((uint)MathF.Round(coverage * 255f));
             }
         }
     }
 
     private DirectCanvas Compose(byte[] source, int sourceStride, Rect sourceArea, Pos position, float opacity)
     {
-        var factor = ToByteFactor(opacity);
-        if (factor == 0) return this;
+        var bFactor = ToByteFactor(opacity);
+        if (bFactor == 0) return this;
 
         lock (_lock)
         {
             var left = Math.Max(0, position.X);
             var top = Math.Max(0, position.Y);
-            var right = Math.Min(width, position.X + sourceArea.Width);
-            var bottom = Math.Min(height, position.Y + sourceArea.Height);
+            var right = Math.Min(curWidth, position.X + sourceArea.Width);
+            var bottom = Math.Min(curHeight, position.Y + sourceArea.Height);
 
             if (right <= left || bottom <= top) return this;
 
-            var data = pixels;
-            var stride = width;
+            var data = curPixels;
+            var stride = curWidth;
             var count = right - left;
             var sourceX = sourceArea.X + (left - position.X);
             var sourceY = sourceArea.Y + (top - position.Y);
 
             Run(bottom - top,
                 count * (bottom - top),
-                i => BlendRow(Row(data, stride, left, top + i, count), Row(source, sourceStride, sourceX, sourceY + i, count), factor));
+                i => BlendRow(Row(data, stride, left, top + i, count), Row(source, sourceStride, sourceX, sourceY + i, count), bFactor));
 
             return this;
         }
@@ -82,26 +86,26 @@ public sealed partial class DirectCanvas
     {
         lock (_lock)
         {
-            var rotated = new byte[pixels.Length];
-            var src = AsPixels(pixels);
+            var rotated = new byte[curPixels.Length];
+            var src = AsPixels(curPixels);
             var dst = AsPixels(rotated);
 
-            for (var tileY = 0; tileY < height; tileY += TileSize)
+            for (var tileY = 0; tileY < curHeight; tileY += TileSize)
             {
-                for (var tileX = 0; tileX < width; tileX += TileSize)
+                for (var tileX = 0; tileX < curWidth; tileX += TileSize)
                 {
-                    for (var y = tileY; y < Math.Min(height, tileY + TileSize); y++)
+                    for (var y = tileY; y < Math.Min(curHeight, tileY + TileSize); y++)
                     {
-                        for (var x = tileX; x < Math.Min(width, tileX + TileSize); x++)
+                        for (var x = tileX; x < Math.Min(curWidth, tileX + TileSize); x++)
                         {
-                            dst[clockwise ? x * height + (height - 1 - y) : (width - 1 - x) * height + y] = src[y * width + x];
+                            dst[clockwise ? x * curHeight + (curHeight - 1 - y) : (curWidth - 1 - x) * curHeight + y] = src[y * curWidth + x];
                         }
                     }
                 }
             }
 
-            pixels = rotated;
-            (width, height) = (height, width);
+            curPixels = rotated;
+            (curWidth, curHeight) = (curHeight, curWidth);
 
             return this;
         }
@@ -113,7 +117,7 @@ public sealed partial class DirectCanvas
 
         for (var y = 0; y < area.Height; y++)
         {
-            Row(pixels, width, area.X, area.Y + y, area.Width).CopyTo(Row(copy, area.Width, 0, y, area.Width));
+            Row(curPixels, curWidth, area.X, area.Y + y, area.Width).CopyTo(Row(copy, area.Width, 0, y, area.Width));
         }
 
         return copy;
@@ -121,10 +125,10 @@ public sealed partial class DirectCanvas
 
     private int IndexOf(int x, int y)
     {
-        if ((uint)x >= (uint)width) throw new ArgumentOutOfRangeException(nameof(x));
-        if ((uint)y >= (uint)height) throw new ArgumentOutOfRangeException(nameof(y));
+        if ((uint)x >= (uint)curWidth) throw new ArgumentOutOfRangeException(nameof(x));
+        if ((uint)y >= (uint)curHeight) throw new ArgumentOutOfRangeException(nameof(y));
 
-        return y * width + x;
+        return y * curWidth + x;
     }
 
     private static void BoxBlur(Span<uint> data, int width, int height, int radius, bool clampEdges)
@@ -239,9 +243,11 @@ public sealed partial class DirectCanvas
         });
     }
 
-    private static Span<uint> AsPixels(byte[] data) => MemoryMarshal.Cast<byte, uint>(data.AsSpan());
+    private static Span<Pbgra32> AsPixels(byte[] data) => MemoryMarshal.Cast<byte, Pbgra32>(data.AsSpan());
 
-    private static Span<uint> Row(byte[] data, int stride, int x, int y, int count) => AsPixels(data).Slice(y * stride + x, count);
+    private static Span<uint> AsRaw(Span<Pbgra32> data) => MemoryMarshal.Cast<Pbgra32, uint>(data);
+
+    private static Span<Pbgra32> Row(byte[] data, int stride, int x, int y, int count) => AsPixels(data).Slice(y * stride + x, count);
 
     private static byte[] Copy(byte[] source)
     {
@@ -253,75 +259,24 @@ public sealed partial class DirectCanvas
 
     private static uint ToByteFactor(float factor) => (uint)MathF.Round(Math.Clamp(float.IsNaN(factor) ? 0f : factor, 0f, 1f) * 255f);
 
-    private static void BlendRow(Span<uint> destination, ReadOnlySpan<uint> source, uint factor)
+    private static void BlendRow(Span<Pbgra32> destination, ReadOnlySpan<Pbgra32> source, uint factor)
     {
         for (var i = 0; i < destination.Length; i++)
         {
-            var s = factor == 255 ? source[i] : Scale(source[i], factor);
-            var a = s >>> 24;
+            var s = factor == 255 ? source[i] : source[i].Scale(factor);
 
-            if (a == 255) destination[i] = s;
-            else if (a != 0) destination[i] = Scale(destination[i], 255 - a) + s;
+            if (!s.IsTransparent) destination[i] = s.Over(destination[i]);
         }
     }
 
-    private static uint Mul255(uint x, uint y)
-    {
-        var t = x * y + 128;
-        return (t + (t >>> 8)) >>> 8;
-    }
-
-    private static uint ToFixedPoint(float factor)
+    private static long ToFixedPoint(float factor)
     {
         if (!float.IsFinite(factor) || factor < 0f) throw new ArgumentOutOfRangeException(nameof(factor));
 
-        return (uint)MathF.Round(MathF.Min(factor, 255f) * 256f);
+        return (long)Math.Round(Math.Min((double)factor, 255.0) * FixedOne);
     }
 
-    private static uint Scale(uint pixel, uint factor)
-    {
-        var rb = (pixel & 0x00FF00FFu) * factor + 0x00800080u;
-        rb = ((rb + ((rb >>> 8) & 0x00FF00FFu)) >>> 8) & 0x00FF00FFu;
+    private static uint Stretch(int value, int center, long factor, int alpha) => (uint)Math.Clamp(center + (int)(((value - center) * factor + FixedHalf) >> FixedShift), 0, alpha);
 
-        var ag = ((pixel >>> 8) & 0x00FF00FFu) * factor + 0x00800080u;
-        ag = (ag + ((ag >>> 8) & 0x00FF00FFu)) & 0xFF00FF00u;
-
-        return rb | ag;
-    }
-
-    private static Rgba Unpack(uint pixel)
-    {
-        var a = pixel >>> 24;
-        if (a == 0) return Rgba.Transparent;
-        if (a == 255) return new Rgba((byte)(pixel >>> 16), (byte)(pixel >>> 8), (byte)pixel, 255);
-
-        var offset = (int)(a << 8);
-        return new Rgba(Unpremultiplied[offset | (int)((pixel >>> 16) & 0xFF)], Unpremultiplied[offset | (int)((pixel >>> 8) & 0xFF)], Unpremultiplied[offset | (int)(pixel & 0xFF)], (byte)a);
-    }
-
-    private static uint Pack(Rgba color)
-    {
-        var a = (uint)color.A;
-        if (a == 255) return 0xFF000000u | ((uint)color.R << 16) | ((uint)color.G << 8) | color.B;
-        if (a == 0) return 0;
-
-        return (a << 24) | (Mul255(color.R, a) << 16) | (Mul255(color.G, a) << 8) | Mul255(color.B, a);
-    }
-
-    private static byte[] BuildUnpremultiplyTable()
-    {
-        var table = new byte[256 * 256];
-
-        for (var a = 1; a < 256; a++)
-        {
-            for (var v = 0; v <= a; v++)
-            {
-                table[(a << 8) | v] = (byte)Math.Min(255, (v * 255 + a / 2) / a);
-            }
-        }
-
-        return table;
-    }
-
-    private delegate void RowAction(Span<uint> row);
+    private delegate void RowAction(Span<Pbgra32> row);
 }

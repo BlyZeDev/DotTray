@@ -398,20 +398,20 @@ file sealed class ImageItem : MenuItemBase
         canvas.RoundCorners(float.MaxValue);
 
         if (Directory.Exists(@"C:\Users\leschi\Downloads")) canvas.SaveToFile(@"C:\Users\leschi\Downloads\canvas.png");
-        else canvas.SaveToFile(@"C:\canvas.png");
+        else canvas.SaveToFile(@"C:\Users\leons\Downloads\canvas.png");
 
         canvas.Pad(25, new Rgba(150, 10, 200, 200));
         canvas.RoundCorners(50f);
         canvas.Brightness(1.1f);
         canvas.Contrast(1.1f);
-        canvas.Sharpen(1f, 5);
+        canvas.Sharpen(5, 1f);
 
         Console.WriteLine(canvas.GetAverageColor());
 
         _image = canvas.ToImage();
        
         if (Directory.Exists(@"C:\Users\leschi\Downloads")) _image.SaveToFile(@"C:\Users\leschi\Downloads\img.png");
-        else _image.SaveToFile(@"C:\img.png");
+        else _image.SaveToFile(@"C:\Users\leons\Downloads\img.png");
 
         _actualSize = new Dim(_image.Dimensions.Width / 2, _image.Dimensions.Height / 2);
     }

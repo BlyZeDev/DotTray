@@ -14,13 +14,11 @@ public sealed partial class DirectCanvas
     private const int TileSize = 32;
     private const int MaxBlurRadius = 4096;
 
-    private static readonly byte[] Unpremultiplied = BuildUnpremultiplyTable();
-
     private readonly Lock _lock;
 
-    private byte[] pixels;
-    private int width;
-    private int height;
+    private byte[] curPixels;
+    private int curWidth;
+    private int curHeight;
 
     /// <summary>
     /// The dimensions of the canvas, in pixels
@@ -31,7 +29,7 @@ public sealed partial class DirectCanvas
         {
             lock (_lock)
             {
-                return new Dim(width, height);
+                return new Dim(curWidth, curHeight);
             }
         }
     }
@@ -40,9 +38,9 @@ public sealed partial class DirectCanvas
     {
         _lock = new Lock();
 
-        this.pixels = pixels;
-        this.width = width;
-        this.height = height;
+        curPixels = pixels;
+        curWidth = width;
+        curHeight = height;
     }
 
     /// <summary>
@@ -53,7 +51,7 @@ public sealed partial class DirectCanvas
     {
         lock (_lock)
         {
-            return new DirectCanvas(Copy(pixels), width, height);
+            return new DirectCanvas(Copy(curPixels), curWidth, curHeight);
         }
     }
 
@@ -69,18 +67,18 @@ public sealed partial class DirectCanvas
     {
         lock (_lock)
         {
-            if (!Clip(width, height, region, out var area)) return Rgba.Transparent;
+            if (!Clip(curWidth, curHeight, region, out var area)) return Rgba.Transparent;
 
             long sumA = 0, sumR = 0, sumG = 0, sumB = 0;
 
             for (var y = 0; y < area.Height; y++)
             {
-                foreach (var p in Row(pixels, width, area.X, area.Y + y, area.Width))
+                foreach (var p in Row(curPixels, curWidth, area.X, area.Y + y, area.Width))
                 {
-                    sumA += p >>> 24;
-                    sumR += (p >>> 16) & 0xFF;
-                    sumG += (p >>> 8) & 0xFF;
-                    sumB += p & 0xFF;
+                    sumA += p.A;
+                    sumR += p.R;
+                    sumG += p.G;
+                    sumB += p.B;
                 }
             }
 
@@ -93,23 +91,34 @@ public sealed partial class DirectCanvas
     }
 
     /// <summary>
+    /// Gets or sets the color of a single pixel
+    /// </summary>
+    /// <param name="coordinate">The coordinates of the pixel to get or set</param>
+    /// <returns><see cref="Rgba"/></returns>
+    public Rgba this[Pos coordinate]
+    {
+        get => GetPixel(coordinate);
+        set => SetPixel(coordinate, value);
+    }
+
+    /// <summary>
     /// Gets the color of a single pixel
     /// </summary>
-    /// <param name="coordinates">The coordinates</param>
+    /// <param name="coordinates">The coordinates of the pixel to get</param>
     /// <returns><see cref="Rgba"/></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     public Rgba GetPixel(Pos coordinates)
     {
         lock (_lock)
         {
-            return Unpack(AsPixels(pixels)[IndexOf(coordinates.X, coordinates.Y)]);
+            return AsPixels(curPixels)[IndexOf(coordinates.X, coordinates.Y)].ToRgba();
         }
     }
 
     /// <summary>
-    /// Replaces the color of a single pixel
+    /// Sets the color of a single pixel
     /// </summary>
-    /// <param name="coordinates">The coordinates</param>
+    /// <param name="coordinates">The coordinates of the pixel to set</param>
     /// <param name="color">The new color</param>
     /// <returns><see cref="DirectCanvas"/></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
@@ -117,7 +126,7 @@ public sealed partial class DirectCanvas
     {
         lock (_lock)
         {
-            AsPixels(pixels)[IndexOf(coordinates.X, coordinates.Y)] = Pack(color);
+            AsPixels(curPixels)[IndexOf(coordinates.X, coordinates.Y)] = Pbgra32.FromRgba(color);
             return this;
         }
     }
@@ -130,7 +139,7 @@ public sealed partial class DirectCanvas
     /// <returns><see cref="DirectCanvas"/></returns>
     public DirectCanvas Fill(Rgba color, Rect? region = null)
     {
-        var value = Pack(color);
+        var value = Pbgra32.FromRgba(color);
 
         return Apply(region, row => row.Fill(value));
     }
@@ -154,13 +163,11 @@ public sealed partial class DirectCanvas
     /// <returns><see cref="DirectCanvas"/></returns>
     public DirectCanvas Map(Func<Rgba, Rgba> transform, Rect? region = null)
     {
-        ArgumentNullException.ThrowIfNull(transform);
-
         return Apply(region, row =>
         {
             for (var i = 0; i < row.Length; i++)
             {
-                row[i] = Pack(transform(Unpack(row[i])));
+                row[i] = Pbgra32.FromRgba(transform(row[i].ToRgba()));
             }
         }, false);
     }
@@ -179,7 +186,7 @@ public sealed partial class DirectCanvas
 
         for (var i = 0; i < row.Length; i++)
         {
-            var color = Unpack(row[i]);
+            var color = row[i].ToRgba();
 
             if (color.A == 0
                 || Math.Abs(color.R - from.R) > actualTolerance.R
@@ -187,7 +194,7 @@ public sealed partial class DirectCanvas
                 || Math.Abs(color.B - from.B) > actualTolerance.B
                 || Math.Abs(color.A - from.A) > actualTolerance.A) continue;
 
-            row[i] = Pack(to with { A = (byte)Mul255(color.A, to.A) });
+            row[i] = Pbgra32.FromRgba(to with { A = (byte)Pbgra32.Mul255(color.A, to.A) });
         }
     });
 
@@ -199,13 +206,13 @@ public sealed partial class DirectCanvas
     /// <returns><see cref="DirectCanvas"/></returns>
     public DirectCanvas Recolor(Rgba color, Rect? region = null)
     {
-        var tint = Pack(color);
+        var tint = Pbgra32.FromRgba(color);
 
         return Apply(region, row =>
         {
             for (var i = 0; i < row.Length; i++)
             {
-                row[i] = Scale(tint, row[i] >>> 24);
+                row[i] = tint.Scale(row[i].A);
             }
         });
     }
@@ -224,7 +231,7 @@ public sealed partial class DirectCanvas
     {
         if (color.A == 0) return this;
 
-        var layer = Pack(color with { A = 255 });
+        var layer = Pbgra32.FromRgba(color with { A = 255 });
         var strength = (uint)color.A;
 
         return Apply(region, row =>
@@ -232,9 +239,8 @@ public sealed partial class DirectCanvas
             for (var i = 0; i < row.Length; i++)
             {
                 var p = row[i];
-                var a = p >>> 24;
 
-                if (a != 0) row[i] = Scale(p, 255 - strength) + Scale(layer, Mul255(a, strength));
+                if (!p.IsTransparent) row[i] = p.Scale(255 - strength) + layer.Scale(Pbgra32.Mul255(p.A, strength));
             }
         });
     }
@@ -249,9 +255,9 @@ public sealed partial class DirectCanvas
         for (var i = 0; i < row.Length; i++)
         {
             var p = row[i];
-            var luma = (54 * ((p >>> 16) & 0xFF) + 183 * ((p >>> 8) & 0xFF) + 19 * (p & 0xFF)) >>> 8;
+            var luma = p.Luma;
 
-            row[i] = (p & 0xFF000000u) | (luma * 0x010101u);
+            row[i] = Pbgra32.FromChannels(p.A, luma, luma, luma);
         }
     });
 
@@ -265,9 +271,9 @@ public sealed partial class DirectCanvas
         for (var i = 0; i < row.Length; i++)
         {
             var p = row[i];
-            var a = p >>> 24;
+            uint a = p.A;
 
-            row[i] = (a << 24) | ((a * 0x010101u) - (p & 0x00FFFFFFu));
+            row[i] = new Pbgra32((a << 24) | ((a * 0x010101u) - (p.Packed & 0x00FFFFFFu)));
         }
     });
 
@@ -284,7 +290,7 @@ public sealed partial class DirectCanvas
 
         return Apply(region, row =>
         {
-            for (var i = 0; i < row.Length; i++) row[i] = Scale(row[i], bFactor);
+            for (var i = 0; i < row.Length; i++) row[i] = row[i].Scale(bFactor);
         });
     }
 
@@ -297,26 +303,21 @@ public sealed partial class DirectCanvas
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     public DirectCanvas Brightness(float factor, Rect? region = null)
     {
-        if (!float.IsFinite(factor) || factor < 0f) throw new ArgumentOutOfRangeException(nameof(factor));
-        if (factor == 1f) return this;
-
-        var fixedPoint = (int)ToFixedPoint(factor);
-        if (fixedPoint == 256) return this;
+        var fPoint = ToFixedPoint(factor);
+        if (fPoint == FixedOne) return this;
 
         return Apply(region, row =>
         {
             for (var i = 0; i < row.Length; i++)
             {
                 var p = row[i];
-                var a = (int)(p >>> 24);
+                uint a = p.A;
 
-                var r = Math.Min(a, ((((p >>> 16) & 0xFF) * fixedPoint) + 128) >>> 8);
-                var g = Math.Min(a, ((((p >>> 8) & 0xFF) * fixedPoint) + 128) >>> 8);
-                var b = Math.Min(a, (((p & 0xFF) * fixedPoint) + 128) >>> 8);
-
-                row[i] = ((uint)a << 24) | ((uint)r << 16) | ((uint)g << 8) | (uint)b;
+                row[i] = Pbgra32.FromChannels(a, Brighten(p.R, a), Brighten(p.G, a), Brighten(p.B, a));
             }
         });
+
+        uint Brighten(byte channel, uint alpha) => Math.Min(alpha, (uint)((channel * fPoint + FixedHalf) >> FixedShift));
     }
 
     /// <summary>
@@ -328,22 +329,18 @@ public sealed partial class DirectCanvas
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     public DirectCanvas Contrast(float factor, Rect? region = null)
     {
-        var fixedPoint = (int)ToFixedPoint(factor);
-        if (fixedPoint == 256) return this;
+        var fPoint = ToFixedPoint(factor);
+        if (fPoint == FixedOne) return this;
 
         return Apply(region, row =>
         {
             for (var i = 0; i < row.Length; i++)
             {
                 var p = row[i];
-                var a = (int)(p >>> 24);
+                var a = (int)p.A;
                 var middle = (a * 128 + 127) / 255;
 
-                var r = Math.Clamp(middle + ((((int)((p >>> 16) & 0xFF) - middle) * fixedPoint + 128) >> 8), 0, a);
-                var g = Math.Clamp(middle + ((((int)((p >>> 8) & 0xFF) - middle) * fixedPoint + 128) >> 8), 0, a);
-                var b = Math.Clamp(middle + ((((int)(p & 0xFF) - middle) * fixedPoint + 128) >> 8), 0, a);
-
-                row[i] = ((uint)a << 24) | ((uint)r << 16) | ((uint)g << 8) | (uint)b;
+                row[i] = Pbgra32.FromChannels((uint)a, Stretch(p.R, middle, fPoint, a), Stretch(p.G, middle, fPoint, a), Stretch(p.B, middle, fPoint, a));
             }
         });
     }
@@ -357,25 +354,18 @@ public sealed partial class DirectCanvas
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     public DirectCanvas Saturation(float factor, Rect? region = null)
     {
-        var fixedPoint = (int)ToFixedPoint(factor);
-        if (fixedPoint == 256) return this;
+        var fPoint = ToFixedPoint(factor);
+        if (fPoint == FixedOne) return this;
 
         return Apply(region, row =>
         {
             for (var i = 0; i < row.Length; i++)
             {
                 var p = row[i];
-                var a = (int)(p >>> 24);
-                var r = (int)((p >>> 16) & 0xFF);
-                var g = (int)((p >>> 8) & 0xFF);
-                var b = (int)(p & 0xFF);
-                var gray = (54 * r + 183 * g + 19 * b) >> 8;
+                var a = (int)p.A;
+                var gray = (int)p.Luma;
 
-                r = Math.Clamp(gray + (((r - gray) * fixedPoint + 128) >> 8), 0, a);
-                g = Math.Clamp(gray + (((g - gray) * fixedPoint + 128) >> 8), 0, a);
-                b = Math.Clamp(gray + (((b - gray) * fixedPoint + 128) >> 8), 0, a);
-
-                row[i] = ((uint)a << 24) | ((uint)r << 16) | ((uint)g << 8) | (uint)b;
+                row[i] = Pbgra32.FromChannels((uint)a, Stretch(p.R, gray, fPoint, a), Stretch(p.G, gray, fPoint, a), Stretch(p.B, gray, fPoint, a));
             }
         });
     }
@@ -393,7 +383,7 @@ public sealed partial class DirectCanvas
 
         lock (_lock)
         {
-            BoxBlur(AsPixels(pixels), width, height, Math.Min(radius, MaxBlurRadius), false);
+            BoxBlur(AsRaw(AsPixels(curPixels)), curWidth, curHeight, Math.Min(radius, MaxBlurRadius), false);
             return this;
         }
     }
@@ -401,47 +391,47 @@ public sealed partial class DirectCanvas
     /// <summary>
     /// Sharpens the canvas
     /// </summary>
-    /// <param name="amount">How strongly the details are added back, <c>0f</c> is unchanged, <c>1f</c> is a normal sharpening and higher is stronger</param>
     /// <param name="radius">The size of the details to enhance in pixels, from <c>1</c> to <c>4096</c></param>
+    /// <param name="amount">How strongly the details are added back, <c>0f</c> is unchanged, <c>1f</c> is a normal sharpening and higher is stronger</param>
     /// <returns><see cref="DirectCanvas"/></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public DirectCanvas Sharpen(float amount = 1f, int radius = 1)
+    public DirectCanvas Sharpen(int radius = 1, float amount = 1f)
     {
-        var fixedPoint = (int)ToFixedPoint(amount);
+        var fPoint = ToFixedPoint(amount);
         ArgumentOutOfRangeException.ThrowIfNegative(radius);
 
-        if (fixedPoint == 0 || radius == 0) return this;
+        if (fPoint == 0 || radius == 0) return this;
 
         lock (_lock)
         {
-            var data = pixels;
-            var stride = width;
+            var data = curPixels;
+            var stride = curWidth;
 
             var blurred = AsPixels(data).ToArray();
-            BoxBlur(blurred, width, height, Math.Min(radius, MaxBlurRadius), true);
+            BoxBlur(AsRaw(blurred), curWidth, curHeight, Math.Min(radius, MaxBlurRadius), true);
 
-            Run(height, width * height, y =>
+            Run(curHeight, curWidth * curHeight, y =>
             {
                 var row = Row(data, stride, 0, y, stride);
 
                 for (var x = 0; x < row.Length; x++)
                 {
                     var blurredPixel = blurred[y * stride + x];
-                    if ((row[x] >>> 24) == 0 || (blurredPixel >>> 24) == 0) continue;
+                    if (row[x].IsTransparent || blurredPixel.IsTransparent) continue;
 
-                    var original = Unpack(row[x]);
-                    var soft = Unpack(blurredPixel);
+                    var original = row[x].ToRgba();
+                    var soft = blurredPixel.ToRgba();
 
-                    var strength = (fixedPoint * (int)Math.Min(blurredPixel >>> 24, 64u)) >> 6;
+                    var strength = (fPoint * Math.Min((int)blurredPixel.A, 64)) >> 6;
 
-                    row[x] = Pack(new Rgba(Enhance(original.R, soft.R, strength), Enhance(original.G, soft.G, strength), Enhance(original.B, soft.B, strength), original.A));
+                    row[x] = Pbgra32.FromRgba(new Rgba(Enhance(original.R, soft.R, strength), Enhance(original.G, soft.G, strength), Enhance(original.B, soft.B, strength), original.A));
                 }
             });
 
             return this;
         }
 
-        static byte Enhance(int original, int soft, int amount) => (byte)Math.Clamp(original + (((original - soft) * amount + 128) >> 8), 0, 255);
+        static byte Enhance(int original, int soft, long amount) => (byte)Math.Clamp(original + (int)((((original - soft) * amount) + FixedHalf) >> FixedShift), 0, 255);
     }
 
     /// <summary>
@@ -460,14 +450,14 @@ public sealed partial class DirectCanvas
     {
         lock (_lock)
         {
-            if (!Clip(width, height, region, out var area)) return this;
+            if (!Clip(curWidth, curHeight, region, out var area)) return this;
 
-            var buffer = new uint[area.Width];
+            var buffer = new Pbgra32[area.Width];
 
             for (int top = area.Top, bottom = area.Bottom - 1; top < bottom; top++, bottom--)
             {
-                var upper = Row(pixels, width, area.X, top, area.Width);
-                var lower = Row(pixels, width, area.X, bottom, area.Width);
+                var upper = Row(curPixels, curWidth, area.X, top, area.Width);
+                var lower = Row(curPixels, curWidth, area.X, bottom, area.Width);
 
                 upper.CopyTo(buffer);
                 lower.CopyTo(upper);
@@ -492,7 +482,7 @@ public sealed partial class DirectCanvas
     {
         lock (_lock)
         {
-            AsPixels(pixels).Reverse();
+            AsPixels(curPixels).Reverse();
             return this;
         }
     }
@@ -513,11 +503,11 @@ public sealed partial class DirectCanvas
     {
         lock (_lock)
         {
-            if (!Clip(width, height, area, out var clipped)) throw new ArgumentException("The area does not overlap the canvas", nameof(area));
+            if (!Clip(curWidth, curHeight, area, out var clipped)) throw new ArgumentException("The area does not overlap the canvas", nameof(area));
 
-            pixels = CopyRegion(clipped);
-            width = clipped.Width;
-            height = clipped.Height;
+            curPixels = CopyRegion(clipped);
+            curWidth = clipped.Width;
+            curHeight = clipped.Height;
 
             return this;
         }
@@ -542,21 +532,21 @@ public sealed partial class DirectCanvas
 
         lock (_lock)
         {
-            var newWidth = (long)width + left + right;
-            var newHeight = (long)height + top + bottom;
+            var newWidth = (long)curWidth + left + right;
+            var newHeight = (long)curHeight + top + bottom;
             ArgumentOutOfRangeException.ThrowIfGreaterThan(newWidth * newHeight * 4, Array.MaxLength, "padding");
 
             var padded = new byte[newWidth * newHeight * 4];
-            if (fillColor.HasValue) AsPixels(padded).Fill(Pack(fillColor.Value));
+            if (fillColor.HasValue) AsPixels(padded).Fill(Pbgra32.FromRgba(fillColor.Value));
 
-            for (var y = 0; y < height; y++)
+            for (var y = 0; y < curHeight; y++)
             {
-                Row(pixels, width, 0, y, width).CopyTo(Row(padded, (int)newWidth, left, top + y, width));
+                Row(curPixels, curWidth, 0, y, curWidth).CopyTo(Row(padded, (int)newWidth, left, top + y, curWidth));
             }
 
-            pixels = padded;
-            width = (int)newWidth;
-            height = (int)newHeight;
+            curPixels = padded;
+            curWidth = (int)newWidth;
+            curHeight = (int)newHeight;
 
             return this;
         }
@@ -586,7 +576,7 @@ public sealed partial class DirectCanvas
     {
         lock (_lock)
         {
-            var max = (float)Math.Max(width, height);
+            var max = (float)Math.Max(curWidth, curHeight);
 
             topLeft = Math.Clamp(float.IsNaN(topLeft) ? 0f : topLeft, 0f, max);
             topRight = Math.Clamp(float.IsNaN(topRight) ? 0f : topRight, 0f, max);
@@ -594,15 +584,15 @@ public sealed partial class DirectCanvas
             bottomLeft = Math.Clamp(float.IsNaN(bottomLeft) ? 0f : bottomLeft, 0f, max);
 
             var factor = Math.Min(
-                Math.Min(Fit(width, topLeft + topRight), Fit(width, bottomLeft + bottomRight)),
-                Math.Min(Fit(height, topLeft + bottomLeft), Fit(height, topRight + bottomRight)));
+                Math.Min(Fit(curWidth, topLeft + topRight), Fit(curWidth, bottomLeft + bottomRight)),
+                Math.Min(Fit(curHeight, topLeft + bottomLeft), Fit(curHeight, topRight + bottomRight)));
 
-            var data = AsPixels(pixels);
+            var data = AsPixels(curPixels);
 
             RoundCorner(data, 0, 0, 1, 1, topLeft * factor);
-            RoundCorner(data, width - 1, 0, -1, 1, topRight * factor);
-            RoundCorner(data, width - 1, height - 1, -1, -1, bottomRight * factor);
-            RoundCorner(data, 0, height - 1, 1, -1, bottomLeft * factor);
+            RoundCorner(data, curWidth - 1, 0, -1, 1, topRight * factor);
+            RoundCorner(data, curWidth - 1, curHeight - 1, -1, -1, bottomRight * factor);
+            RoundCorner(data, 0, curHeight - 1, 1, -1, bottomLeft * factor);
 
             return this;
         }
@@ -630,11 +620,9 @@ public sealed partial class DirectCanvas
     /// <returns><see cref="DirectCanvas"/></returns>
     public DirectCanvas Draw(DirectImage source, Pos position, float opacity = 1f, Rect? sourceRegion = null)
     {
-        ArgumentNullException.ThrowIfNull(source);
-
-        if (!Clip(source.Dimensions.Width, source.Dimensions.Height, sourceRegion, out var area)) return this;
-
-        return Compose(source.Pixels, source.Dimensions.Width, area, position, opacity);
+        return Clip(source.Dimensions.Width, source.Dimensions.Height, sourceRegion, out var area)
+            ? Compose(source.Pixels, source.Dimensions.Width, area, position, opacity)
+            : this;
     }
 
     /// <summary>
@@ -650,14 +638,12 @@ public sealed partial class DirectCanvas
     /// <returns><see cref="DirectCanvas"/></returns>
     public DirectCanvas Draw(DirectCanvas source, Pos position, float opacity = 1f, Rect? sourceRegion = null)
     {
-        ArgumentNullException.ThrowIfNull(source);
-
         byte[] snapshot;
         Rect area;
 
         lock (source._lock)
         {
-            if (!Clip(source.width, source.height, sourceRegion, out area)) return this;
+            if (!Clip(source.curWidth, source.curHeight, sourceRegion, out area)) return this;
 
             snapshot = source.CopyRegion(area);
         }
@@ -676,7 +662,7 @@ public sealed partial class DirectCanvas
     {
         lock (_lock)
         {
-            return new DirectImage(Copy(pixels), width, height);
+            return new DirectImage(Copy(curPixels), curWidth, curHeight);
         }
     }
 
@@ -694,7 +680,7 @@ public sealed partial class DirectCanvas
     {
         lock (_lock)
         {
-            Wic.Save(path, pixels, width, height, background);
+            Wic.Save(path, curPixels, curWidth, curHeight, background);
         }
     }
 
