@@ -12,7 +12,7 @@ internal static unsafe class Wic
     private const int RpcEChangedMode = unchecked((int)0x80010106);
     private const uint GenericRead = 0x80000000;
     private const uint GenericWrite = 0x40000000;
-    private const uint EncoderCacheInMemory = 0;
+    private const uint EncoderNoCache = 2;
     private const uint MetadataCacheOnDemand = 0;
     private const uint DitherTypeNone = 0;
     private const uint PaletteTypeCustom = 0;
@@ -140,7 +140,7 @@ internal static unsafe class Wic
             stream.InitializeFromFilename(fullPath, GenericWrite);
 
             factory.CreateEncoder(in container, nint.Zero, out encoder);
-            encoder.Initialize(stream, EncoderCacheInMemory);
+            encoder.Initialize(stream, EncoderNoCache);
             encoder.CreateNewFrame(out frame, nint.Zero);
 
             frame.Initialize(nint.Zero);

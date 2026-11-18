@@ -165,7 +165,7 @@ public static class DotTrayDirectTest
 
         handler.MenuItems.Add<IconItem>(x =>
         {
-            x.Icon = DirectImage.FromFile(@"C:\trashicon.png");
+            x.Icon = DirectImage.TryFromFile(@"C:\trashicon.png", out var image) ? image : null;
             x.IconSize = 32;
             x.IconOptions = ImageOptions.Default with { InterpolationMode = InterpolationMode.HighQualityCubic };
             x.Background = SolidColorBrush.Red;
@@ -394,15 +394,24 @@ file sealed class ImageItem : MenuItemBase
 
         var canvas = _image.ToCanvas();
 
-        canvas.Tint(Rgba.Green with { A = 100 });
+        canvas.Tint(new Rgba(150, 20, 180, 50));
         canvas.RoundCorners(float.MaxValue);
-        canvas.Pad(25, Rgba.Green);
+
+        if (Directory.Exists(@"C:\Users\leschi\Downloads")) canvas.SaveToFile(@"C:\Users\leschi\Downloads\canvas.png");
+        else canvas.SaveToFile(@"C:\canvas.png");
+
+        canvas.Pad(25, new Rgba(150, 10, 200, 200));
         canvas.RoundCorners(50f);
         canvas.Brightness(1.1f);
         canvas.Contrast(1.1f);
+        canvas.Sharpen(1f, 5);
+
+        Console.WriteLine(canvas.GetAverageColor());
 
         _image = canvas.ToImage();
-        _image.SaveToFile(@"C:\Users\leons\Downloads\img.png"); // FIX
+       
+        if (Directory.Exists(@"C:\Users\leschi\Downloads")) _image.SaveToFile(@"C:\Users\leschi\Downloads\img.png");
+        else _image.SaveToFile(@"C:\img.png");
 
         _actualSize = new Dim(_image.Dimensions.Width / 2, _image.Dimensions.Height / 2);
     }

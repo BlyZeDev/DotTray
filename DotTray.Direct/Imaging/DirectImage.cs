@@ -63,7 +63,7 @@ public sealed class DirectImage
     /// For formats other than <c>.png</c>, <paramref name="background"/> is used to fill the transparent parts
     /// </remarks>
     /// <param name="path">The path of the file</param>
-    /// <param name="background">The color transparent parts are drawn over for formats without transparency, or <see langword="null"/> for <see cref="Rgba.White"/></param>
+    /// <param name="background">The color used to replace transparent pixels in formats without transparency, <see langword="null"/> for <see cref="Rgba.White"/></param>
     public void SaveToFile(string path, Rgba? background = null) => Wic.Save(path, Pixels, Dimensions.Width, Dimensions.Height, background);
 
     /// <summary>

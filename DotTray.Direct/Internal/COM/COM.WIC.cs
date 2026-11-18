@@ -60,33 +60,23 @@ internal unsafe partial interface IWICFormatConverter : IWICBitmapSource
     void Initialize(IWICBitmapSource source, in Guid destinationFormat, uint dither, nint palette, double alphaThresholdPercent, uint paletteTranslate);
 }
 
-[GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
-[Guid("0c733a30-2a1c-11ce-ade5-00aa0044773d")]
-internal unsafe partial interface ISequentialStream
-{
-    void Read(byte* buffer, uint count, uint* read);
-    void Write(byte* buffer, uint count, uint* written);
-}
-
-[GeneratedComInterface(Options = ComInterfaceOptions.ComObjectWrapper)]
-[Guid("0000000c-0000-0000-C000-000000000046")]
-internal unsafe partial interface IStream : ISequentialStream
-{
-    void Seek(long move, uint origin, ulong* newPosition);
-    void SetSize(ulong size);
-    void CopyTo(IStream stream, ulong count, ulong* read, ulong* written);
-    void Commit(uint flags);
-    void Revert();
-    void LockRegion(ulong offset, ulong count, uint lockType);
-    void UnlockRegion(ulong offset, ulong count, uint lockType);
-    void Stat(nint stat, uint flags);
-    void Clone(out IStream stream);
-}
-
 [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16, Options = ComInterfaceOptions.ComObjectWrapper)]
 [Guid("135ff860-22b7-4ddf-b0f6-218f4f299a43")]
-internal unsafe partial interface IWICStream : IStream
+internal partial interface IWICStream
 {
+    void Read_Unbound();
+    void Write_Unbound();
+
+    void Seek_Unbound();
+    void SetSize_Unbound();
+    void CopyTo_Unbound();
+    void Commit_Unbound();
+    void Revert_Unbound();
+    void LockRegion_Unbound();
+    void UnlockRegion_Unbound();
+    void Stat_Unbound();
+    void Clone_Unbound();
+
     void InitializeFromIStream_Unbound();
     void InitializeFromFilename(string fileName, uint desiredAccess);
 }
@@ -95,7 +85,7 @@ internal unsafe partial interface IWICStream : IStream
 [Guid("00000103-a8f2-4877-ba0a-fd2b6645fb94")]
 internal partial interface IWICBitmapEncoder
 {
-    void Initialize(IStream stream, uint cacheOption);
+    void Initialize(IWICStream stream, uint cacheOption);
     void GetContainerFormat_Unbound();
     void GetEncoderInfo_Unbound();
     void SetColorContexts_Unbound();

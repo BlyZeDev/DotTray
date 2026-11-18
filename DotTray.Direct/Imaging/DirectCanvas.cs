@@ -1,14 +1,14 @@
 ﻿namespace DotTray.Direct.Imaging;
 
 using DotTray.Direct.Coloring;
+using DotTray.Direct.Internal;
 using DotTray.Direct.Primitives;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
 
 /// <summary>
 /// Represents a mutable image that can be edited and turned into a <see cref="DirectImage"/>
 /// </summary>
-public sealed class DirectCanvas
+public sealed partial class DirectCanvas
 {
     private const int ParallelThreshold = 4_194_304;
     private const int TileSize = 32;
@@ -54,6 +54,41 @@ public sealed class DirectCanvas
         lock (_lock)
         {
             return new DirectCanvas(Copy(pixels), width, height);
+        }
+    }
+
+    /// <summary>
+    /// Gets the average color
+    /// </summary>
+    /// <remarks>
+    /// The pixels are weighted by their opacity, so transparent parts do not darken the result. The alpha of the returned color is the average opacity
+    /// </remarks>
+    /// <param name="region">The part to look at, or <see langword="null"/> for the whole canvas</param>
+    /// <returns><see cref="Rgba"/></returns>
+    public Rgba GetAverageColor(Rect? region = null)
+    {
+        lock (_lock)
+        {
+            if (!Clip(width, height, region, out var area)) return Rgba.Transparent;
+
+            long sumA = 0, sumR = 0, sumG = 0, sumB = 0;
+
+            for (var y = 0; y < area.Height; y++)
+            {
+                foreach (var p in Row(pixels, width, area.X, area.Y + y, area.Width))
+                {
+                    sumA += p >>> 24;
+                    sumR += (p >>> 16) & 0xFF;
+                    sumG += (p >>> 8) & 0xFF;
+                    sumB += p & 0xFF;
+                }
+            }
+
+            if (sumA == 0) return Rgba.Transparent;
+
+            var count = (long)area.Width * area.Height;
+
+            return new Rgba((byte)((sumR * 255 + sumA / 2) / sumA), (byte)((sumG * 255 + sumA / 2) / sumA), (byte)((sumB * 255 + sumA / 2) / sumA), (byte)((sumA + count / 2) / count));
         }
     }
 
@@ -356,28 +391,57 @@ public sealed class DirectCanvas
         ArgumentOutOfRangeException.ThrowIfNegative(radius);
         if (radius == 0) return this;
 
-        radius = Math.Min(radius, MaxBlurRadius);
+        lock (_lock)
+        {
+            BoxBlur(AsPixels(pixels), width, height, Math.Min(radius, MaxBlurRadius), false);
+            return this;
+        }
+    }
+
+    /// <summary>
+    /// Sharpens the canvas
+    /// </summary>
+    /// <param name="amount">How strongly the details are added back, <c>0f</c> is unchanged, <c>1f</c> is a normal sharpening and higher is stronger</param>
+    /// <param name="radius">The size of the details to enhance in pixels, from <c>1</c> to <c>4096</c></param>
+    /// <returns><see cref="DirectCanvas"/></returns>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    public DirectCanvas Sharpen(float amount = 1f, int radius = 1)
+    {
+        var fixedPoint = (int)ToFixedPoint(amount);
+        ArgumentOutOfRangeException.ThrowIfNegative(radius);
+
+        if (fixedPoint == 0 || radius == 0) return this;
 
         lock (_lock)
         {
-            var current = AsPixels(pixels);
-            var buffer = new uint[current.Length];
+            var data = pixels;
+            var stride = width;
 
-            for (var pass = 0; pass < 3; pass++)
+            var blurred = AsPixels(data).ToArray();
+            BoxBlur(blurred, width, height, Math.Min(radius, MaxBlurRadius), true);
+
+            Run(height, width * height, y =>
             {
-                for (var y = 0; y < height; y++)
-                {
-                    BoxBlurLine(current, buffer, y * width, 1, width, radius);
-                }
+                var row = Row(data, stride, 0, y, stride);
 
-                for (var x = 0; x < width; x++)
+                for (var x = 0; x < row.Length; x++)
                 {
-                    BoxBlurLine(buffer, current, x, width, height, radius);
+                    var blurredPixel = blurred[y * stride + x];
+                    if ((row[x] >>> 24) == 0 || (blurredPixel >>> 24) == 0) continue;
+
+                    var original = Unpack(row[x]);
+                    var soft = Unpack(blurredPixel);
+
+                    var strength = (fixedPoint * (int)Math.Min(blurredPixel >>> 24, 64u)) >> 6;
+
+                    row[x] = Pack(new Rgba(Enhance(original.R, soft.R, strength), Enhance(original.G, soft.G, strength), Enhance(original.B, soft.B, strength), original.A));
                 }
-            }
+            });
 
             return this;
         }
+
+        static byte Enhance(int original, int soft, int amount) => (byte)Math.Clamp(original + (((original - soft) * amount + 128) >> 8), 0, 255);
     }
 
     /// <summary>
@@ -616,125 +680,22 @@ public sealed class DirectCanvas
         }
     }
 
-    private DirectCanvas Apply(Rect? region, RowAction action, bool parallel = true)
+    /// <summary>
+    /// Saves the current canvas to a file
+    /// </summary>
+    /// <remarks>
+    /// The format is chosen by the extension of <paramref name="path"/>.<br/>
+    /// Supported formats are <c>.png</c>, <c>.jpg</c>, <c>.jpeg</c> and <c>.bmp</c>.<br/>
+    /// For formats other than <c>.png</c>, <paramref name="background"/> is used to fill the transparent parts
+    /// </remarks>
+    /// <param name="path">The path of the file</param>
+    /// <param name="background">The color used to replace transparent pixels in formats without transparency, <see langword="null"/> for <see cref="Rgba.White"/></param>
+    public void SaveToFile(string path, Rgba? background = null)
     {
         lock (_lock)
         {
-            if (!Clip(width, height, region, out var area)) return this;
-
-            var data = pixels;
-            var stride = width;
-
-            void Process(int i) => action(Row(data, stride, area.X, area.Y + i, area.Width));
-
-            if (parallel) Run(area.Height, area.Width * area.Height, Process);
-            else
-            {
-                for (var i = 0; i < area.Height; i++)
-                {
-                    Process(i);
-                }
-            }
-
-            return this;
+            Wic.Save(path, pixels, width, height, background);
         }
-    }
-
-    private void RoundCorner(Span<uint> data, int originX, int originY, int directionX, int directionY, float radius)
-    {
-        var size = (int)MathF.Ceiling(radius);
-
-        for (var y = 0; y < size; y++)
-        {
-            for (var x = 0; x < size; x++)
-            {
-                var dx = Math.Max(0f, radius - (x + 0.5f));
-                var dy = Math.Max(0f, radius - (y + 0.5f));
-
-                var coverage = Math.Clamp(radius - MathF.Sqrt(dx * dx + dy * dy) + 0.5f, 0f, 1f);
-                if (coverage >= 1f) continue;
-
-                var index = (originY + y * directionY) * width + originX + x * directionX;
-                data[index] = Scale(data[index], (uint)MathF.Round(coverage * 255f));
-            }
-        }
-    }
-
-    private DirectCanvas Compose(byte[] source, int sourceStride, Rect sourceArea, Pos position, float opacity)
-    {
-        var factor = ToByteFactor(opacity);
-        if (factor == 0) return this;
-
-        lock (_lock)
-        {
-            var left = Math.Max(0, position.X);
-            var top = Math.Max(0, position.Y);
-            var right = Math.Min(width, position.X + sourceArea.Width);
-            var bottom = Math.Min(height, position.Y + sourceArea.Height);
-
-            if (right <= left || bottom <= top) return this;
-
-            var data = pixels;
-            var stride = width;
-            var count = right - left;
-            var sourceX = sourceArea.X + (left - position.X);
-            var sourceY = sourceArea.Y + (top - position.Y);
-
-            Run(bottom - top,
-                count * (bottom - top),
-                i => BlendRow(Row(data, stride, left, top + i, count), Row(source, sourceStride, sourceX, sourceY + i, count), factor));
-
-            return this;
-        }
-    }
-
-    private DirectCanvas Transpose(bool clockwise)
-    {
-        lock (_lock)
-        {
-            var rotated = new byte[pixels.Length];
-            var src = AsPixels(pixels);
-            var dst = AsPixels(rotated);
-
-            for (var tileY = 0; tileY < height; tileY += TileSize)
-            {
-                for (var tileX = 0; tileX < width; tileX += TileSize)
-                {
-                    for (var y = tileY; y < Math.Min(height, tileY + TileSize); y++)
-                    {
-                        for (var x = tileX; x < Math.Min(width, tileX + TileSize); x++)
-                        {
-                            dst[clockwise ? x * height + (height - 1 - y) : (width - 1 - x) * height + y] = src[y * width + x];
-                        }
-                    }
-                }
-            }
-
-            pixels = rotated;
-            (width, height) = (height, width);
-
-            return this;
-        }
-    }
-
-    private byte[] CopyRegion(Rect area)
-    {
-        var copy = GC.AllocateUninitializedArray<byte>(area.Width * area.Height * 4);
-
-        for (var y = 0; y < area.Height; y++)
-        {
-            Row(pixels, width, area.X, area.Y + y, area.Width).CopyTo(Row(copy, area.Width, 0, y, area.Width));
-        }
-
-        return copy;
-    }
-
-    private int IndexOf(int x, int y)
-    {
-        if ((uint)x >= (uint)width) throw new ArgumentOutOfRangeException(nameof(x));
-        if ((uint)y >= (uint)height) throw new ArgumentOutOfRangeException(nameof(y));
-
-        return y * width + x;
     }
 
     /// <summary>
@@ -802,173 +763,4 @@ public sealed class DirectCanvas
             return false;
         }
     }
-
-    private static void BoxBlurLine(ReadOnlySpan<uint> source, Span<uint> destination, int start, int step, int count, int radius)
-    {
-        var inverse = (1u << 24) / (uint)(2 * radius + 1);
-        uint sumA = 0, sumR = 0, sumG = 0, sumB = 0;
-
-        for (var i = 0; i <= Math.Min(radius, count - 1); i++)
-        {
-            var p = source[start + i * step];
-
-            sumA += p >>> 24;
-            sumR += (p >>> 16) & 0xFF;
-            sumG += (p >>> 8) & 0xFF;
-            sumB += p & 0xFF;
-        }
-
-        for (var i = 0; i < count; i++)
-        {
-            destination[start + i * step] = (Average(sumA, inverse) << 24) | (Average(sumR, inverse) << 16) | (Average(sumG, inverse) << 8) | Average(sumB, inverse);
-
-            var entering = i + radius + 1;
-            if (entering < count)
-            {
-                var p = source[start + entering * step];
-
-                sumA += p >>> 24;
-                sumR += (p >>> 16) & 0xFF;
-                sumG += (p >>> 8) & 0xFF;
-                sumB += p & 0xFF;
-            }
-
-            var leaving = i - radius;
-            if (leaving >= 0)
-            {
-                var p = source[start + leaving * step];
-
-                sumA -= p >>> 24;
-                sumR -= (p >>> 16) & 0xFF;
-                sumG -= (p >>> 8) & 0xFF;
-                sumB -= p & 0xFF;
-            }
-        }
-
-        static uint Average(uint sum, uint inverse) => (sum * inverse + (1u << 23)) >>> 24;
-    }
-
-    private static bool Clip(int width, int height, Rect? region, out Rect area)
-    {
-        var actualRegion = region ?? new Rect(0, 0, width, height);
-
-        var left = Math.Max(0, actualRegion.Left);
-        var top = Math.Max(0, actualRegion.Top);
-        var right = Math.Min(width, actualRegion.Right);
-        var bottom = Math.Min(height, actualRegion.Bottom);
-
-        area = new Rect(left, top, Math.Max(0, right - left), Math.Max(0, bottom - top));
-        return right > left && bottom > top;
-    }
-
-    private static void Run(int count, int pixelCount, Action<int> body)
-    {
-        var parts = Math.Min(count, Environment.ProcessorCount);
-
-        if (parts <= 1 || pixelCount < ParallelThreshold)
-        {
-            for (var i = 0; i < count; i++)
-            {
-                body(i);
-            }
-            return;
-        }
-
-        Parallel.For(0, parts, part =>
-        {
-            var start = (int)((long)count * part / parts);
-            var end = (int)((long)count * (part + 1) / parts);
-
-            for (var i = start; i < end; i++)
-            {
-                body(i);
-            }
-        });
-    }
-
-    private static Span<uint> AsPixels(byte[] data) => MemoryMarshal.Cast<byte, uint>(data.AsSpan());
-
-    private static Span<uint> Row(byte[] data, int stride, int x, int y, int count) => AsPixels(data).Slice(y * stride + x, count);
-
-    private static byte[] Copy(byte[] source)
-    {
-        var copy = GC.AllocateUninitializedArray<byte>(source.Length);
-        source.CopyTo(copy, 0);
-
-        return copy;
-    }
-
-    private static uint ToByteFactor(float factor) => (uint)MathF.Round(Math.Clamp(float.IsNaN(factor) ? 0f : factor, 0f, 1f) * 255f);
-
-    private static void BlendRow(Span<uint> destination, ReadOnlySpan<uint> source, uint factor)
-    {
-        for (var i = 0; i < destination.Length; i++)
-        {
-            var s = factor == 255 ? source[i] : Scale(source[i], factor);
-            var a = s >>> 24;
-
-            if (a == 255) destination[i] = s;
-            else if (a != 0) destination[i] = Scale(destination[i], 255 - a) + s;
-        }
-    }
-
-    private static uint Mul255(uint x, uint y)
-    {
-        var t = x * y + 128;
-        return (t + (t >>> 8)) >>> 8;
-    }
-
-    private static uint ToFixedPoint(float factor)
-    {
-        if (!float.IsFinite(factor) || factor < 0f) throw new ArgumentOutOfRangeException(nameof(factor));
-
-        return (uint)MathF.Round(MathF.Min(factor, 255f) * 256f);
-    }
-
-    private static uint Scale(uint pixel, uint factor)
-    {
-        var rb = (pixel & 0x00FF00FFu) * factor + 0x00800080u;
-        rb = ((rb + ((rb >>> 8) & 0x00FF00FFu)) >>> 8) & 0x00FF00FFu;
-
-        var ag = ((pixel >>> 8) & 0x00FF00FFu) * factor + 0x00800080u;
-        ag = (ag + ((ag >>> 8) & 0x00FF00FFu)) & 0xFF00FF00u;
-
-        return rb | ag;
-    }
-
-    private static Rgba Unpack(uint pixel)
-    {
-        var a = pixel >>> 24;
-        if (a == 0) return Rgba.Transparent;
-        if (a == 255) return new Rgba((byte)(pixel >>> 16), (byte)(pixel >>> 8), (byte)pixel, 255);
-
-        var offset = (int)(a << 8);
-        return new Rgba(Unpremultiplied[offset | (int)((pixel >>> 16) & 0xFF)], Unpremultiplied[offset | (int)((pixel >>> 8) & 0xFF)], Unpremultiplied[offset | (int)(pixel & 0xFF)], (byte)a);
-    }
-
-    private static uint Pack(Rgba color)
-    {
-        var a = (uint)color.A;
-        if (a == 255) return 0xFF000000u | ((uint)color.R << 16) | ((uint)color.G << 8) | color.B;
-        if (a == 0) return 0;
-
-        return (a << 24) | (Mul255(color.R, a) << 16) | (Mul255(color.G, a) << 8) | Mul255(color.B, a);
-    }
-
-    private static byte[] BuildUnpremultiplyTable()
-    {
-        var table = new byte[256 * 256];
-
-        for (var a = 1; a < 256; a++)
-        {
-            for (var v = 0; v <= a; v++)
-            {
-                table[(a << 8) | v] = (byte)Math.Min(255, (v * 255 + a / 2) / a);
-            }
-        }
-
-        return table;
-    }
-
-    private delegate void RowAction(Span<uint> row);
 }
