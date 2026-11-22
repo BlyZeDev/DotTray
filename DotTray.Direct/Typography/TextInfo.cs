@@ -14,9 +14,9 @@ public sealed record TextInfo
     public const float MaxSize = 1000f;
 
     /// <summary>
-    /// Segoe UI Emoji, 16 DIPs
+    /// <see cref="SystemFont.Default"/> and <c>16f</c>
     /// </summary>
-    public static TextInfo Default => new TextInfo
+    public static readonly TextInfo Default = new TextInfo
     {
         Font = SystemFont.Default,
         Size = 16f

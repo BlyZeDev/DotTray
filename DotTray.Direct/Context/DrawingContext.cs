@@ -12,7 +12,7 @@ using System.Runtime.CompilerServices;
 /// <summary>
 /// Includes data for drawing <see cref="MenuItemBase"/> instances
 /// </summary>
-public sealed class DrawingContext : Context
+public sealed class DrawingContext : ContextBase
 {
     private readonly DirectBrushContext _brushContext;
 

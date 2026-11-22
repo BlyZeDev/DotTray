@@ -86,7 +86,8 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// Adds a new item to the collection
     /// </summary>
     /// <typeparam name="TItem">The type of the item</typeparam>
-    public void Add<TItem>() where TItem : MenuItemBase, new()
+    /// <returns>The created item</returns>
+    public TItem Add<TItem>() where TItem : MenuItemBase, new()
     {
         var item = new TItem();
 
@@ -98,6 +99,8 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
         }
 
         OnUpdate();
+
+        return item;
     }
 
     /// <summary>
@@ -105,7 +108,8 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// </summary>
     /// <typeparam name="TItem">The type of the item</typeparam>
     /// <param name="configuration">The configuration of the item</param>
-    public void Add<TItem>(Action<TItem> configuration) where TItem : MenuItemBase, new()
+    /// <returns>The created item</returns>
+    public TItem Add<TItem>(Action<TItem> configuration) where TItem : MenuItemBase, new()
     {
         var item = new TItem();
         configuration(item);
@@ -118,6 +122,8 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
         }
 
         OnUpdate();
+
+        return item;
     }
 
     /// <summary>
@@ -126,7 +132,8 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
     /// <typeparam name="TItem">The type of the item</typeparam>
     /// <param name="index">The zero-based index of the position to insert the item into</param>
     /// <param name="configuration">The configuration of the item</param>
-    public void Insert<TItem>(int index, Action<TItem>? configuration = null) where TItem : MenuItemBase, new()
+    /// <returns>The created item</returns>
+    public TItem Insert<TItem>(int index, Action<TItem>? configuration = null) where TItem : MenuItemBase, new()
     {
         var item = new TItem();
         configuration?.Invoke(item);
@@ -139,6 +146,8 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
         }
 
         OnUpdate();
+
+        return item;
     }
 
     /// <summary>

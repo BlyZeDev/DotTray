@@ -42,4 +42,28 @@ public static class DirectDefaultStyles
     /// The default item foreground disabled used for menu items, eg. <see cref="MenuItem.ForegroundDisabled"/>
     /// </summary>
     public static IDirectBrush ItemForegroundDisabled { get; set; } = new SolidColorBrush(new Rgba(118, 118, 118));
+
+    /// <summary>
+    /// Overrides all properties by calling <see cref="UseLight"/> or <see cref="UseDark"/> depending on the system theme
+    /// </summary>
+    public static void UseSystem()
+    {
+        //TODO
+    }
+
+    /// <summary>
+    /// Overrides all properties to the light theme
+    /// </summary>
+    public static void UseLight()
+    {
+        //TODO
+    }
+
+    /// <summary>
+    /// Overrides all properties to the dark theme
+    /// </summary>
+    public static void UseDark()
+    {
+        //TODO
+    }
 }

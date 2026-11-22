@@ -54,6 +54,14 @@ public sealed class RadialGradientBrush : IDirectBrush
     }
 
     /// <inheritdoc/>
+    public bool Equals(IDirectBrush? other) => other is RadialGradientBrush gradient
+        && Center.Equals(gradient.Center)
+        && Radius.Equals(gradient.Radius)
+        && OriginOffset.Equals(gradient.OriginOffset)
+        && ExtendMode == gradient.ExtendMode
+        && _stops.SequenceEqual(gradient._stops);
+
+    /// <inheritdoc/>
     public DirectBrush Create(DirectBrushContext context, RectF bounds)
     {
         var center = new PointF

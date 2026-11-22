@@ -6,7 +6,7 @@ using DotTray.Direct.Primitives;
 /// <summary>
 /// Describes a way to create a direct brush
 /// </summary>
-public interface IDirectBrush
+public interface IDirectBrush : IEquatable<IDirectBrush>
 {
     /// <summary>
     /// Creates the brush used to paint inside <paramref name="bounds"/>

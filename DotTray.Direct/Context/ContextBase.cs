@@ -11,7 +11,7 @@ using System.ComponentModel;
 /// <remarks>
 /// All sizes and coordinates handled by contexts are in DIPs (1 DIP = 1 pixel at 100% display scaling)
 /// </remarks>
-public abstract class Context
+public abstract class ContextBase
 {
     private protected readonly DirectSurface _surface;
 
@@ -32,7 +32,7 @@ public abstract class Context
     /// </remarks>
     public float Scale => _surface.Scale;
 
-    internal Context(DirectSurface surface) => _surface = surface;
+    internal ContextBase(DirectSurface surface) => _surface = surface;
 
     /// <summary>
     /// Snaps <paramref name="dips"/> to the nearest physical pixel edge, returned in DIPs

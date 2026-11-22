@@ -24,12 +24,16 @@ public class MenuItem : MenuItemBase
     /// <summary>
     /// The background brush matching the current state (disabled, hovered or normal)
     /// </summary>
-    protected virtual IDirectBrush CurrentBackground => IsDisabled ? BackgroundDisabled : (isHovering ? BackgroundHover : Background);
+    protected virtual IDirectBrush CurrentBackground => IsDisabled
+        ? (BackgroundDisabled ?? DirectDefaultStyles.ItemBackgroundDisabled)
+        : (isHovering ? (BackgroundHover ?? DirectDefaultStyles.ItemBackgroundHover) : (Background ?? DirectDefaultStyles.ItemBackground));
 
     /// <summary>
     /// The foreground brush matching the current state (disabled, hovered or normal)
     /// </summary>
-    protected virtual IDirectBrush CurrentForeground => IsDisabled ? ForegroundDisabled : (isHovering ? ForegroundHover : Foreground);
+    protected virtual IDirectBrush CurrentForeground => IsDisabled
+        ? (ForegroundDisabled ?? DirectDefaultStyles.ItemForegroundDisabled)
+        : (isHovering ? (ForegroundHover ?? DirectDefaultStyles.ItemForegroundHover) : (Foreground ?? DirectDefaultStyles.ItemForeground));
 
     /// <summary>
     /// <inheritdoc/>
@@ -47,94 +51,94 @@ public class MenuItem : MenuItemBase
     internal protected sealed override MenuItemCollection SubmenuItems => base.SubmenuItems;
 
     /// <summary>
-    /// The background color
+    /// The background color, or <see langword="null"/> to inherit from <see cref="DirectDefaultStyles.ItemBackground"/>
     /// </summary>
-    public virtual IDirectBrush Background
+    public virtual IDirectBrush? Background
     {
         get;
         set
         {
-            if (field.Equals(value)) return;
+            if (EqualityComparer<IDirectBrush?>.Default.Equals(field, value)) return;
 
             field = value;
             Update();
         }
-    } = DirectDefaultStyles.ItemBackground;
+    } = null;
 
     /// <summary>
-    /// The foreground color
+    /// The foreground color, or <see langword="null"/> to inherit from <see cref="DirectDefaultStyles.ItemForeground"/>
     /// </summary>
-    public virtual IDirectBrush Foreground
+    public virtual IDirectBrush? Foreground
     {
         get;
         set
         {
-            if (field.Equals(value)) return;
+            if (EqualityComparer<IDirectBrush?>.Default.Equals(field, value)) return;
 
             field = value;
             Update();
         }
-    } = DirectDefaultStyles.ItemForeground;
+    } = null;
 
     /// <summary>
-    /// The background hover color
+    /// The background hover color, or <see langword="null"/> to inherit from <see cref="DirectDefaultStyles.ItemBackgroundHover"/>
     /// </summary>
-    public virtual IDirectBrush BackgroundHover
+    public virtual IDirectBrush? BackgroundHover
     {
         get;
         set
         {
-            if (field.Equals(value)) return;
+            if (EqualityComparer<IDirectBrush?>.Default.Equals(field, value)) return;
 
             field = value;
             Update();
         }
-    } = DirectDefaultStyles.ItemBackgroundHover;
+    } = null;
 
     /// <summary>
-    /// The foreground hover color
+    /// The foreground hover color, or <see langword="null"/> to inherit from <see cref="DirectDefaultStyles.ItemForegroundHover"/>
     /// </summary>
-    public virtual IDirectBrush ForegroundHover
+    public virtual IDirectBrush? ForegroundHover
     {
         get;
         set
         {
-            if (field.Equals(value)) return;
+            if (EqualityComparer<IDirectBrush?>.Default.Equals(field, value)) return;
 
             field = value;
             Update();
         }
-    } = DirectDefaultStyles.ItemForegroundHover;
+    } = null;
 
     /// <summary>
-    /// The background disabled color
+    /// The background disabled color, or <see langword="null"/> to inherit from <see cref="DirectDefaultStyles.ItemBackgroundDisabled"/>
     /// </summary>
-    public virtual IDirectBrush BackgroundDisabled
+    public virtual IDirectBrush? BackgroundDisabled
     {
         get;
         set
         {
-            if (field.Equals(value)) return;
+            if (EqualityComparer<IDirectBrush?>.Default.Equals(field, value)) return;
 
             field = value;
             Update();
         }
-    } = DirectDefaultStyles.ItemBackgroundDisabled;
+    } = null;
 
     /// <summary>
-    /// The foreground disabled color
+    /// The foreground disabled color, or <see langword="null"/> to inherit from <see cref="DirectDefaultStyles.ItemForegroundDisabled"/>
     /// </summary>
-    public virtual IDirectBrush ForegroundDisabled
+    public virtual IDirectBrush? ForegroundDisabled
     {
         get;
         set
         {
-            if (field.Equals(value)) return;
+            if (EqualityComparer<IDirectBrush?>.Default.Equals(field, value)) return;
 
             field = value;
             Update();
         }
-    } = DirectDefaultStyles.ItemForegroundDisabled;
+    } = null;
 
     /// <summary>
     /// The displayed text
@@ -177,6 +181,7 @@ public class MenuItem : MenuItemBase
             if (field.Equals(value)) return;
 
             field = value;
+            if (field) isHovering = false;
             Update();
         }
     } = false;

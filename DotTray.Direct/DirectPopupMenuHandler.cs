@@ -11,7 +11,7 @@ using DotTray.Direct.Internal.Rendering;
 /// <remarks>
 /// One instance can be shared by multiple <see cref="NotifyIcon{THandler}"/> instances at the same time, every icon gets its own popup tree
 /// </remarks>
-public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
+public class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
 {
     private readonly Lock _lock;
     private readonly Dictionary<object, PopupMenuTree> _activeTrees;
@@ -20,14 +20,14 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
     private bool disposed;
 
     /// <summary>
-    /// The background color of the popup windows
-    /// </summary>
-    public IDirectBrush Background { get; set; } = DirectDefaultStyles.PopupWindowBackground;
-
-    /// <summary>
     /// The <see cref="MenuItemCollection"/> of this instance
     /// </summary>
     public MenuItemCollection MenuItems { get; }
+
+    /// <summary>
+    /// The background color of the popup windows, or <see langword="null"/> to inherit from <see cref="DirectDefaultStyles.PopupWindowBackground"/>
+    /// </summary>
+    public IDirectBrush? Background { get; set; } = null;
 
     /// <summary>
     /// Initializes a new <see cref="DirectPopupMenuHandler"/> instance
@@ -42,9 +42,17 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// By default this opens the popup menu.<br/>
+    /// If you don't want this behaviour override <see cref="Show{THandler}(NotifyIcon{THandler}, MousePosition)"/> and don't call the <see langword="base"/> implementation
+    /// </remarks>
     protected override void Show<THandler>(NotifyIcon<THandler> owner, MousePosition mousePosition) => ShowRoot(owner);
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// By default this opens the popup menu.<br/>
+    /// If you don't want this behaviour override <see cref="ShowContext{THandler}(NotifyIcon{THandler}, MousePosition)"/> and don't call the <see langword="base"/> implementation
+    /// </remarks>
     protected override void ShowContext<THandler>(NotifyIcon<THandler> owner, MousePosition mousePosition) => ShowRoot(owner);
 
     /// <summary>
@@ -72,6 +80,8 @@ public sealed class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
 
         foreach (var tree in trees) tree.Dispose();
         foreach (var device in devices) device?.Dispose();
+
+        GC.SuppressFinalize(this);
     }
 
     private void ShowRoot(object owner)

@@ -48,6 +48,13 @@ public sealed class LinearGradientBrush : IDirectBrush
     }
 
     /// <inheritdoc/>
+    public bool Equals(IDirectBrush? other) => other is LinearGradientBrush gradient
+        && Start.Equals(gradient.Start)
+        && End.Equals(gradient.End)
+        && ExtendMode == gradient.ExtendMode
+        && _stops.SequenceEqual(gradient._stops);
+
+    /// <inheritdoc/>
     public DirectBrush Create(DirectBrushContext context, RectF bounds)
     {
         var start = new PointF

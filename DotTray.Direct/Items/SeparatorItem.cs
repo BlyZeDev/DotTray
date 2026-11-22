@@ -20,34 +20,34 @@ public class SeparatorItem : MenuItemBase
     internal protected override bool IgnoreInteraction => true;
 
     /// <summary>
-    /// The background color
+    /// The background color, or <see langword="null"/> to inherit from <see cref="DirectDefaultStyles.ItemBackgroundDisabled"/>
     /// </summary>
-    public IDirectBrush Background
+    public IDirectBrush? Background
     {
         get;
         set
         {
-            if (field.Equals(value)) return;
+            if (EqualityComparer<IDirectBrush?>.Default.Equals(field, value)) return;
 
             field = value;
             Update();
         }
-    } = DirectDefaultStyles.ItemBackground;
+    } = null;
 
     /// <summary>
-    /// The color of the separator line
+    /// The color of the separator line, or <see langword="null"/> to inherit from <see cref="DirectDefaultStyles.ItemForegroundDisabled"/>
     /// </summary>
-    public IDirectBrush Foreground
+    public IDirectBrush? Foreground
     {
         get;
         set
         {
-            if (field.Equals(value)) return;
+            if (EqualityComparer<IDirectBrush?>.Default.Equals(field, value)) return;
 
             field = value;
             Update();
         }
-    } = DirectDefaultStyles.ItemForegroundDisabled;
+    } = null;
 
     /// <summary>
     /// The thickness of the separator line, in DIPs
@@ -125,7 +125,7 @@ public class SeparatorItem : MenuItemBase
     {
         var bounds = context.ItemBounds;
 
-        context.FillRect(bounds, Background);
+        context.FillRect(bounds, Background ?? DirectDefaultStyles.ItemBackgroundDisabled);
 
         var topPx = context.ToPixels(bounds.Top);
         var heightPx = Math.Max(1, context.ToPixels(bounds.Bottom) - topPx);
@@ -134,7 +134,7 @@ public class SeparatorItem : MenuItemBase
 
         var line = new RectF(bounds.X + HorizontalPadding, lineTopPx / context.Scale, Math.Max(0, bounds.Width - HorizontalPadding * 2), linePx / context.Scale);
 
-        if (IsRounded) context.FillRoundedRect(line, linePx / context.Scale / 2f, Foreground);
-        else context.FillRect(line, Foreground);
+        if (IsRounded) context.FillRoundedRect(line, linePx / context.Scale / 2f, Foreground ?? DirectDefaultStyles.ItemForegroundDisabled);
+        else context.FillRect(line, Foreground ?? DirectDefaultStyles.ItemForegroundDisabled);
     }
 }
