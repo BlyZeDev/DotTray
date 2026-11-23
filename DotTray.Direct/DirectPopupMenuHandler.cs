@@ -27,7 +27,17 @@ public class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
     /// <summary>
     /// The background color of the popup windows, or <see langword="null"/> to inherit from <see cref="DirectDefaultStyles.PopupWindowBackground"/>
     /// </summary>
-    public IDirectBrush? Background { get; set; } = null;
+    public IDirectBrush? Background
+    {
+        get;
+        set
+        {
+            if (EqualityComparer<IDirectBrush?>.Default.Equals(field, value)) return;
+
+            field = value;
+            MenuItems.ForceUpdate();
+        }
+    }
 
     /// <summary>
     /// Initializes a new <see cref="DirectPopupMenuHandler"/> instance

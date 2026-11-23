@@ -31,10 +31,7 @@ public static class DotTrayDirectTest
                     var tempIcon = CreateTestIcon(test.Icon);
                     disposables.Add(tempIcon);
 
-                    var handler = new DirectPopupMenuHandler
-                    {
-                        Background = LinearGradientBrush.Vertical(Rgba.Blue, Rgba.Green)
-                    };
+                    var handler = new DirectPopupMenuHandler();
                     disposables.Add(handler);
 
                     var icon = await NotifyIcon.RunAsync(tempIcon.FilePath, handler, cts.Token);
@@ -60,8 +57,6 @@ public static class DotTrayDirectTest
 
     private static void ConfigureBoundsMenu(DirectPopupMenuHandler handler)
     {
-        handler.Background = SolidColorBrush.Black;
-
         handler.MenuItems.Add<MenuItem>(x =>
         {
             x.Text = "Min - MenuItem";
@@ -324,6 +319,17 @@ public static class DotTrayDirectTest
         handler.MenuItems.Add<MenuItem>(x =>
         {
             x.Text = "🪼🔥 Élite 🔥🪼";
+            x.Interacted = args =>
+            {
+                if (args.Type is not ItemInteractionType.MouseLeftUp) return;
+
+                if (Random.Shared.Next(0, 2) == 0) DirectDefaultStyles.UseLight();
+                else DirectDefaultStyles.UseDark();
+
+                handler.MenuItems.ForceUpdate();
+
+                args.KeepMenuOpen = true;
+            };
             x.ForegroundHover = LinearGradientBrush.FromAngle(
                 [
                     new GradientStop(new Rgba(255, 235, 160), 0f),

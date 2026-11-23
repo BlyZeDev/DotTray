@@ -48,6 +48,11 @@ public sealed class MenuItemCollection : IReadOnlyList<MenuItemBase>
         _items = [];
     }
 
+    /// <summary>
+    /// Initiates an update manually
+    /// </summary>
+    public void ForceUpdate() => OnUpdate();
+
     /// <inheritdoc/>
     public MenuItemBase this[int index]
     {
