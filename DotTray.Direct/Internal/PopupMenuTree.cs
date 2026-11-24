@@ -13,6 +13,9 @@ internal sealed class PopupMenuTree : IDisposable
     private readonly PInvoke.LowLevelKeyboardProc _pKeyHook;
     private readonly nint _hKeyHook;
 
+    private readonly PInvoke.WinEventProc _pForegroundHook;
+    private readonly nint _hForegroundHook;
+
     private readonly Dictionary<nint, PopupMenu> _popups = [];
     private readonly nint _rootHWnd;
 
@@ -38,6 +41,9 @@ internal sealed class PopupMenuTree : IDisposable
 
         _pKeyHook = LowLevelKeyboardProcFunc;
         _hKeyHook = PInvoke.SetWindowsHookEx(PInvoke.WH_KEYBOARD_LL, Marshal.GetFunctionPointerForDelegate(_pKeyHook), nint.Zero, 0);
+
+        _pForegroundHook = OnForegroundChanged;
+        _hForegroundHook = PInvoke.SetWinEventHook(PInvoke.EVENT_SYSTEM_FOREGROUND, PInvoke.EVENT_SYSTEM_FOREGROUND, nint.Zero, _pForegroundHook, 0, 0, PInvoke.WINEVENT_OUTOFCONTEXT);
     }
 
     public void Close()
@@ -125,6 +131,12 @@ internal sealed class PopupMenuTree : IDisposable
         {
             var vkCode = Marshal.ReadInt32(lParam);
 
+            if (IsDismissKey(vkCode) || (vkCode == PInvoke.VK_ESCAPE && IsCtrlDown()))
+            {
+                Dispose();
+                return PInvoke.CallNextHookEx(_hKeyHook, nCode, wParam, lParam);
+            }
+
             if (IsNavigationKey(vkCode))
             {
                 PInvoke.PostMessage(currentLeafHWnd, PopupMenu.WM_APP_POPUP_KEYDOWN, vkCode, nint.Zero);
@@ -133,6 +145,12 @@ internal sealed class PopupMenuTree : IDisposable
         }
 
         return PInvoke.CallNextHookEx(_hKeyHook, nCode, wParam, lParam);
+    }
+
+    private void OnForegroundChanged(nint hook, uint evt, nint hwnd, int idObject, int idChild, uint thread, uint time)
+    {
+        if (disposed || _popups.ContainsKey(hwnd)) return;
+        Dispose();
     }
 
     private bool IsInHierarchy()
@@ -154,6 +172,7 @@ internal sealed class PopupMenuTree : IDisposable
         
         PInvoke.UnhookWindowsHookEx(_hMouseHook);
         PInvoke.UnhookWindowsHookEx(_hKeyHook);
+        PInvoke.UnhookWinEvent(_hForegroundHook);
 
         try
         {
@@ -168,6 +187,12 @@ internal sealed class PopupMenuTree : IDisposable
     private static bool IsNavigationKey(int vkCode) => vkCode is
         PInvoke.VK_UP or PInvoke.VK_DOWN or PInvoke.VK_LEFT or PInvoke.VK_RIGHT or
         PInvoke.VK_RETURN or PInvoke.VK_ESCAPE;
+
+    private static bool IsDismissKey(int vkCode) => vkCode is
+        PInvoke.VK_LWIN or PInvoke.VK_RWIN or
+        PInvoke.VK_MENU or PInvoke.VK_LMENU or PInvoke.VK_RMENU;
+
+    private static bool IsCtrlDown() => (PInvoke.GetAsyncKeyState(PInvoke.VK_CONTROL) & 0x8000) != 0;
 
     private static bool IsHit(nint hWnd, POINT pos) => PInvoke.GetWindowRect(hWnd, out var rect) && PInvoke.PtInRect(ref rect, pos);
 }

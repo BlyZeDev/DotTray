@@ -11,7 +11,6 @@ using OpenSubmenu = (nint HWnd, Items.MenuItemBase? Owner);
 internal sealed class PopupMenu
 {
     private const float BaseDpi = 96f;
-    private const uint SubmenuHoverDelayMs = 350;
     private const nint SubmenuTimerId = 1;
 
     internal const uint WM_APP_POPUP_CALCWND = PInvoke.WM_APP + 0x2000;
@@ -118,6 +117,9 @@ internal sealed class PopupMenu
             case PInvoke.WM_LBUTTONUP: return HandleMouseButton(lParam, ItemInteractionType.MouseLeftUp);
             case PInvoke.WM_RBUTTONDOWN: return HandleMouseButton(lParam, ItemInteractionType.MouseRightDown);
             case PInvoke.WM_RBUTTONUP: return HandleMouseButton(lParam, ItemInteractionType.MouseRightUp);
+
+            case PInvoke.WM_DISPLAYCHANGE or PInvoke.WM_DPICHANGED or PInvoke.WM_CANCELMODE: return Dismiss(hWnd, msg, wParam, lParam);
+            case PInvoke.WM_SETTINGCHANGE when wParam == PInvoke.SPI_SETWORKAREA: return Dismiss(hWnd, msg, wParam, lParam);
 
             case PInvoke.WM_CLOSE: PInvoke.DestroyWindow(hWnd); return 0;
             case PInvoke.WM_DESTROY: return HandleDestroy();
@@ -307,7 +309,12 @@ internal sealed class PopupMenu
     {
         tracking = false;
 
-        if (openSubmenu.Owner is not null) return 0;
+        if (openSubmenu.Owner is not null)
+        {
+            SetHotItem(openSubmenu.Owner, b => RelativePosition(b, lastPoint), ItemInteractionType.MouseEnter, ItemInteractionType.MouseLeave);
+            KillSubmenuTimer();
+            return 0;
+        }
 
         SetHotItem(null, b => RelativePosition(b, lastPoint), ItemInteractionType.MouseEnter, ItemInteractionType.MouseLeave);
 
@@ -349,10 +356,9 @@ internal sealed class PopupMenu
 
         KillSubmenuTimer();
 
-        if (hotItem?.CanOpenSubmenu(ItemInteractionType.MouseEnter) ?? false)
-        {
-            OpenSubmenu(hotItem, false);
-        }
+        if (openSubmenu.Owner is not null && !ReferenceEquals(openSubmenu.Owner, hotItem)) CloseOpenSubmenu();
+
+        if (hotItem?.CanOpenSubmenu(ItemInteractionType.MouseEnter) ?? false) OpenSubmenu(hotItem, false);
 
         return 0;
     }
@@ -375,6 +381,12 @@ internal sealed class PopupMenu
         return nint.Zero;
     }
 
+    private nint Dismiss(nint hWnd, uint msg, nint wParam, nint lParam)
+    {
+        _tree.Dispose();
+        return PInvoke.DefWindowProc(hWnd, msg, wParam, lParam);
+    }
+
     private void SetHotItem(MenuItemBase? newHot, Func<Rect, Pos> positionFor, ItemInteractionType enterType, ItemInteractionType leaveType)
     {
         if (ReferenceEquals(newHot, hotItem)) return;
@@ -391,7 +403,8 @@ internal sealed class PopupMenu
 
         if (!ReferenceEquals(newHot, openSubmenu.Owner))
         {
-            CloseOpenSubmenu();
+            if (openSubmenu.Owner is not null && enterType is ItemInteractionType.MouseEnter) StartSubmenuTimer();
+            else CloseOpenSubmenu();
         }
 
         if (newHot is not null)
@@ -483,7 +496,8 @@ internal sealed class PopupMenu
 
     private void StartSubmenuTimer()
     {
-        PInvoke.SetTimer(HWnd, SubmenuTimerId, SubmenuHoverDelayMs, nint.Zero);
+        PInvoke.SystemParametersInfo(PInvoke.SPI_GETMENUSHOWDELAY, 0, out var delay, 0);
+        PInvoke.SetTimer(HWnd, SubmenuTimerId, delay, nint.Zero);
         submenuTimerActive = true;
     }
 
@@ -540,6 +554,7 @@ internal sealed class PopupMenu
     }
 
     private int ToPixels(int dips) => PixelGrid.ToPixel(dips, _scale);
+    private Pos ToDipPoint(Pos pixel) => new Pos(PixelGrid.ToDip(pixel.X, _scale), PixelGrid.ToDip(pixel.Y, _scale));
 
     private static int IndexOf(ReadOnlySpan<ItemLayout> items, MenuItemBase? item)
     {
@@ -565,6 +580,4 @@ internal sealed class PopupMenu
 
         return new Pos(x, y);
     }
-
-    private Pos ToDipPoint(Pos pixel) => new Pos(PixelGrid.ToDip(pixel.X, _scale), PixelGrid.ToDip(pixel.Y, _scale));
 }

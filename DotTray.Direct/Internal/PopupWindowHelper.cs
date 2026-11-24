@@ -30,7 +30,8 @@ internal static class PopupWindowHelper
                     hInstance = currentHInstance,
                     lpszClassName = name,
                     hbrBackground = nint.Zero,
-                    hCursor = PInvoke.LoadCursor(nint.Zero, PInvoke.IDC_ARROW)
+                    hCursor = PInvoke.LoadCursor(nint.Zero, PInvoke.IDC_ARROW),
+                    style = PInvoke.CS_DROPSHADOW
                 };
 
                 if (PInvoke.RegisterClassEx(ref wndClassEx) == 0)

@@ -19,7 +19,7 @@ public static class DotTrayDirectTest
             new(System.Drawing.StockIconId.Info, ConfigureSimpleMenu),
             new(System.Drawing.StockIconId.Delete, ConfigureBoundsMenu)
         ];
-
+        
         using (var cts = new CancellationTokenSource())
         {
             var disposables = new List<IDisposable>();
