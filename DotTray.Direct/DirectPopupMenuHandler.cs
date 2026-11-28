@@ -1,23 +1,19 @@
 ﻿namespace DotTray.Direct;
 
-using DotTray;
 using DotTray.Direct.Coloring;
-using DotTray.Direct.Internal;
-using DotTray.Direct.Internal.Rendering;
+using DotTray.Direct.Internal.Popup;
+using DotTray.Direct.Primitives;
 
 /// <summary>
 /// The default popup behaviour handler, rendering with Direct2D and DirectWrite
 /// </summary>
 /// <remarks>
-/// One instance can be shared by multiple <see cref="NotifyIcon{THandler}"/> instances at the same time, every icon gets its own popup tree
+/// One instance can be shared by multiple <see cref="NotifyIcon{THandler}"/> instances, only one popup is open at a time.<br/>
+/// The popups run on a dedicated background thread that is owned by this instance, so <see cref="ItemInteractedEventArgs"/> handlers are invoked on that thread
 /// </remarks>
 public class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
 {
-    private readonly Lock _lock;
-    private readonly Dictionary<object, PopupMenuTree> _activeTrees;
-    private readonly ThreadLocal<DirectDevice?> _devices;
-
-    private bool disposed;
+    private readonly PopupThread _thread;
 
     /// <summary>
     /// The <see cref="MenuItemCollection"/> of this instance
@@ -35,138 +31,72 @@ public class DirectPopupMenuHandler : PopupMenuHandler, IDisposable
             if (EqualityComparer<IDirectBrush?>.Default.Equals(field, value)) return;
 
             field = value;
-            MenuItems.ForceUpdate();
+            _thread.ForceUpdate();
         }
     }
 
     /// <summary>
-    /// Initializes a new <see cref="DirectPopupMenuHandler"/> instance
+    /// Whether a popup of this instance is currently open
     /// </summary>
-    public DirectPopupMenuHandler()
-    {
-        _lock = new Lock();
-        _activeTrees = new Dictionary<object, PopupMenuTree>(ReferenceEqualityComparer.Instance);
-        _devices = new ThreadLocal<DirectDevice?>(true);
-
-        MenuItems = [];
-    }
-
-    /// <inheritdoc/>
-    /// <remarks>
-    /// By default this opens the popup menu.<br/>
-    /// If you don't want this behaviour override <see cref="Show{THandler}(NotifyIcon{THandler}, MousePosition)"/> and don't call the <see langword="base"/> implementation
-    /// </remarks>
-    protected override void Show<THandler>(NotifyIcon<THandler> owner, MousePosition mousePosition) => ShowRoot(owner);
-
-    /// <inheritdoc/>
-    /// <remarks>
-    /// By default this opens the popup menu.<br/>
-    /// If you don't want this behaviour override <see cref="ShowContext{THandler}(NotifyIcon{THandler}, MousePosition)"/> and don't call the <see langword="base"/> implementation
-    /// </remarks>
-    protected override void ShowContext<THandler>(NotifyIcon<THandler> owner, MousePosition mousePosition) => ShowRoot(owner);
+    public bool IsOpen => _thread.IsOpen;
 
     /// <summary>
-    /// Closes every popup tree of this instance and stops it from showing new ones
+    /// Initializes a new <see cref="DirectPopupMenuHandler"/> instance
+    /// </summary>
+    /// <remarks>
+    /// This starts the popup thread and creates the rendering device, so the first popup opens without delay
+    /// </remarks>
+    public DirectPopupMenuHandler()
+    {
+        MenuItems = [];
+        _thread = new PopupThread(this);
+    }
+
+    /// <summary>
+    /// Opens the popup menu with its bottom left corner at the given screen position, replacing an already open popup immediately
+    /// </summary>
+    /// <remarks>
+    /// This can be called from any thread and returns immediately.<br/>
+    /// Like every native popup menu it needs the permission of Windows to take the focus, which is given when the call is a result of user input like a click or a hotkey.
+    /// Without it the popup is not shown, because it couldn't be dismissed
+    /// </remarks>
+    /// <param name="anchor">The screen position in pixels</param>
+    public void Open(Pos anchor) => _thread.Open(anchor, nint.Zero);
+
+    /// <summary>
+    /// Closes the open popup
+    /// </summary>
+    /// <remarks>
+    /// This can be called from any thread and returns immediately
+    /// </remarks>
+    public void Close() => _thread.Close();
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// By default this opens the popup menu at the position of the mouse.<br/>
+    /// Like native tray menus the popup hands the foreground back to the window of the notify icon when it closes, so Windows also closes the hidden icons flyout.<br/>
+    /// If you don't want this behaviour override <see cref="Show{THandler}(NotifyIcon{THandler}, MousePosition)"/> and don't call the <see langword="base"/> implementation
+    /// </remarks>
+    protected override void Show<THandler>(NotifyIcon<THandler> owner, MousePosition mousePosition) => _thread.Open(new Pos(mousePosition.X, mousePosition.Y), owner.NativeWindowHandle);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// By default this opens the popup menu at the position of the mouse.<br/>
+    /// Like native tray menus the popup hands the foreground back to the window of the notify icon when it closes, so Windows also closes the hidden icons flyout.<br/>
+    /// If you don't want this behaviour override <see cref="ShowContext{THandler}(NotifyIcon{THandler}, MousePosition)"/> and don't call the <see langword="base"/> implementation
+    /// </remarks>
+    protected override void ShowContext<THandler>(NotifyIcon<THandler> owner, MousePosition mousePosition) => _thread.Open(new Pos(mousePosition.X, mousePosition.Y), owner.NativeWindowHandle);
+
+    /// <summary>
+    /// Closes the open popup, stops the popup thread and releases the rendering device
     /// </summary>
     /// <remarks>
     /// This can be called from any thread
     /// </remarks>
     public void Dispose()
     {
-        PopupMenuTree[] trees;
-        DirectDevice?[] devices;
-
-        lock (_lock)
-        {
-            if (disposed) return;
-            disposed = true;
-
-            trees = [.. _activeTrees.Values];
-            _activeTrees.Clear();
-
-            devices = [.. _devices.Values];
-            _devices.Dispose();
-        }
-
-        foreach (var tree in trees) tree.Dispose();
-        foreach (var device in devices) device?.Dispose();
+        _thread.Dispose();
 
         GC.SuppressFinalize(this);
-    }
-
-    private void ShowRoot(object owner)
-    {
-        if (MenuItems.IsEmpty) return;
-
-        PopupMenuTree? active;
-        lock (_lock)
-        {
-            if (disposed) return;
-
-            _activeTrees.TryGetValue(owner, out active);
-        }
-
-        active?.Dispose();
-
-        var device = AcquireDevice();
-        if (device is null) return;
-
-        PopupMenuTree tree;
-        try
-        {
-            tree = new PopupMenuTree(this, device, MenuItems);
-        }
-        catch
-        {
-            device.Dispose();
-            throw;
-        }
-
-        tree.Disposed += () => Untrack(owner, tree);
-
-        lock (_lock)
-        {
-            if (!disposed)
-            {
-                _activeTrees[owner] = tree;
-                return;
-            }
-        }
-
-        tree.Dispose();
-
-    }
-
-    private DirectDevice? AcquireDevice()
-    {
-        lock (_lock)
-        {
-            if (disposed) return null;
-
-            var device = _devices.Value;
-
-            if (device is null || device.IsLost)
-            {
-                if (device is not null)
-                {
-                    _devices.Value = null;
-                    device.Dispose();
-                }
-
-                device = new DirectDevice();
-                _devices.Value = device;
-            }
-
-            return device.Retain();
-        }
-    }
-
-
-    private void Untrack(object owner, PopupMenuTree tree)
-    {
-        lock (_lock)
-        {
-            if (_activeTrees.TryGetValue(owner, out var current) && ReferenceEquals(current, tree)) _activeTrees.Remove(owner);
-        }
     }
 }

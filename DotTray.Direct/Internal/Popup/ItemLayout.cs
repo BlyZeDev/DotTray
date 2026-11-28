@@ -1,4 +1,4 @@
-﻿namespace DotTray.Direct.Internal;
+﻿namespace DotTray.Direct.Internal.Popup;
 
 using DotTray.Direct.Items;
 using DotTray.Direct.Primitives;

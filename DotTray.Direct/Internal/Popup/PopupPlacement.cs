@@ -1,8 +1,8 @@
-﻿namespace DotTray.Direct.Internal;
+﻿namespace DotTray.Direct.Internal.Popup;
 
 using DotTray.Direct.Internal.Models;
 using DotTray.Direct.Primitives;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 internal static class PopupPlacement
 {
@@ -16,26 +16,20 @@ internal static class PopupPlacement
 
         var monitorInfo = new MONITORINFO
         {
-            cbSize = (uint)Marshal.SizeOf<MONITORINFO>()
+            cbSize = (uint)Unsafe.SizeOf<MONITORINFO>()
         };
         PInvoke.GetMonitorInfo(hMonitor, ref monitorInfo);
 
         return new Rect(monitorInfo.rcWork.Left, monitorInfo.rcWork.Top, monitorInfo.rcWork.Right - monitorInfo.rcWork.Left, monitorInfo.rcWork.Bottom - monitorInfo.rcWork.Top);
     }
 
-    public static Rect GetCursorAnchor()
-    {
-        PInvoke.GetCursorPos(out var pos);
-        return new Rect(pos.X, pos.Y, 0, 0);
-    }
-
     public static Pos ResolveRoot(Rect anchor, int width, int height, Rect workArea)
     {
         var x = anchor.X;
-        var y = anchor.Y;
-
         if (x + width > workArea.Right) x = anchor.X - width;
-        if (y + height > workArea.Bottom) y = anchor.Y - height;
+
+        var y = anchor.Y - height;
+        if (y < workArea.Top) y = anchor.Y;
 
         return ClampToWorkArea(x, y, width, height, workArea);
     }

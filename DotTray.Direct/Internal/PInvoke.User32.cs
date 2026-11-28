@@ -7,7 +7,7 @@ internal static partial class PInvoke
 {
     private const string User32 = "user32.dll";
 
-    public const int GWLP_WNDPROC = -4;
+    public const int GWLP_USERDATA = -21;
 
     public const uint WS_CLIPCHILDREN = 0x02000000;
     public const uint WS_CLIPSIBLINGS = 0x04000000;
@@ -18,12 +18,9 @@ internal static partial class PInvoke
     public const uint WS_EX_NOACTIVATE = 0x08000000;
     public const uint WS_EX_NOREDIRECTIONBITMAP = 0x00200000;
 
-    public const int SW_HIDE = 0;
     public const int SW_SHOW = 5;
     public const int SW_SHOWNOACTIVATE = 4;
 
-    public const uint SWP_NOSIZE = 0x0001;
-    public const uint SWP_NOMOVE = 0x0002;
     public const uint SWP_NOZORDER = 0x0004;
     public const uint SWP_NOACTIVATE = 0x0010;
     public const uint SWP_NOCOPYBITS = 0x0100;
@@ -35,35 +32,36 @@ internal static partial class PInvoke
     public const int WM_ERASEBKGND = 0x0014;
     public const int WM_SETTINGCHANGE = 0x001A;
     public const int WM_CANCELMODE = 0x001F;
+    public const int WM_SETCURSOR = 0x0020;
     public const int WM_DISPLAYCHANGE = 0x007E;
+    public const int WM_NCCREATE = 0x0081;
+    public const int WM_NCDESTROY = 0x0082;
     public const int WM_NCACTIVATE = 0x0086;
-    public const int WM_TIMER = 0x0113;
     public const int WM_KEYDOWN = 0x0100;
     public const int WM_SYSKEYDOWN = 0x0104;
+    public const int WM_TIMER = 0x0113;
     public const int WM_MOUSEMOVE = 0x0200;
     public const int WM_LBUTTONDOWN = 0x0201;
     public const int WM_LBUTTONUP = 0x0202;
     public const int WM_RBUTTONDOWN = 0x0204;
     public const int WM_RBUTTONUP = 0x0205;
     public const int WM_MBUTTONDOWN = 0x0207;
-    public const int WM_MOUSELEAVE = 0x02A3;
+    public const int WM_CAPTURECHANGED = 0x0215;
     public const int WM_DPICHANGED = 0x02E0;
     public const int WM_APP = 0x8000;
 
-    public const uint GW_OWNER = 4;
-
     public const int WA_INACTIVE = 0;
 
-    public const uint MONITOR_DEFAULTTONULL = 0;
-    public const uint MONITOR_DEFAULTTOPRIMARY = 1;
-    public const uint MONITOR_DEFAULTTONEAREST = 2;
-    public const uint MONITORINFOF_PRIMARY = 1;
+    public const uint EVENT_SYSTEM_MENUSTART = 0x0004;
+    public const uint EVENT_SYSTEM_MENUEND = 0x0005;
+    public const uint EVENT_SYSTEM_MENUPOPUPSTART = 0x0006;
+    public const uint EVENT_SYSTEM_MENUPOPUPEND = 0x0007;
+    public const int OBJID_CLIENT = -4;
+    public const int CHILDID_SELF = 0;
 
-    public const int WH_KEYBOARD_LL = 13;
-    public const int WH_MOUSE_LL = 14;
+    public const uint MONITOR_DEFAULTTONEAREST = 2;
 
     public const int VK_RETURN = 0x0D;
-    public const int VK_CONTROL = 0x11;
     public const int VK_MENU = 0x12;
     public const int VK_ESCAPE = 0x1B;
     public const int VK_SPACE = 0x20;
@@ -73,43 +71,18 @@ internal static partial class PInvoke
     public const int VK_UP = 0x26;
     public const int VK_RIGHT = 0x27;
     public const int VK_DOWN = 0x28;
-    public const int VK_LWIN = 0x5B;
-    public const int VK_RWIN = 0x5C;
-    public const int VK_LMENU = 0xA4;
-    public const int VK_RMENU = 0xA5;
-
-    public const uint TME_LEAVE = 0x00000002;
 
     public const uint CS_DROPSHADOW = 0x00020000;
 
     public const nint SPI_SETWORKAREA = 0x002F;
     public const uint SPI_GETMENUSHOWDELAY = 0x006A;
 
-    public const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
-    public const uint WINEVENT_OUTOFCONTEXT = 0x0000;
-
-    public static readonly nint HWND_TOPMOST = -1;
+    public static readonly nint HWND_MESSAGE = -3;
     public static readonly nint IDC_ARROW = 32512;
     public static readonly nint DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4;
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true)]
-    public delegate nint WndProc(nint hWnd, uint msg, nint wParam, nint lParam);
-
-    [UnmanagedFunctionPointer(CallingConvention.Winapi, SetLastError = true)]
-    public delegate nint LowLevelMouseProc(int nCode, nint wParam, nint lParam);
-
-    [UnmanagedFunctionPointer(CallingConvention.Winapi, SetLastError = true)]
-    public delegate nint LowLevelKeyboardProc(int nCode, nint wParam, nint lParam);
-
-    [UnmanagedFunctionPointer(CallingConvention.Winapi, SetLastError = true)]
-    public delegate void WinEventProc(nint hWinEventHook, uint eventType, nint hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
-
     [LibraryImport(User32, EntryPoint = "RegisterClassExW", SetLastError = true)]
     public static partial ushort RegisterClassEx(ref WNDCLASSEX wndClass);
-
-    [LibraryImport(User32, EntryPoint = "UnregisterClassW", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool UnregisterClass(nint className, nint hInstance);
 
     [LibraryImport(User32, EntryPoint = "CreateWindowExW", SetLastError = true)]
     public static partial nint CreateWindowEx(uint exStyle, nint className, nint windowName, uint style, int x, int y, int width, int height, nint parent, nint menu, nint hInstance, nint param);
@@ -131,11 +104,17 @@ internal static partial class PInvoke
 
     [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool ValidateRect(nint hWnd, nint rect);
+    public static partial bool SetForegroundWindow(nint hWnd);
+
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial nint GetForegroundWindow();
+
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial nint SetCapture(nint hWnd);
 
     [LibraryImport(User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool SetForegroundWindow(nint hWnd);
+    public static partial bool ReleaseCapture();
 
     [LibraryImport(User32, EntryPoint = "GetMessageW", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -155,12 +134,14 @@ internal static partial class PInvoke
     [LibraryImport(User32, SetLastError = true)]
     public static partial void PostQuitMessage(int exitCode);
 
-    [LibraryImport(User32, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool GetCursorPos(out POINT point);
-
     [LibraryImport(User32, EntryPoint = "LoadCursorW", SetLastError = true)]
     public static partial nint LoadCursor(nint hInstance, nint cursorName);
+
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial nint SetCursor(nint hCursor);
+
+    [LibraryImport(User32, SetLastError = true)]
+    public static partial void NotifyWinEvent(uint winEvent, nint hWnd, int idObject, int idChild);
 
     [LibraryImport(User32, SetLastError = true)]
     public static partial uint GetDpiForWindow(nint hWnd);
@@ -171,26 +152,15 @@ internal static partial class PInvoke
     [LibraryImport(User32, EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
     public static partial nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
 
+    [LibraryImport(User32, EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+    public static partial nint GetWindowLongPtr(nint hWnd, int nIndex);
+
     [LibraryImport(User32, SetLastError = true)]
     public static partial nint MonitorFromPoint(POINT pt, uint dwFlags);
 
     [LibraryImport(User32, EntryPoint = "GetMonitorInfoW", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool GetMonitorInfo(nint hMonitor, ref MONITORINFO lpmi);
-
-    [LibraryImport(User32, EntryPoint = "SetWindowsHookExW", SetLastError = true)]
-    public static partial nint SetWindowsHookEx(int idHook, nint lpfn, nint hmod, uint dwThreadId);
-
-    [LibraryImport(User32, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool UnhookWindowsHookEx(nint hhk);
-
-    [LibraryImport(User32, SetLastError = true)]
-    public static partial nint CallNextHookEx(nint hhk, int nCode, nint wParam, nint lParam);
-
-    [LibraryImport(User32, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool TrackMouseEvent(ref TRACKMOUSEEVENT lpEventTrack);
 
     [LibraryImport(User32, SetLastError = true)]
     public static partial nint SetTimer(nint hWnd, nint nIDEvent, uint uElapse, nint lpTimerFunc);
@@ -210,32 +180,7 @@ internal static partial class PInvoke
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool EndPaint(nint hWnd, ref PAINTSTRUCT lpPaint);
 
-    [LibraryImport(User32, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool GetWindowRect(nint hWnd, out RECT lpRect);
-
-    [LibraryImport(User32, SetLastError = true)]
-    public static partial nint GetWindow(nint hWnd, uint uCmd);
-
-    [LibraryImport(User32, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool ClientToScreen(nint hWnd, ref POINT lpPoint);
-
-    [LibraryImport(User32, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool PtInRect(ref RECT lprc, POINT pt);
-
     [LibraryImport(User32, EntryPoint = "SystemParametersInfoW", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool SystemParametersInfo(uint uiAction, uint uiParam, out uint pvParam, uint fWinIni);
-
-    [LibraryImport(User32, SetLastError = true)]
-    public static partial short GetAsyncKeyState(int vKey);
-
-    [LibraryImport(User32, SetLastError = true)]
-    public static partial nint SetWinEventHook(uint eventMin, uint eventMax, nint hmodWinEventProc, WinEventProc lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
-
-    [LibraryImport(User32, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool UnhookWinEvent(nint hWinEventHook);
 }
